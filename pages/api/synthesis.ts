@@ -19,7 +19,7 @@ const xfyunConfigTTS = {
 };
 async function xfyunTextToSpeech(
   text: string,
-  voiceName: string = "xiaoyan",
+  voiceName: string = "x5_lingfeiyi_flow",
   speed: number = 50,
   volume: number = 50,
   pitch: number = 50

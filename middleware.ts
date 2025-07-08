@@ -6,7 +6,8 @@ export default async function middleware(
   request: NextRequest,
   event: NextFetchEvent
 ): Promise<Response | undefined> {
-  const ip = request.ip ?? "127.0.0.1";
+  const forwarded = request.headers.get("x-forwarded-for");
+  const ip = forwarded ? forwarded.split(",")[0].trim() : "127.0.0.1";
 
   // ratelimit for demo app: https://demo.useliftoff.com/
   if (

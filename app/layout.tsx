@@ -2,11 +2,11 @@ import "../styles/globals.css";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Liftoff - AI-Powered Mock Interviews",
+  title: "伯乐-多模态AI面试官",
   openGraph: {
-    title: "Liftoff - AI-Powered Mock Interviews",
+    title: "伯乐-多模态AI面试官",
     description:
-      "Liftoff is an AI-powered mock interview platform that helps you practice for your next job interview.",
+      "伯乐是一款融合多模态感知与交互的AI人才评测系统",
     images: [
       {
         url: "https://demo.useliftoff.com/opengraph-image",
@@ -15,9 +15,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Liftoff - AI-Powered Mock Interviews",
+    title: "伯乐-多模态AI面试官",
     description:
-      "Liftoff is an AI-powered mock interview platform that helps you practice for your next job interview.",
+      "伯乐是一款融合多模态感知与交互的AI人才评测系统",
     images: ["https://demo.useliftoff.com/opengraph-image"],
     creator: "@tmeyer_me",
   },

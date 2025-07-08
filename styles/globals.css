@@ -1,7 +1,11 @@
+@layer theme, base, clerk, components, utilities;
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+/* @import 'tailwindcss'; */
 
+/* 你的自定义 CSS 放在最后 */
 #gradient-canvas {
   --gradient-color-1: #bde1ff;
   --gradient-color-2: #6ca0f4;
