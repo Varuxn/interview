@@ -5,3 +5,8 @@ rm -rf .next
 npm run build
 ```
 
+先运行 `go_backend` 的后端 `./ai-interviewer` 启动后端服务
+
+然后使用 `npm run dev` 开始调试模式。
+
+在`./page/demo.tsx` 文件下 `synthesizeSpeech` 函数发送报文 `debug=true` 只会返回固定的音频，改为 `debug=false` 才会生成指定音频。

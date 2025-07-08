@@ -219,6 +219,7 @@ export default function DemoPage() {
         body: JSON.stringify({
           text: generatedQuestion,
           voice: person, // Use selectedName as the voice parameter
+          debug: true
           // You can add speed, volume, pitch here if needed, e.g.:
           // speed: 50,
           // volume: 50,

@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import crypto from "crypto";
+import path from "path";
 import WebSocket from "ws";
 import fs from "fs";
 import util from "util";
@@ -148,12 +149,24 @@ export default async function handler(
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { text, voice, speed, volume, pitch } = req.body;
+  const { text, voice, speed, volume, pitch, debug } = req.body;
 
-  if (!text) {
+  if (!text&& !debug) {
     return res.status(400).json({ error: "Text is required" });
   }
-
+  if (debug) {
+    try {
+      // 这里假设 es.mp3 位于项目根目录的上一级
+      const filePath = path.resolve(process.cwd(), "es.mp3");
+      const audioBuffer = await fs.promises.readFile(filePath);
+      res.setHeader("Content-Type", "audio/mpeg");
+      res.setHeader("Content-Length", audioBuffer.length);
+      return res.status(200).send(audioBuffer);
+    } catch (err) {
+      console.error("调试模式读取音频文件失败:", err);
+      return res.status(500).json({ error: "调试模式读取音频文件失败" });
+    }
+  }
   // Optional: You can define a default voice or validate supported voices
   const selectedVoice = voice || "xiaoyan"; // Default voice if not provided
   const selectedSpeed = typeof speed === 'number' ? speed : 50;
