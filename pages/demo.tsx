@@ -5,43 +5,60 @@ import Link from "next/link";
 import { useRef, useState, useEffect, useCallback } from "react";
 import Webcam from "react-webcam";
 import { createFFmpeg, fetchFile } from "@ffmpeg/ffmpeg";
+import { FlagIcon } from '../components/FlagIcon';
 
-const questions = [
+const questions = [ //面试问题
   {
     id: 1,
-    name: "Behavioral",
-    description: "From LinkedIn, Amazon, Adobe",
-    difficulty: "Easy",
+    name: "人工智能",
+    description: "机器学习工程师、算法研究员、NLP工程师...",
+    difficulty: "hard",
   },
   {
     id: 2,
-    name: "Technical",
-    description: "From Google, Meta, and Apple",
-    difficulty: "Medium",
+    name: "大数据",
+    description: "大数据开发工程师、数据仓库工程师、数据分析师...",
+    difficulty: "medium",
   },
+  {
+    id: 3,
+    name: "物联网",
+    description: "嵌入式开发工程师、物联网系统架构师、传感器算法工程师...",
+    difficulty: "medium",
+  },
+  {
+    id: 4,
+    name: "智能系统",
+    description: "自动驾驶系统工程师、机器人控制工程师、智能硬件产品经理...",
+    difficulty: "hard",
+  }
 ];
 
-const interviewers = [
+const interviewers = [ //面试官
   {
-    id: "John",
-    name: "John",
-    description: "Software Engineering",
-    level: "L3",
+    id: "Alex",
+    name: "Alex",
+    description: "高级算法工程师 | 性格：理性冷静｜面试风格：深挖技术细节，重视代码严谨性",
+    country : "CN",
+    level: "L4",
   },
   {
-    id: "Richard",
-    name: "Richard",
-    description: "Product Management",
-    level: "L5",
+    id: "Bob",
+    name: "Bob",
+    description: "CTO｜性格：强势直接｜面试风格：高压追问，模拟极端场景",
+    country : "EN",
+    level: "L8",
   },
   {
-    id: "Sarah",
-    name: "Sarah",
-    description: "Other",
-    level: "L7",
-  },
+    id: "Coty",
+    name: "Coty",
+    description: "产品总监｜性格：亲和力强但逻辑缜密｜面试风格：关注用户需求和商业化落地",
+    country : "CN",
+    level: "L6",
+  }
 ];
 
+//初始化FFmpeg
 const ffmpeg = createFFmpeg({
   // corePath: `http://localhost:3000/ffmpeg/dist/ffmpeg-core.js`,
   // I've included a default import above (and files in the public directory), but you can also use a CDN like this:
@@ -49,36 +66,46 @@ const ffmpeg = createFFmpeg({
   log: true,
 });
 
+//辅助函数：合并多个CSS类名，并且过滤掉空值
 function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(" ");
 }
 
 export default function DemoPage() {
-  const [selected, setSelected] = useState(questions[0]);
-  const [selectedInterviewer, setSelectedInterviewer] = useState(
+  const [selected, setSelected] = useState(questions[0]); //问题类型
+  const [selectedInterviewer, setSelectedInterviewer] = useState( //面试官类型
     interviewers[0]
   );
-  const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const webcamRef = useRef<Webcam | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const [capturing, setCapturing] = useState(false);
-  const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
-  const [seconds, setSeconds] = useState(150);
-  const [videoEnded, setVideoEnded] = useState(false);
-  const [recordingPermission, setRecordingPermission] = useState(true);
-  const [cameraLoaded, setCameraLoaded] = useState(false);
-  const vidRef = useRef<HTMLVideoElement>(null);
-  const [isSubmitting, setSubmitting] = useState(false);
-  const [status, setStatus] = useState("Processing");
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [isVisible, setIsVisible] = useState(true);
-  const [isDesktop, setIsDesktop] = useState(false);
-  const [completed, setCompleted] = useState(false);
-  const [transcript, setTranscript] = useState("");
-  const [generatedFeedback, setGeneratedFeedback] = useState("");
+  const [step, setStep] = useState(1);//面试步骤
+  const [loading, setLoading] = useState(true);//加载状态
+  const webcamRef = useRef<Webcam | null>(null);//存储 Webcam 组件.current未挂载=null，挂载指向组件实例
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);//引用媒体录制器
+  const [capturing, setCapturing] = useState(false);//是否正在录制
+  const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);//存储录制的视频数据块
+  const [seconds, setSeconds] = useState(150);//倒计时秒数
+  const [videoEnded, setVideoEnded] = useState(false);//视频是否结束
+  const [recordingPermission, setRecordingPermission] = useState(true);//录制权限
+  const [cameraLoaded, setCameraLoaded] = useState(false);//摄像头是否加载
+  const vidRef = useRef<HTMLVideoElement>(null);//引用视频元素，语法同webcamRef
+  const [isSubmitting, setSubmitting] = useState(false);//是否正在提交数据
+  const [status, setStatus] = useState("Processing");//当前状态
+  const [isSuccess, setIsSuccess] = useState(false);//成功
+  const [isVisible, setIsVisible] = useState(true);//控制某些UI元素是否可见
+  const [isDesktop, setIsDesktop] = useState(false);//是否为桌面设备
+  const [completed, setCompleted] = useState(false);//是否开始
+  const [transcript, setTranscript] = useState("");//转录文本
+  const [generatedFeedback, setGeneratedFeedback] = useState("");//生成的反馈
+  const [generatedQuestion, setGeneratedQuestion] = useState("");//生成的问题
+  const [generatedAudio,setGeneratedAudio] = useState<string | undefined>(undefined)//存储生成的语音
+  const audioRef = useRef<HTMLAudioElement>(null);
+  // 控制音频是否播放完毕
+  const [audioEnded, setAudioEnded] = useState(false);
+  // 控制音频是否已经手动触发过播放
+  const [audioStarted, setAudioStarted] = useState(false);
+  
 
-  useEffect(() => {
+
+  useEffect(() => {//设备检测
     setIsDesktop(window.innerWidth >= 768);
   }, []);
 
@@ -87,35 +114,36 @@ export default function DemoPage() {
       const element = document.getElementById("startTimer");
 
       if (element) {
-        element.style.display = "flex";
+        element.style.display = "flex";// 显示计时器UI
       }
 
       setCapturing(true);
       setIsVisible(false);
 
+      //初始化媒体录制器
       mediaRecorderRef.current = new MediaRecorder(
         webcamRef?.current?.stream as MediaStream
       );
-      mediaRecorderRef.current.addEventListener(
+      mediaRecorderRef.current.addEventListener(//视频数据监听调用handleDataAvailable
         "dataavailable",
         handleDataAvailable
       );
-      mediaRecorderRef.current.start();
+      mediaRecorderRef.current.start();//开始录制
     }
   }, [videoEnded, webcamRef, setCapturing, mediaRecorderRef]);
 
-  const handleStartCaptureClick = useCallback(() => {
+  const handleStartCaptureClick = useCallback(() => {//开始录制
     const startTimer = document.getElementById("startTimer");
     if (startTimer) {
       startTimer.style.display = "none";
     }
 
     if (vidRef.current) {
-      vidRef.current.play();
+      vidRef.current.play();//播放引导视频
     }
   }, [webcamRef, setCapturing, mediaRecorderRef]);
 
-  const handleDataAvailable = useCallback(
+  const handleDataAvailable = useCallback(//视频数据收集到recordedChunks
     ({ data }: BlobEvent) => {
       if (data.size > 0) {
         setRecordedChunks((prev) => prev.concat(data));
@@ -124,14 +152,14 @@ export default function DemoPage() {
     [setRecordedChunks]
   );
 
-  const handleStopCaptureClick = useCallback(() => {
+  const handleStopCaptureClick = useCallback(() => {//停止录制
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
     }
     setCapturing(false);
   }, [mediaRecorderRef, webcamRef, setCapturing]);
 
-  useEffect(() => {
+  useEffect(() => {//倒计时控制
     let timer: any = null;
     if (capturing) {
       timer = setInterval(() => {
@@ -148,140 +176,232 @@ export default function DemoPage() {
     };
   });
 
+  const getQuestion = async () => {
+    const response = await fetch("http://localhost:5000/api/v1/generate_question", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        domain: selected.description,
+        difficulty: selected.difficulty,
+      }),
+    });
+    const result = await response.json();
+    if (result.success && result.data && result.data.question) {
+      setGeneratedQuestion(result.data.question);
+      // console.log("generatedQuestion内容设置为:",result.data.question,generatedQuestion)
+    } else {
+      setGeneratedQuestion("未能生成面试问题，请重试。");
+    }
+  };
+
+  const synthesizeSpeech = async () => {
+    console.log('已进入音频生成函数');
+    if (!generatedQuestion) {
+      setStatus("Please provide text to synthesize.");
+      console.log('Please provide text to synthesize.');
+      return;
+    }
+
+    setGeneratedAudio(undefined); // Clear previous audio
+    console.log('开始尝试生成面试官音频');
+    const person = 
+    selectedInterviewer.name === "Alex"
+      ? `x5_lingfeiyi_flow`
+      : selectedInterviewer.name === "Bob"
+      ? `x4_lingfeizhe_oral`
+      : `x5_lingyuyan_flow`
+    try {
+      const response = await fetch('/api/synthesis', { 
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: generatedQuestion,
+          voice: person, // Use selectedName as the voice parameter
+          // You can add speed, volume, pitch here if needed, e.g.:
+          // speed: 50,
+          // volume: 50,
+          // pitch: 50,
+        }),
+      });
+
+      if (!response.ok) {
+        // Attempt to parse JSON error from the server
+        const errorData = await response.json();
+        console.log('面试官音频生成失败',errorData);
+        throw new Error(errorData.details || `HTTP error! Status: ${response.status}`);
+      }
+
+      // Get the audio data as a Blob
+      const audioBlob = await response.blob();
+      // Create a URL for the Blob which can be used in an <audio> tag
+      const audioUrl = URL.createObjectURL(audioBlob);
+      setGeneratedAudio(audioUrl);
+      console.log('Audio generated successfully!');
+
+    } catch (err) {
+      console.error('Error synthesizing speech:', err);
+      setStatus(`Failed to synthesize speech: ${err instanceof Error ? err.message : String(err)}`);
+    } 
+  };
+
+  //生成题目
+  useEffect(() => {
+    if (step === 3) {
+      getQuestion();
+      // console.log("generatedQuestion内容: ", generatedQuestion)
+      synthesizeSpeech()
+    }
+  }, [step]);
+
+  useEffect(() => {
+      synthesizeSpeech()
+  }, [generatedQuestion]);
+
   const handleDownload = async () => {
     if (recordedChunks.length) {
       setSubmitting(true);
       setStatus("Processing");
-
-      const file = new Blob(recordedChunks, {
-        type: `video/webm`,
-      });
-
+  
+      const file = new Blob(recordedChunks, { type: `video/webm` });
       const unique_id = uuid();
-
-      // This checks if ffmpeg is loaded
+  
       if (!ffmpeg.isLoaded()) {
         await ffmpeg.load();
       }
-
-      // This writes the file to memory, removes the video, and converts the audio to mp3
+  
       ffmpeg.FS("writeFile", `${unique_id}.webm`, await fetchFile(file));
       await ffmpeg.run(
-        "-i",
-        `${unique_id}.webm`,
-        "-vn",
-        "-acodec",
-        "libmp3lame",
-        "-ac",
-        "1",
-        "-ar",
-        "16000",
-        "-f",
-        "mp3",
+        "-i", `${unique_id}.webm`,
+        "-vn", "-acodec", "libmp3lame",
+        "-ac", "1", "-ar", "16000", "-f", "mp3",
         `${unique_id}.mp3`
       );
-
-      // This reads the converted file from the file system
+  
       const fileData = ffmpeg.FS("readFile", `${unique_id}.mp3`);
-      // This creates a new file from the raw data
-      const output = new File([fileData.buffer], `${unique_id}.mp3`, {
-        type: "audio/mp3",
-      });
-
-      const formData = new FormData();
-      formData.append("file", output, `${unique_id}.mp3`);
-      formData.append("model", "whisper-1");
-
-      const question =
-        selected.name === "Behavioral"
-          ? `Tell me about yourself. Why don${`’`}t you walk me through your resume?`
-          : selectedInterviewer.name === "John"
-          ? "What is a Hash Table, and what is the average case and worst case time for each of its operations?"
-          : selectedInterviewer.name === "Richard"
-          ? "Uber is looking to expand its product line. Talk me through how you would approach this problem."
-          : "You have a 3-gallon jug and 5-gallon jug, how do you measure out exactly 4 gallons?";
-
+      const audioFile = new File([fileData.buffer], `${unique_id}.mp3`, { type: "audio/mp3" });
+  
+      // 1. 先转写音频
+      const transcribeForm = new FormData();
+      transcribeForm.append("file", audioFile, `${unique_id}.mp3`);
+      // transcribeForm.append("model", "whisper-1");
+  
+      const question = generatedQuestion;
+  
       setStatus("Transcribing");
-
-      const upload = await fetch(
+  
+      const transcribeRes = await fetch(
         `/api/transcribe?question=${encodeURIComponent(question)}`,
         {
           method: "POST",
-          body: formData,
+          body: transcribeForm,
         }
       );
-      const results = await upload.json();
-
-      if (upload.ok) {
-        setIsSuccess(true);
-        setSubmitting(false);
-
-        if (results.error) {
-          setTranscript(results.error);
-        } else {
-          setTranscript(results.transcript);
-        }
-
-        console.log("Uploaded successfully!");
-
-        await Promise.allSettled([
-          new Promise((resolve) => setTimeout(resolve, 800)),
-        ]).then(() => {
-          setCompleted(true);
-          console.log("Success!");
-        });
-
-        if (results.transcript.length > 0) {
-          const prompt = `Please give feedback on the following interview question: ${question} given the following transcript: ${
-            results.transcript
-          }. ${
-            selected.name === "Behavioral"
-              ? "Please also give feedback on the candidate's communication skills. Make sure their response is structured (perhaps using the STAR or PAR frameworks)."
-              : "Please also give feedback on the candidate's communication skills. Make sure they accurately explain their thoughts in a coherent way. Make sure they stay on topic and relevant to the question."
-          } \n\n\ Feedback on the candidate's response:`;
-
-          setGeneratedFeedback("");
-          const response = await fetch("/api/generate", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              prompt,
-            }),
-          });
-
-          if (!response.ok) {
-            throw new Error(response.statusText);
-          }
-
-          // This data is a ReadableStream
-          const data = response.body;
-          if (!data) {
-            return;
-          }
-
-          const reader = data.getReader();
-          const decoder = new TextDecoder();
-          let done = false;
-
-          while (!done) {
-            const { value, done: doneReading } = await reader.read();
-            done = doneReading;
-            const chunkValue = decoder.decode(value);
-            setGeneratedFeedback((prev: any) => prev + chunkValue);
-          }
-        }
+      const transcribeResult = await transcribeRes.json();
+  
+      let transcript = "";
+      if (transcribeRes.ok && transcribeResult.transcript) {
+        transcript = transcribeResult.transcript;
+        setTranscript(transcript);
       } else {
-        console.error("Upload failed.");
+        setTranscript(transcribeResult.error || "转写失败");
+        setSubmitting(false);
+        return;
       }
-
+  
+      console.log("组装多模态表单")
+      // 2. 再组装多模态表单，上传到 submit_response
+      const formData = new FormData();
+      formData.append("question", question);
+      formData.append("text_response", transcript); // 用转写文本
+      formData.append("audio_response", audioFile, `${unique_id}.mp3`);
+      formData.append("video_response", file, `${unique_id}.webm`);
+  
+      setStatus("提交中...");
+  
+      const upload = await fetch("http://localhost:5000/api/v1/submit_response", {
+        method: "POST",
+        body: formData,
+      });
+  
+      const results = await upload.json();
+      setSubmitting(false);
+  
+      if (upload.ok && results.success) {
+        setIsSuccess(true);
+        setCompleted(true);
+        const evaluation = results.data.evaluation;
+        // setGeneratedFeedback(evaluation.feedback);
+        setGeneratedFeedback(
+          `语言表达: ${evaluation.language_expression}\n` +
+          `逻辑思维: ${evaluation.logical_thinking}\n` +
+          `专业知识: ${evaluation.professional_knowledge}\n` +
+          `技能匹配: ${evaluation.skill_matching}\n` +
+          `创新能力: ${evaluation.innovation}\n` +
+          `抗压表现: ${evaluation.stress_response}\n` +
+          `综合评分: ${evaluation.overall_score}\n` +
+          `详细反馈: ${evaluation.feedback}`
+        );
+      } else {
+        setIsSuccess(false);
+        setGeneratedFeedback("提交失败，请重试。");
+      }
+  
       setTimeout(function () {
         setRecordedChunks([]);
       }, 1500);
     }
   };
 
+  // 视频 onPlay 时，音频只在第一次播放
+  const handleVideoPlay = () => {
+    if (!audioStarted) {
+      const audio = audioRef.current;
+      if (audio) {
+        audio.currentTime = 0;
+        audio.play();
+        setAudioEnded(false);
+        setAudioStarted(true);
+      }
+    }
+  };
+
+  // 音频 onEnded 时，暂停视频
+  const handleAudioEnded = () => {
+    setAudioEnded(true);
+    const video = vidRef.current;
+    if (video) {
+      video.pause();
+    }
+    setVideoEnded(true); // 新增：音频结束时也触发 videoEnded
+  };
+
+  // 视频 onEnded 时，如果音频未结束则循环播放视频，否则不循环
+  const handleVideoEnded = () => {
+    if (!audioEnded) {
+      // 循环播放视频，但不再重播音频
+      const video = vidRef.current;
+      if (video) {
+        video.currentTime = 0;
+        video.play();
+      }
+    }
+    else setVideoEnded(true);
+    // 如果音频已结束，视频自然停止
+  };
+
+  // 如果 generatedAudio 变化，重置 audioEnded 和 audioStarted
+  useEffect(() => {
+    setAudioEnded(false);
+    setAudioStarted(false);
+    // 自动重置音频 currentTime
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+    }
+  }, [generatedAudio]);
+
+  //数值重置函数
   function restartVideo() {
     setRecordedChunks([]);
     setVideoEnded(false);
@@ -294,6 +414,7 @@ export default function DemoPage() {
     ? { width: 1280, height: 720, facingMode: "user" }
     : { width: 480, height: 640, facingMode: "user" };
 
+  //处理摄像头成功加载后的回调
   const handleUserMedia = () => {
     setTimeout(() => {
       setLoading(false);
@@ -385,8 +506,7 @@ export default function DemoPage() {
                     />
                   </svg>
                   <p className="text-[14px] font-normal leading-[20px] text-[#1a2b3b]">
-                    Video is not stored on our servers, and will go away as soon
-                    as you leave the page.
+                    视频不会存储在服务器上，并且会在您离开页面后消失。
                   </p>
                 </div>
                 <Link
@@ -460,16 +580,10 @@ export default function DemoPage() {
               {recordingPermission ? (
                 <div className="w-full flex flex-col max-w-[1080px] mx-auto justify-center">
                   <h2 className="text-2xl font-semibold text-left text-[#1D2B3A] mb-2">
-                    {selected.name === "Behavioral"
-                      ? `Tell me about yourself. Why don${`’`}t you walk me through your resume?`
-                      : selectedInterviewer.name === "John"
-                      ? "What is a Hash Table, and what is the average case and worst case time for each of its operations?"
-                      : selectedInterviewer.name === "Richard"
-                      ? "Uber is looking to expand its product line. Talk me through how you would approach this problem."
-                      : "You have a 3-gallon jug and 5-gallon jug, how do you measure out exactly 4 gallons?"}
+                    {generatedQuestion}
                   </h2>
                   <span className="text-[14px] leading-[20px] text-[#1a2b3b] font-normal mb-4">
-                    Asked by top companies like Google, Facebook and more
+                    请在点击按钮和问题说明后，开始回答问题。
                   </span>
                   <motion.div
                     initial={{ y: -20 }}
@@ -515,36 +629,36 @@ export default function DemoPage() {
                           <div className="h-full w-full aspect-video rounded md:rounded-lg lg:rounded-xl">
                             <video
                               id="question-video"
-                              onEnded={() => setVideoEnded(true)}
-                              controls={false}
                               ref={vidRef}
+                              onPlay={handleVideoPlay}
+                              onEnded={handleVideoEnded}
+                              controls={false}
                               playsInline
                               className="h-full object-cover w-full rounded-md md:rounded-[12px] aspect-video"
                               crossOrigin="anonymous"
+                              muted
                             >
                               <source
                                 src={
-                                  selectedInterviewer.name === "John"
-                                    ? selected.name === "Behavioral"
-                                      ? "https://liftoff-public.s3.amazonaws.com/DemoInterviewMale.mp4"
-                                      : "https://liftoff-public.s3.amazonaws.com/JohnTechnical.mp4"
-                                    : selectedInterviewer.name === "Richard"
-                                    ? selected.name === "Behavioral"
-                                      ? "https://liftoff-public.s3.amazonaws.com/RichardBehavioral.mp4"
-                                      : "https://liftoff-public.s3.amazonaws.com/RichardTechnical.mp4"
-                                    : selectedInterviewer.name === "Sarah"
-                                    ? selected.name === "Behavioral"
-                                      ? "https://liftoff-public.s3.amazonaws.com/BehavioralSarah.mp4"
-                                      : "https://liftoff-public.s3.amazonaws.com/SarahTechnical.mp4"
-                                    : selected.name === "Behavioral"
-                                    ? "https://liftoff-public.s3.amazonaws.com/DemoInterviewMale.mp4"
-                                    : "https://liftoff-public.s3.amazonaws.com/JohnTechnical.mp4"
+                                  selectedInterviewer.name === "Alex"
+                                    ? "https://liftoff-public.s3.amazonaws.com/JohnTechnical.mp4"
+                                    : selectedInterviewer.name === "Bob"
+                                    ? "https://liftoff-public.s3.amazonaws.com/RichardTechnical.mp4"
+                                    : "https://liftoff-public.s3.amazonaws.com/SarahTechnical.mp4"
                                 }
                                 type="video/mp4"
                               />
                             </video>
+                            {/* 音频播放，视频开始时播放，音频结束时暂停视频 */}
+                            <audio
+                              id="generated-audio-player"
+                              ref={audioRef}
+                              src={generatedAudio}
+                              onEnded={handleAudioEnded}
+                              // controls // 可选：开发时调试用
+                            />
                           </div>
-                        </div>
+                      </div>
                       )}
                       <Webcam
                         mirrored
@@ -843,11 +957,10 @@ export default function DemoPage() {
                   className="max-w-lg mx-auto px-4 lg:px-0"
                 >
                   <h2 className="text-4xl font-bold text-[#1E2B3A]">
-                    Select a question type
+                    请选择你想要应聘的岗位
                   </h2>
                   <p className="text-[14px] leading-[20px] text-[#1a2b3b] font-normal my-4">
-                    We have hundreds of questions from top tech companies.
-                    Choose a type to get started.
+                    我们提供多个岗位供你选择，请选择你想要应聘的岗位，我们将围绕这个岗位对你展开面试。
                   </p>
                   <div>
                     <RadioGroup value={selected} onChange={setSelected}>
@@ -1043,11 +1156,10 @@ export default function DemoPage() {
                   className="max-w-lg mx-auto px-4 lg:px-0"
                 >
                   <h2 className="text-4xl font-bold text-[#1E2B3A]">
-                    And an interviewer
+                    选择你的面试官
                   </h2>
                   <p className="text-[14px] leading-[20px] text-[#1a2b3b] font-normal my-4">
-                    Choose whoever makes you feel comfortable. You can always
-                    try again with another one.
+                    选择让你感到舒适的面试官，以便于我们更好的交流面试。
                   </p>
                   <div>
                     <RadioGroup
@@ -1099,181 +1211,10 @@ export default function DemoPage() {
                                   className="flex text-sm ml-4 mt-0 flex-col text-right items-center justify-center"
                                 >
                                   <span className=" text-gray-500">
-                                    <svg
-                                      className="w-[28px] h-full"
-                                      viewBox="0 0 38 30"
-                                      fill="none"
-                                      xmlns="http://www.w3.org/2000/svg"
-                                    >
-                                      <g filter="url(#filter0_d_34_25)">
-                                        <g clipPath="url(#clip0_34_25)">
-                                          <mask
-                                            id="mask0_34_25"
-                                            style={{ maskType: "luminance" }}
-                                            maskUnits="userSpaceOnUse"
-                                            x="3"
-                                            y="1"
-                                            width="32"
-                                            height="24"
-                                          >
-                                            <rect
-                                              x="3"
-                                              y="1"
-                                              width="32"
-                                              height="24"
-                                              fill="white"
-                                            />
-                                          </mask>
-                                          <g mask="url(#mask0_34_25)">
-                                            <path
-                                              fillRule="evenodd"
-                                              clipRule="evenodd"
-                                              d="M3 1H35V25H3V1Z"
-                                              fill="#F7FCFF"
-                                            />
-                                            <path
-                                              fillRule="evenodd"
-                                              clipRule="evenodd"
-                                              d="M3 15.6666V17.6666H35V15.6666H3Z"
-                                              fill="#E31D1C"
-                                            />
-                                            <path
-                                              fillRule="evenodd"
-                                              clipRule="evenodd"
-                                              d="M3 19.3334V21.3334H35V19.3334H3Z"
-                                              fill="#E31D1C"
-                                            />
-                                            <path
-                                              fillRule="evenodd"
-                                              clipRule="evenodd"
-                                              d="M3 8.33337V10.3334H35V8.33337H3Z"
-                                              fill="#E31D1C"
-                                            />
-                                            <path
-                                              fillRule="evenodd"
-                                              clipRule="evenodd"
-                                              d="M3 23V25H35V23H3Z"
-                                              fill="#E31D1C"
-                                            />
-                                            <path
-                                              fillRule="evenodd"
-                                              clipRule="evenodd"
-                                              d="M3 12V14H35V12H3Z"
-                                              fill="#E31D1C"
-                                            />
-                                            <path
-                                              fillRule="evenodd"
-                                              clipRule="evenodd"
-                                              d="M3 1V3H35V1H3Z"
-                                              fill="#E31D1C"
-                                            />
-                                            <path
-                                              fillRule="evenodd"
-                                              clipRule="evenodd"
-                                              d="M3 4.66663V6.66663H35V4.66663H3Z"
-                                              fill="#E31D1C"
-                                            />
-                                            <rect
-                                              x="3"
-                                              y="1"
-                                              width="20"
-                                              height="13"
-                                              fill="#2E42A5"
-                                            />
-                                            <path
-                                              fillRule="evenodd"
-                                              clipRule="evenodd"
-                                              d="M4.72221 3.93871L3.99633 4.44759L4.2414 3.54198L3.59668 2.96807H4.43877L4.7212 2.229L5.05237 2.96807H5.77022L5.20619 3.54198L5.42455 4.44759L4.72221 3.93871ZM8.72221 3.93871L7.99633 4.44759L8.2414 3.54198L7.59668 2.96807H8.43877L8.7212 2.229L9.05237 2.96807H9.77022L9.20619 3.54198L9.42455 4.44759L8.72221 3.93871ZM11.9963 4.44759L12.7222 3.93871L13.4245 4.44759L13.2062 3.54198L13.7702 2.96807H13.0524L12.7212 2.229L12.4388 2.96807H11.5967L12.2414 3.54198L11.9963 4.44759ZM16.7222 3.93871L15.9963 4.44759L16.2414 3.54198L15.5967 2.96807H16.4388L16.7212 2.229L17.0524 2.96807H17.7702L17.2062 3.54198L17.4245 4.44759L16.7222 3.93871ZM3.99633 8.44759L4.72221 7.93871L5.42455 8.44759L5.20619 7.54198L5.77022 6.96807H5.05237L4.7212 6.229L4.43877 6.96807H3.59668L4.2414 7.54198L3.99633 8.44759ZM8.72221 7.93871L7.99633 8.44759L8.2414 7.54198L7.59668 6.96807H8.43877L8.7212 6.229L9.05237 6.96807H9.77022L9.20619 7.54198L9.42455 8.44759L8.72221 7.93871ZM11.9963 8.44759L12.7222 7.93871L13.4245 8.44759L13.2062 7.54198L13.7702 6.96807H13.0524L12.7212 6.229L12.4388 6.96807H11.5967L12.2414 7.54198L11.9963 8.44759ZM16.7222 7.93871L15.9963 8.44759L16.2414 7.54198L15.5967 6.96807H16.4388L16.7212 6.229L17.0524 6.96807H17.7702L17.2062 7.54198L17.4245 8.44759L16.7222 7.93871ZM3.99633 12.4476L4.72221 11.9387L5.42455 12.4476L5.20619 11.542L5.77022 10.9681H5.05237L4.7212 10.229L4.43877 10.9681H3.59668L4.2414 11.542L3.99633 12.4476ZM8.72221 11.9387L7.99633 12.4476L8.2414 11.542L7.59668 10.9681H8.43877L8.7212 10.229L9.05237 10.9681H9.77022L9.20619 11.542L9.42455 12.4476L8.72221 11.9387ZM11.9963 12.4476L12.7222 11.9387L13.4245 12.4476L13.2062 11.542L13.7702 10.9681H13.0524L12.7212 10.229L12.4388 10.9681H11.5967L12.2414 11.542L11.9963 12.4476ZM16.7222 11.9387L15.9963 12.4476L16.2414 11.542L15.5967 10.9681H16.4388L16.7212 10.229L17.0524 10.9681H17.7702L17.2062 11.542L17.4245 12.4476L16.7222 11.9387ZM19.9963 4.44759L20.7222 3.93871L21.4245 4.44759L21.2062 3.54198L21.7702 2.96807H21.0524L20.7212 2.229L20.4388 2.96807H19.5967L20.2414 3.54198L19.9963 4.44759ZM20.7222 7.93871L19.9963 8.44759L20.2414 7.54198L19.5967 6.96807H20.4388L20.7212 6.229L21.0524 6.96807H21.7702L21.2062 7.54198L21.4245 8.44759L20.7222 7.93871ZM19.9963 12.4476L20.7222 11.9387L21.4245 12.4476L21.2062 11.542L21.7702 10.9681H21.0524L20.7212 10.229L20.4388 10.9681H19.5967L20.2414 11.542L19.9963 12.4476ZM6.72221 5.93871L5.99633 6.44759L6.2414 5.54198L5.59668 4.96807H6.43877L6.7212 4.229L7.05237 4.96807H7.77022L7.20619 5.54198L7.42455 6.44759L6.72221 5.93871ZM9.99633 6.44759L10.7222 5.93871L11.4245 6.44759L11.2062 5.54198L11.7702 4.96807H11.0524L10.7212 4.229L10.4388 4.96807H9.59668L10.2414 5.54198L9.99633 6.44759ZM14.7222 5.93871L13.9963 6.44759L14.2414 5.54198L13.5967 4.96807H14.4388L14.7212 4.229L15.0524 4.96807H15.7702L15.2062 5.54198L15.4245 6.44759L14.7222 5.93871ZM5.99633 10.4476L6.72221 9.93871L7.42455 10.4476L7.20619 9.54198L7.77022 8.96807H7.05237L6.7212 8.229L6.43877 8.96807H5.59668L6.2414 9.54198L5.99633 10.4476ZM10.7222 9.93871L9.99633 10.4476L10.2414 9.54198L9.59668 8.96807H10.4388L10.7212 8.229L11.0524 8.96807H11.7702L11.2062 9.54198L11.4245 10.4476L10.7222 9.93871ZM13.9963 10.4476L14.7222 9.93871L15.4245 10.4476L15.2062 9.54198L15.7702 8.96807H15.0524L14.7212 8.229L14.4388 8.96807H13.5967L14.2414 9.54198L13.9963 10.4476ZM18.7222 5.93871L17.9963 6.44759L18.2414 5.54198L17.5967 4.96807H18.4388L18.7212 4.229L19.0524 4.96807H19.7702L19.2062 5.54198L19.4245 6.44759L18.7222 5.93871ZM17.9963 10.4476L18.7222 9.93871L19.4245 10.4476L19.2062 9.54198L19.7702 8.96807H19.0524L18.7212 8.229L18.4388 8.96807H17.5967L18.2414 9.54198L17.9963 10.4476Z"
-                                              fill="#F7FCFF"
-                                            />
-                                          </g>
-                                          <rect
-                                            x="3"
-                                            y="1"
-                                            width="32"
-                                            height="24"
-                                            fill="url(#paint0_linear_34_25)"
-                                            style={{ mixBlendMode: "overlay" }}
-                                          />
-                                        </g>
-                                        <rect
-                                          x="3.5"
-                                          y="1.5"
-                                          width="31"
-                                          height="23"
-                                          rx="1.5"
-                                          stroke="black"
-                                          strokeOpacity="0.1"
-                                          style={{ mixBlendMode: "multiply" }}
-                                        />
-                                      </g>
-                                      <defs>
-                                        <filter
-                                          id="filter0_d_34_25"
-                                          x="0"
-                                          y="0"
-                                          width="38"
-                                          height="30"
-                                          filterUnits="userSpaceOnUse"
-                                          colorInterpolationFilters="sRGB"
-                                        >
-                                          <feFlood
-                                            floodOpacity="0"
-                                            result="BackgroundImageFix"
-                                          />
-                                          <feColorMatrix
-                                            in="SourceAlpha"
-                                            type="matrix"
-                                            values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"
-                                            result="hardAlpha"
-                                          />
-                                          <feOffset dy="2" />
-                                          <feGaussianBlur stdDeviation="1.5" />
-                                          <feColorMatrix
-                                            type="matrix"
-                                            values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.1 0"
-                                          />
-                                          <feBlend
-                                            mode="normal"
-                                            in2="BackgroundImageFix"
-                                            result="effect1_dropShadow_34_25"
-                                          />
-                                          <feBlend
-                                            mode="normal"
-                                            in="SourceGraphic"
-                                            in2="effect1_dropShadow_34_25"
-                                            result="shape"
-                                          />
-                                        </filter>
-                                        <linearGradient
-                                          id="paint0_linear_34_25"
-                                          x1="19"
-                                          y1="1"
-                                          x2="19"
-                                          y2="25"
-                                          gradientUnits="userSpaceOnUse"
-                                        >
-                                          <stop
-                                            stopColor="white"
-                                            stopOpacity="0.7"
-                                          />
-                                          <stop offset="1" stopOpacity="0.3" />
-                                        </linearGradient>
-                                        <clipPath id="clip0_34_25">
-                                          <rect
-                                            x="3"
-                                            y="1"
-                                            width="32"
-                                            height="24"
-                                            rx="2"
-                                            fill="white"
-                                          />
-                                        </clipPath>
-                                      </defs>
-                                    </svg>
+                                  <FlagIcon country={interviewer.country} />
                                   </span>
                                   <span className="font-medium text-gray-900">
-                                    EN
+                                  {interviewer.country}
                                   </span>
                                 </RadioGroup.Description>
                                 <span
@@ -1633,7 +1574,7 @@ export default function DemoPage() {
                       key={selected.id}
                       className="text-[#1a2b3b] text-[14px] leading-[18px] font-semibold absolute"
                     >
-                      {selected.name} Questions
+                      {selected.name} 问题
                     </motion.span>
 
                     <ul className="mt-[28px] flex">
@@ -1655,13 +1596,7 @@ export default function DemoPage() {
                       key={selected.id}
                       className="text-[#1a2b3b] text-[14px] leading-[18px] font-semibold absolute"
                     >
-                      {selected.name === "Behavioral"
-                        ? "Tell me about yourself"
-                        : selectedInterviewer.name === "John"
-                        ? "What is a Hash Table, and what is the average case for each of its operations?"
-                        : selectedInterviewer.name === "Richard"
-                        ? "Uber is looking to expand its product line. How would you go about doing this?"
-                        : "You have a 3-gallon jug and 5-gallon jug, how do you measure out exactly 4 gallons?"}
+                      {generatedQuestion}
                     </motion.span>
 
                     <ul className="mt-[28px] flex">
@@ -1748,7 +1683,7 @@ export default function DemoPage() {
                   </ul>
                 )}
                 {step === 1 &&
-                  (selected.name === "Behavioral" ? (
+                  (selected.name === "人工智能" ? (
                     <motion.ul
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}

@@ -1,0 +1,52 @@
+{
+  "detailed_results": {
+    "audio_analysis": {
+      "transcript_text": "TCP三次握手是TCP协议中建立连接的过程，它的必要性在于确保客户端和服务器之间可以可靠地建立连接...",
+      "speech_rate": 150,
+      "pauses": 5,
+      "confidence": 0.92,
+      "clarity": 0.88,
+      "stress_level": 0.15
+    },
+    "text_analysis": {
+      "content_relevance": 0.85,
+      "logical_structure": 0.78,
+      "professional_level": 0.82,
+      "clarity": 0.9,
+      "keywords": [
+        "TCP",
+        "网络协议",
+        "握手过程",
+        "可靠传输"
+      ],
+      "summary": "回答详细阐述了TCP三次握手的过程和必要性，包括同步序列号、确认连接和防止旧连接请求的作用。"
+    },
+    "video_analysis": {
+      "facial_expressions": {
+        "confident": 0.05,
+        "confused": 0.05,
+        "neutral": 0.75,
+        "thinking": 0.15
+      },
+      "eye_contact": 0.82,
+      "body_language": {
+        "attentive": 0.2,
+        "nervous": 0.1,
+        "relaxed": 0.7
+      },
+      "professionalism": 0.85,
+      "confidence": 0.78
+    }
+  },
+  "evaluation": {
+    "language_expression": 7.5,
+    "logical_thinking": 8,
+    "professional_knowledge": 7.8,
+    "skill_matching": 7,
+    "innovation": 6.5,
+    "stress_response": 8.2,
+    "overall_score": 7.5,
+    "feedback": "根据提供的分析数据，候选人在各方面的表现均为0，显然存在严重的问题。以下是对候选人在各个评估维度的评分：\n\n1. 语言表达能力：0分\n   - 候选人的回答缺乏清晰度，导致无法有效传达信息。\n\n2. 逻辑思维能力：0分\n   - 答案缺乏逻辑结构，未能展示出合理的思维过程。\n\n3. 专业知识水平：0分\n   - 内容相关度为0，表明候选人未能展示出任何专业知识。\n\n4. 技能匹配度：0分\n   - 由于缺乏相关内容，无法评估候选人与职位的技能匹配度。\n\n5. 创新能力：0分\n   - 无法评估，因候选人未能提供任何创新的思维或解决方案。\n\n6. 抗压能力：0分\n   - 候选人在表现上缺乏自信，未能有效应对面试压力。\n\n整体评价：\n候选人在此次面试中的表现极为不理想，未能有效回答问题，缺乏必要的准备和沟通技巧。建议候选人加强面试准备，特别是在语言表达和逻辑思维方面的训练。同时，建议在模拟面试中练习以提高自信心，掌握如何有效地讲述自己的经历和技能，以增加未来面试的成功率。"
+  },
+  "question": "Tell me about yourself. Why don’t you walk me through your resume?"
+}
