@@ -426,14 +426,14 @@ export default function DemoPage() {
 
   return (
     <AnimatePresence>
-      <header>
+      {/* <header>
       <SignedOut>
         <SignInButton />
       </SignedOut>
       <SignedIn>
         <UserButton />
       </SignedIn>
-    </header>
+    </header> */}
       {step === 3 ? (
         <div className="w-full min-h-screen flex flex-col px-4 pt-2 pb-8 md:px-8 md:py-2 bg-[#FCFCFC] relative overflow-x-hidden">
           
