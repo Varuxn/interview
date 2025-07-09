@@ -36,4 +36,4 @@ yarn-error.log*
 next-env.d.ts
 
 ./go_backend/.env
-go_backend/uploads/
+./go_backend/uploads/
