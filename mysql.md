@@ -1,4 +1,4 @@
-## 5. 请求和响应示例
+## 请求和响应示例
 
 ### 1. 用户创建/更新
 
@@ -185,6 +185,50 @@ POST /api/interviewers
     "country": "CN",
     "level": "L4"
   }
+}
+```
+
+### 7. 查询
+
+* 查询单个用户：
+
+  请求URL:  GET /api/query?table=users&id=user123
+
+  响应: 
+```json
+{
+  "success": true,
+  "message": "Record fetched",
+  "data": {
+    "id": "user123",
+    "name": "John Doe"
+  }
+}
+```
+
+* 查询所有：
+
+  请求URL:  GET /api/query?table=positions
+
+  响应: 
+```json
+{
+  "success": true,
+  "message": "All records fetched",
+  "data": [
+    {
+      "id": 1,
+      "name": "人工智能",
+      "description": "机器学习工程师、算法研究员...",
+      "difficulty": "hard"
+    },
+    {
+      "id": 2,
+      "name": "大数据",
+      "description": "大数据开发工程师...",
+      "difficulty": "medium"
+    }
+  ]
 }
 ```
 

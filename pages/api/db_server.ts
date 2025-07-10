@@ -5,7 +5,7 @@ import pool from './db_init';
 import {
   UserRequest, SettingRequest, ScheduleRequest,
   EvaluationRequest, PositionRequest, InterviewerRequest,
-  ApiResponse
+  ApiResponse,QueryRequest, QueryResponse
 } from './types';
 
 const app = express();
@@ -232,6 +232,59 @@ app.post('/api/interviewers', async (req, res) => {
     res.json(response);
   } catch (error) {
     handleError(res, error, 'interviewer');
+  }
+});
+
+// 通用查询接口
+app.get('/api/query', async (req, res) => {
+  try {
+    const queryParams: QueryRequest = {
+      table: req.query.table as QueryRequest['table'],
+      id: req.query.id 
+        ? isNaN(Number(req.query.id)) 
+          ? req.query.id.toString() 
+          : Number(req.query.id)
+        : undefined
+    };
+
+    // 验证表名是否有效
+    const validTables = ['users', 'settings', 'schedules', 'evaluations', 'positions', 'interviewers'];
+    if (!validTables.includes(queryParams.table)) {
+      const response: QueryResponse = {
+        success: false,
+        message: 'Invalid table name'
+      };
+      return res.status(400).json(response);
+    }
+
+    let query: string;
+    let params: any[] = [];
+
+    if (queryParams.id) {
+      // 查询单条记录
+      query = `SELECT * FROM ${queryParams.table} WHERE id = ?`;
+      params = [queryParams.id];
+    } else {
+      // 查询整个表
+      query = `SELECT * FROM ${queryParams.table}`;
+    }
+
+    const [rows] = await pool.execute(query, params);
+
+    const response: QueryResponse = {
+      success: true,
+      message: queryParams.id ? 'Record fetched' : 'All records fetched',
+      data: queryParams.id ? rows[0] : rows
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('Query error:', error);
+    const response: QueryResponse = {
+      success: false,
+      message: 'Database query failed'
+    };
+    res.status(500).json(response);
   }
 });
 
