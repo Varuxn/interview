@@ -181,7 +181,7 @@ export default async function handler(
       }
     );
 
-    audioFilePath = fData.files.file?.filepath;
+    audioFilePath = fData.files.file?.[0]?.filepath;
     console.log("接收到音频文件，临时路径:", audioFilePath);
 
     if (!audioFilePath) {

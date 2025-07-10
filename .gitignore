@@ -37,3 +37,5 @@ next-env.d.ts
 
 /go_backend/uploads
 /go_backend/.env
+
+/data
