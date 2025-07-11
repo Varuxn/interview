@@ -1,3 +1,4 @@
+import { RowDataPacket } from 'mysql2';
 export interface UserRequest {
     id: string;
     name?: string;
@@ -43,15 +44,19 @@ export interface UserRequest {
     message: string;
     data?: T;
   }
-  // 查询请求格式
-  export interface QueryRequest {
-    table: 'users' | 'settings' | 'schedules' | 'evaluations' | 'positions' | 'interviewers';
-    id?: string | number; // 可选ID，不传则查询整表
+  
+  export interface RowData extends RowDataPacket {
+      id?: number | string;
+      // 添加其他你需要的字段
   }
 
-  // 通用查询响应格式
-  export interface QueryResponse<T = any> {
-    success: boolean;
-    message: string;
-    data?: T | T[]; // 单个对象或数组
+  export interface QueryRequest {
+      table: string;
+      id?: number | string;
+  }
+
+  export interface QueryResponse<T = RowData | RowData[] | null> {
+      success: boolean;
+      message: string;
+      data?: T;
   }

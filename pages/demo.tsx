@@ -6,8 +6,9 @@ import { useRef, useState, useEffect, useCallback } from "react";
 import Webcam from "react-webcam";
 import { createFFmpeg, fetchFile } from "@ffmpeg/ffmpeg";
 import { FlagIcon } from '../components/FlagIcon';
+import { useAuth } from "@clerk/nextjs";
 
-const questions = [ //面试问题
+const questions = [ //岗位
   {
     id: 1,
     name: "人工智能",
@@ -70,7 +71,6 @@ const ffmpeg = createFFmpeg({
 function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(" ");
 }
-
 export default function DemoPage() {
   const [selected, setSelected] = useState(questions[0]); //问题类型
   const [selectedInterviewer, setSelectedInterviewer] = useState( //面试官类型
@@ -102,7 +102,7 @@ export default function DemoPage() {
   const [audioEnded, setAudioEnded] = useState(false);
   // 控制音频是否已经手动触发过播放
   const [audioStarted, setAudioStarted] = useState(false);
-  
+  const { userId } = useAuth();
 
 
   useEffect(() => {//设备检测
@@ -434,6 +434,68 @@ export default function DemoPage() {
     }, 1000);
   };
 
+  const handlePosition = async () => {
+      if (!selected) {
+        alert('请先选择一个岗位');
+        return;
+      }
+    
+      try {
+        const response = await fetch('/api/databases/settings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            id: userId,          // 用户ID
+            position: selected.name, // 岗位名称
+            interviewer: null    // 明确传递null保持原值
+          }),
+        });
+    
+        // 关键修复步骤：
+        // 1. 先检查HTTP状态码
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`请求失败: ${response.status} - ${errorText}`);
+        }
+    
+        // 2. 检查Content-Type
+        const contentType = response.headers.get('content-type');
+        if (!contentType?.includes('application/json')) {
+          throw new Error(`响应不是JSON格式: ${contentType}`);
+        }
+    
+        // 3. 解析JSON
+        const result = await response.json();
+        
+        if (!result.success) {
+          throw new Error(result.message || '保存失败');
+        }
+    
+        // 保存成功后才跳转
+        setStep(2);
+      } catch (error: unknown) {
+        // 1. 安全获取错误信息
+        const errorMessage = error instanceof Error 
+          ? error.message 
+          : '发生未知错误';
+      
+        // 2. 简化版日志记录
+        console.error('保存失败:', {
+          error: errorMessage,
+          userId,
+          position: selected?.name,
+          time: new Date().toLocaleString()
+        });
+      
+        // 3. 用户友好提示
+        alert(`保存失败: ${errorMessage.includes('Network') 
+          ? '网络连接失败，请检查网络' 
+          : '系统繁忙，请稍后重试'}`);
+      }
+    };
+  
   return (
     <AnimatePresence>
       {step === 3 ? (
@@ -1066,6 +1128,7 @@ export default function DemoPage() {
                       <button
                         onClick={() => {
                           setStep(2);
+                          handlePosition();
                         }}
                         className="group rounded-full px-4 py-2 text-[13px] font-semibold transition-all flex items-center justify-center bg-[#1E2B3A] text-white hover:[linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1)), #0D2247] no-underline flex gap-x-2  active:scale-95 scale-100 duration-75"
                         style={{

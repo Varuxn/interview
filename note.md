@@ -24,7 +24,26 @@
 * `eval_result.tsx` 显示面试人员的面试结果，各个指标的可视化报告
 * `setting.tsx` 引导面试者进行面试岗位的选择和面试官的选择
 
+* 面试界面双机位
+* 功能表
+* 小组讨论
 
+### 评估环节
+
+1. 自我介绍 introduction
+2. 技术问答 technology
+3. 情景案例分析 analysis
+
+### 评估指标
+
+1. 语言表达 language
+2. 专业能力 profession
+3. 逻辑思维 logic
+4. 表现力 expressiveness
+5. 综合 total
+
+指标的具体名称是 `环节_指标` ,比如 `introduction_total`
+综合各个环节的指标前缀为 `final_指标`
 
 ### 其他
 
