@@ -7,6 +7,7 @@ import Webcam from "react-webcam";
 import { createFFmpeg, fetchFile } from "@ffmpeg/ffmpeg";
 import { FlagIcon } from '../components/FlagIcon';
 import { useAuth } from "@clerk/nextjs";
+import { fetchUserSettingsAndDetails } from './api/databases/fetchUserSettings'; 
 
 const questions = [ //岗位
   {
@@ -448,7 +449,7 @@ export default function DemoPage() {
           },
           body: JSON.stringify({
             id: userId,          // 用户ID
-            position: selected.name, // 岗位名称
+            position: selected.id, // 岗位名称
             interviewer: null    // 明确传递null保持原值
           }),
         });
@@ -486,6 +487,69 @@ export default function DemoPage() {
           error: errorMessage,
           userId,
           position: selected?.name,
+          time: new Date().toLocaleString()
+        });
+      
+        // 3. 用户友好提示
+        alert(`保存失败: ${errorMessage.includes('Network') 
+          ? '网络连接失败，请检查网络' 
+          : '系统繁忙，请稍后重试'}`);
+      }
+    };
+
+    const handleInterviewer = async () => {
+      if (!selectedInterviewer) {
+        alert('请先选择一个面试官');
+        return;
+      }
+    
+      try {
+        const response = await fetch('/api/databases/settings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            id: userId,          // 用户ID
+            position: selected.id, // 岗位名称
+            interviewer: selectedInterviewer.id    // 明确传递null保持原值
+          }),
+        });
+    
+        // 关键修复步骤：
+        // 1. 先检查HTTP状态码
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`请求失败: ${response.status} - ${errorText}`);
+        }
+    
+        // 2. 检查Content-Type
+        const contentType = response.headers.get('content-type');
+        if (!contentType?.includes('application/json')) {
+          throw new Error(`响应不是JSON格式: ${contentType}`);
+        }
+    
+        // 3. 解析JSON
+        const result = await response.json();
+        
+        if (!result.success) {
+          throw new Error(result.message || '保存失败');
+        }
+    
+        // 保存成功后才跳转
+        setStep(3);
+      } catch (error: unknown) {
+        // 1. 安全获取错误信息
+        const errorMessage = error instanceof Error 
+          ? error.message 
+          : '发生未知错误';
+      
+        // 2. 简化版日志记录
+        console.error('保存失败:', {
+          error: errorMessage,
+          userId,
+          position: selected?.name,
+          interviewer: selectedInterviewer?.name,
           time: new Date().toLocaleString()
         });
       
@@ -1127,7 +1191,6 @@ export default function DemoPage() {
                     <div>
                       <button
                         onClick={() => {
-                          setStep(2);
                           handlePosition();
                         }}
                         className="group rounded-full px-4 py-2 text-[13px] font-semibold transition-all flex items-center justify-center bg-[#1E2B3A] text-white hover:[linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1)), #0D2247] no-underline flex gap-x-2  active:scale-95 scale-100 duration-75"
@@ -1268,7 +1331,7 @@ export default function DemoPage() {
                     <div>
                       <button
                         onClick={() => {
-                          setStep(3);
+                          handleInterviewer();
                         }}
                         className="group rounded-full px-4 py-2 text-[13px] font-semibold transition-all flex items-center justify-center bg-[#1E2B3A] text-white hover:[linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1)), #0D2247] no-underline flex gap-x-2  active:scale-95 scale-100 duration-75"
                         style={{

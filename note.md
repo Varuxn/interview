@@ -43,7 +43,11 @@
 5. 综合 total
 
 指标的具体名称是 `环节_指标` ,比如 `introduction_total`
-综合各个环节的指标前缀为 `final_指标`
+各个环节的最终指标前缀为 `final_指标`
+
+根据上面的评估环节和指标设计一个函数，如果在users的表中找不到userId
+则进行初始化：向users表中加入userId，并且向evaluations的表中初始化userId的相关信息
+将上述涉及的4*5=20个指标创建对应的行，得分score设置为-1，description设置为"未测试"
 
 ### 其他
 
