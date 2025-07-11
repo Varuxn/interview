@@ -78,7 +78,7 @@ export default function UploadPage() {
 
       if (response.ok) {
         toast.success("简历评估已提交");
-        router.push("/demo");
+        router.push("/setting");
       } else {
         toast.error(data.error || "提交失败");
       }

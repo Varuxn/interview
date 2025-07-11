@@ -1,16 +1,16 @@
 {
   "originalText": "\n\n姓名：张三\n电话：+86 123-4567-8901 | 邮箱：\nzhangsan@email.com\nGitHub：github.com/zhangsan | 个人博客：zhangsan.blog (可选)\n现居地：北京 | 工作年限：3年\n清华大学 | 计算机科学与技术 硕士\n2020.09 - 2023.06\n• 研究方向：自然语言处理（NLP）、大模型预训练与微调\n• 毕业论文：《基于Transformer的少样本学习在对话系统中的应用》（获优秀论文奖）\n北京大学 | 计算机科学与技术 学士\n2016.09 - 2020.06\nAI研究员（大模型方向） | 字节跳动AILab\n2023.07 - 至今\n• 参与千亿参数大模型的预训练任务，负责数据清洗、分布式训练优化，训练效率提升30%。\n• 设计基于RLHF的对话模型对齐方案，在内部评估中使人工反馈满意度提升25%。\n• 开发模型压缩工具，实现模型推理速度提升2倍（量化+蒸馏技术）。\n大模型微调项目 | 阿里巴巴达摩院（实习）\n教育背景\n工作/项目经历\nMarkdown 转换 PDF 小工具 | markdowntopdf.janqi.comhttps://markdowntopdf.janqi.com/zh.html\n第1页 共3页2025/7/10 15:26\n\n2022.06 - 2022.12\n• 基于LLaMA-2构建垂直领域法律问答模型，通过领域自适应预训练（DAPT）使F1值提升18%。\n• 优化Prompt Engineering流程，减少标注成本40%。\n开源项目 | 个人开发\n• LMFlow-Adaptor：开发支持多模态输入的大模型适配器框架，GitHub Star 500+。\n• Chinese-ChatLLM：开源中文对话微调数据集，被3家创业公司采用。\n• 语言与框架：Python、PyTorch、DeepSpeed、Megatron-LM、vLLM、HuggingFace Transformers\n• 大模型技术：\n◦ 预训练/微调：Full-Parameter/LoRA/P-Tuning/QLoRA\n◦ 推理优化：量化（AWQ/GPTQ）、FlashAttention、张量并行\n◦ 领域应用：Agent设计、RAG、多模态对齐（如LLaVA）\n• 分布式训练：熟练使用FSDP、DDP，有千卡集群调试经验\n• 其他：熟悉LangChain、LlamaIndex等应用开发框架\n• 第一作者，《Efficient Prompt Tuning for Few-shot Learning》, ACL 2023\n• 共同作者专利：《一种大模型推理加速方法》（公开号CNXXXXXX）\n• 对NLP前沿技术（如Mixture of Experts、MoE架构）有持续跟踪\n• 具备扎实的工程能力，能从论文复现到落地部署全流程推进\n• 热衷技术分享，曾在MLNLP社区组织大模型系列讲座\n技术能力\n论文与专利\n自我评价\nMarkdown 转换 PDF 小工具 | markdowntopdf.janqi.comhttps://markdowntopdf.janqi.com/zh.html\n第2页 共3页2025/7/10 15:26\n\nMarkdown 转换 PDF 小工具 | markdowntopdf.janqi.comhttps://markdowntopdf.janqi.com/zh.html\n第3页 共3页2025/7/10 15:26",
   "analysis": {
-    "id": "chatcmpl-89DezfCRYveWNdfCQgz81WJMfP2YK",
+    "id": "chatcmpl-89DylVFKe2Nf143mjGZ7E6IlStrro",
     "object": "chat.completion",
-    "created": 1752143683,
+    "created": 1752230616,
     "model": "gpt-3.5-turbo",
     "choices": [
       {
         "index": 0,
         "message": {
           "role": "assistant",
-          "content": "这份简历的信息内容丰富专业"
+          "content": "张三的简历内容较为完善，涵盖了教育背景、工作经历、技术能力和发表的论文与专利等方面，整体呈现出较强的专业性。以下是一些改进建议，以便进一步提升简历的效果：\n\n1. **联系方式完善**：\n   - 邮箱地址需要填写完全，确保招聘官可以顺利联系到你。\n   - 个人博客可以考虑加入简短的描述，说明博客的主要内容和所覆盖的主题方向。\n\n2. **简历结构和排版**：\n   - 将简历分为清晰的模块，例如教育背景、工作经历、项目经历和技术能力。每个模块使用清晰的标题，以便于阅读和查找信息。\n   - 保持一致的格式，例如对齐方式、项目符号和字体大小等，增强视觉效果。\n\n3. **教育背景**：\n   - 可以在教育背景中添加相关课程或项目，以展示你的专业知识和能力。\n   - 在硕士和本科学位之后，可以增加“相关课程”或者“研究项目”以进一步突出专业技能。\n\n4. **工作经历**：\n   - 在工作经历部分，可以增加使用数字化的成果，例如在字节跳动的工作中，除了30%的训练效率提升，可以提到具体训练所用的数据量或具体的时间跨度，以增强说服力。\n   - 强调你在团队中的角色，比如强调是否是团队的关键成员或领导者，会有助于展示你的职业能力。\n\n5. **项目经历**：\n   - 项目经历可以分开为“主要项目”和“其他项目”，便于突出重要经历。\n   - 在描述项目时，除了具体的成果外，可以简要阐述项目的背景和意义，增加项目的吸引力。\n\n6. **技术能力**：\n   - 技术能力部分可以对各项技能进行评级（如熟悉、精通），并对相应的经验提供更详细的上下文。\n   - 如果有使用不同框架的具体成果或案例，可以考虑将相关经历与技术能力相结合，增加求职者的整体印象。\n\n7. **论文与专利**：\n   - 在论文和专利部分，可以考虑加上一定的背景信息，例如每项研究的目标和应用领域，以便让招聘者更好地理解你的学术贡献。\n   - 若有请求，适当标注论文和专利的链接，以供深入阅读和评估。\n\n8. **自我评价**：\n   - 自我评价中的内容需要更具体，围绕个人的工作风格、团队合作能力、学习能力等方面展开，并且与应聘岗位的要求相匹配。\n   - 可以考虑加入未来的职业目标，显示出明确的职业方向和对新工作的期待。\n\n整体来说，张三的简历已经相当不错，以上改进建议旨在进一步增强简历的专业性和吸引力。"
         },
         "logprobs": null,
         "finish_reason": "stop"
@@ -18,8 +18,8 @@
     ],
     "usage": {
       "prompt_tokens": 1115,
-      "completion_tokens": 13,
-      "total_tokens": 1128,
+      "completion_tokens": 968,
+      "total_tokens": 2083,
       "prompt_tokens_details": {
         "text_tokens": 1108,
         "cached_tokens_details": {}
@@ -27,5 +27,5 @@
       "completion_tokens_details": {}
     }
   },
-  "timestamp": "2025-07-10T10:34:43.895Z"
+  "timestamp": "2025-07-11T10:43:36.142Z"
 }

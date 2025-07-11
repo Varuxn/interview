@@ -20,11 +20,14 @@ export async function fetchUserSettingsAndDetails(userId: string): Promise<{
 
   try {
     // 1. Fetch position_id and interviewer_id from the 'settings' table for the given userId
-    const settingsResponse = await fetch(`/api/query?table=settings&id=${userId}`);
+    const settingsResponse = await fetch(`/api/databases/query?table=settings&id=${userId}`);
     if (!settingsResponse.ok) {
       console.error(`Failed to fetch settings for user ${userId}: ${settingsResponse.statusText}`);
       return null;
     }
+
+    // console.log('Settings 响应为:', settingsResponse);
+
     const settingsData: QueryResponse<RowData | null> = await settingsResponse.json();
 
     if (!settingsData.success || !settingsData.data) {
@@ -32,16 +35,18 @@ export async function fetchUserSettingsAndDetails(userId: string): Promise<{
       return null;
     }
 
+    console.log('Settings 数据:',settingsData.data)
+
     const userSettings = settingsData.data;
-    const positionId = userSettings.position_id; // Assuming column name is position_id
-    const interviewerId = userSettings.interviewer_id; // Assuming column name is interviewer_id
+    const positionId = userSettings.position; // Assuming column name is position_id
+    const interviewerId = userSettings.interviewer; // Assuming column name is interviewer_id
 
     let selectedPosition: PositionRequest | null = null;
     let selectedInterviewer: InterviewerRequest | null = null;
 
     // 2. Fetch detailed position information if positionId exists
     if (positionId) {
-      const positionResponse = await fetch(`/api/query?table=positions&id=${positionId}`);
+      const positionResponse = await fetch(`/api/databases/query?table=positions&id=${positionId}`);
       if (!positionResponse.ok) {
         console.error(`Failed to fetch position details for ID ${positionId}: ${positionResponse.statusText}`);
       } else {
@@ -57,7 +62,7 @@ export async function fetchUserSettingsAndDetails(userId: string): Promise<{
 
     // 3. Fetch detailed interviewer information if interviewerId exists
     if (interviewerId) {
-      const interviewerResponse = await fetch(`/api/query?table=interviewers&id=${interviewerId}`);
+      const interviewerResponse = await fetch(`/api/databases/query?table=interviewers&id=${interviewerId}`);
       if (!interviewerResponse.ok) {
         console.error(`Failed to fetch interviewer details for ID ${interviewerId}: ${interviewerResponse.statusText}`);
       } else {

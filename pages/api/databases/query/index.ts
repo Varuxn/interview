@@ -29,6 +29,7 @@ export default async function handler(
           : Number(req.query.id)
         : undefined
     };
+    console.log('Query 参数为:', queryParams);
 
     const validTables = ['users', 'settings', 'schedules', 'evaluations', 'positions', 'interviewers'];
     if (!queryParams.table || !validTables.includes(queryParams.table)) {
@@ -72,6 +73,8 @@ export default async function handler(
       data: responseData
     };
 
+    console.log('Query 响应为:', response);
+    // console.log('返回:', res.status(200).json(response));
     return res.status(200).json(response);
   } catch (error) {
     console.error('Query error:', error);
