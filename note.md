@@ -89,6 +89,7 @@ npm run build
 然后使用 `npm run dev` 开始调试模式。
 
 在`./page/demo.tsx` 文件下 `synthesizeSpeech` 函数发送报文 `debug=true` 只会返回固定的音频，改为 `debug=false` 才会生成指定音频。
+在`./page/demo.tsx` 文件下 全局变量`debug=true`时不会调用生成问题的api和评估的api。
 
 ## Mysql 表格格式
 

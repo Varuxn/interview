@@ -9,6 +9,10 @@ import useStepRedirect from './api/jump_fuc';
 // Ensure this path is correct based on your project structure
 import { fetchUserSettingsAndDetails } from './api/databases/fetchUserSettings';
 import { PositionRequest, InterviewerRequest } from './api/databases/types'; // Import your type interfaces
+import CircularProgressBarWithGradient from '../components/CircularProgressBarWithGradient';
+import HorizontalProgressBar from '../components/HorizontalProgressBar';
+import { FeedbackData } from '../components/types'; // 从 types 文件导入
+import { skillColors, totalScoreGradientColors } from '../components/color'; // 从 utils 文件导入
 
 // Initialize FFmpeg
 const ffmpeg = createFFmpeg({
@@ -55,18 +59,25 @@ export default function DemoPage() {
   const [isDesktop, setIsDesktop] = useState(false); // 是否为桌面设备
   const [completed, setCompleted] = useState(false); // 是否开始
   const [transcript, setTranscript] = useState(""); // 转录文本
-  const [generatedFeedback, setGeneratedFeedback] = useState(""); // 生成的反馈
-  const [generatedQuestion, setGeneratedQuestion] = useState(""); // 生成的问题
-  const [generatedAudio, setGeneratedAudio] = useState<string | undefined>(undefined); // 存储生成的语音
+  const [generatedFeedback, setGeneratedFeedback] = useState<FeedbackData>({
+    language : 10,
+    profession :30,
+    logic :50,
+    expressiveness :90,
+    total :70,
+    description :"面试表现良好，语言表达清晰，逻辑思维严谨，专业知识扎实，创新能力突出。建议在抗压表现方面继续提升。",
+  }); // 生成的反馈
+  const [generatedQuestion, setGeneratedQuestion] = useState("请简单介绍一下你自己"); // 生成的问题
+  const [generatedAudio, setGeneratedAudio] = useState<string | undefined>(); // 存储生成的语音
   const audioRef = useRef<HTMLAudioElement>(null);
   // 控制音频是否播放完毕
   const [audioEnded, setAudioEnded] = useState(false);
   // 控制音频是否已经手动触发过播放
   const [audioStarted, setAudioStarted] = useState(false);
+  const debug = useState(true);
 
   // Get userId and isLoaded from Clerk's useAuth hook
   const { userId, isLoaded } = useAuth();
-
   // --- Start of new/modified code for fetching initial data ---
   useEffect(() => {
     // Only proceed if Clerk user data is loaded and userId is available
@@ -110,6 +121,10 @@ export default function DemoPage() {
   useStepRedirect(step, 1, '/setting');
 
   useEffect(() => {//设备检测
+    // if(debug)
+    // {
+    //   setAudioEnded(true);
+    // }
     setIsDesktop(window.innerWidth >= 768);
   }, []);
 
@@ -258,18 +273,33 @@ export default function DemoPage() {
 
   //生成题目
   useEffect(() => {
-    if (step === 3) {
-      getQuestion();
-      // console.log("generatedQuestion内容: ", generatedQuestion)
-      synthesizeSpeech()
+    if(!debug) {
+      if (step === 3) {
+        getQuestion();
+        // console.log("generatedQuestion内容: ", generatedQuestion)
+        // synthesizeSpeech()
+      }
     }
   }, [step]);
 
   useEffect(() => {
-      synthesizeSpeech()
+      if(generatedQuestion) {
+        synthesizeSpeech()
+      }
   }, [generatedQuestion]);
 
   const handleDownload = async () => {
+    if(debug)
+    {
+      setSubmitting(true);
+      setStatus("Processing");
+      setStatus("Transcribing");
+      setStatus("提交中...");
+      setSubmitting(false);
+      setIsSuccess(true);
+      setCompleted(true);
+      return;
+    }
     if (recordedChunks.length) {
       setSubmitting(true);
       setStatus("Processing");
@@ -354,19 +384,24 @@ export default function DemoPage() {
         setCompleted(true);
         const evaluation = results.data.evaluation;
         // setGeneratedFeedback(evaluation.feedback);
-        setGeneratedFeedback(
-          `语言表达: ${evaluation.language_expression}\n` +
-          `逻辑思维: ${evaluation.logical_thinking}\n` +
-          `专业知识: ${evaluation.professional_knowledge}\n` +
-          `技能匹配: ${evaluation.skill_matching}\n` +
-          `创新能力: ${evaluation.innovation}\n` +
-          `抗压表现: ${evaluation.stress_response}\n` +
-          `综合评分: ${evaluation.overall_score}\n` +
-          `详细反馈: ${evaluation.feedback}`
-        );
+        setGeneratedFeedback({
+          language: evaluation.language_expression,
+          logic: evaluation.logical_thinking,
+          profession: evaluation.professional_knowledge,
+          expressiveness: evaluation.innovation,
+          total: evaluation.overall_score,
+          description: evaluation.feedback
+        });
       } else {
         setIsSuccess(false);
-        setGeneratedFeedback("提交失败，请重试。");
+        setGeneratedFeedback({
+          language: 0,
+          logic: 0,
+          profession: 0,
+          expressiveness: 0,
+          total: 0,
+          description: "error: " + (results.error || "提交失败，请稍后再试。"),
+        });
       }
   
       setTimeout(function () {
@@ -430,7 +465,7 @@ export default function DemoPage() {
     setIsVisible(true);
     setSeconds(150);
   }
-
+  
   const videoConstraints = isDesktop
     ? { width: 1280, height: 720, facingMode: "user" }
     : { width: 480, height: 640, facingMode: "user" };
@@ -462,6 +497,8 @@ export default function DemoPage() {
           </div>
       );
   }
+
+  const { total, description, ...skills } = generatedFeedback;
 
   return (
     <AnimatePresence>
@@ -573,16 +610,41 @@ export default function DemoPage() {
                       : "Don't think you said anything. Want to try again?"}
                   </p>
                 </div>
-                <div className="mt-8">
-                  <h2 className="text-xl font-semibold text-left text-[#1D2B3A] mb-2">
-                    Feedback
-                  </h2>
-                  <div className="mt-4 text-sm flex gap-2.5 rounded-lg border border-[#EEEEEE] bg-[#FAFAFA] p-4 leading-6 text-gray-900 min-h-[100px]">
-                    <p className="prose prose-sm max-w-none">
-                      {generatedFeedback}
-                    </p>
+                  <div className="mt-8 p-6 bg-white rounded-lg shadow-md">
+                    <h2 className="text-2xl font-bold text-left text-[#1D2B3A] mb-6">
+                      Feedback
+                    </h2>
+
+                    {/* Total Score - Circular Progress Bar */}
+                    <div className="flex justify-center mb-8">
+                      <CircularProgressBarWithGradient
+                        value={total}
+                        label="Total Score"
+                        gradientColors={totalScoreGradientColors} // 使用导入的颜色
+                      />
+                    </div>
+
+                    {/* Individual Skills - Horizontal Progress Bars */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 mb-6">
+                      {Object.entries(skills).map(([key, value]) => (
+                        key !== 'description' && (
+                          <HorizontalProgressBar
+                            key={key}
+                            label={key.charAt(0).toUpperCase() + key.slice(1)}
+                            value={value as number}
+                            colorClass={skillColors[key]} // 使用导入的颜色
+                          />
+                        )
+                      ))}
+                    </div>
+
+                    {/* Description */}
+                    <div className="mt-4 text-sm flex gap-2.5 rounded-lg border border-[#EEEEEE] bg-[#FAFAFA] p-4 leading-6 text-gray-900 min-h-[100px]">
+                      <p className="prose prose-sm max-w-none">
+                        {description}
+                      </p>
+                    </div>
                   </div>
-                </div>
               </motion.div>
             </div>
           ) : (
