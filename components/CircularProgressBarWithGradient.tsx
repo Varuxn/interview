@@ -1,39 +1,33 @@
 import React from 'react';
 import { CircularProgressbarWithChildren, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
+import styles from '../styles/Dashboard.module.css'; // 引入新的样式文件
 
 interface CircularProgressBarWithGradientProps {
   value: number; // 0-100
-  label: string;
-  gradientColors: string[]; // 例如: ['#4CAF50', '#8BC34A']
+  gradientColors: string[]; // 例如: ['#10B981', '#6EE7B7']
 }
 
-const CircularProgressBarWithGradient: React.FC<CircularProgressBarWithGradientProps> = ({ value, label, gradientColors }) => {
-  // 创建渐变 ID，确保唯一性
-  const gradientId = `gradient-${label.toLowerCase().replace(/\s/g, '-')}`;
+const CircularProgressBarWithGradient: React.FC<CircularProgressBarWithGradientProps> = ({ value, gradientColors }) => {
+  // 渐变ID，确保唯一性。使用一个固定的ID即可，因为每个组件实例都有自己的SVG定义域。
+  const gradientId = `circular-progress-gradient`;
 
   return (
-    <div style={{ width: '120px', height: '120px' }}>
+    // 移除固定的 width 和 height，让它填充父容器
+    <div style={{ width: '100%', height: '100%' }}> 
       <CircularProgressbarWithChildren
         value={value}
         styles={buildStyles({
-          // Rotation of path and trail, in number of turns (0-1)
           rotation: 0.25,
-
-          // Whether to use rounded or flat corners on the ends - can use 'butt' or 'round'
           strokeLinecap: 'round',
-
-          // Text size
-          textSize: '16px',
-
-          // Colors
-          pathColor: `url(#${gradientId})`, // 应用渐变色
-          textColor: '#1D2B3A',
-          trailColor: '#d6d6d6',
-          backgroundColor: '#3e98c7',
+          // 使用与新设计一致的颜色
+          pathColor: `url(#${gradientId})`,
+          textColor: '#111827', // 对应 --text-primary
+          trailColor: '#E5E7EB', // 对应 --border-color
+          backgroundColor: '#3e98c7', // 这个颜色通常不可见
         })}
       >
-        {/* SVG Defs for gradient */}
+        {/* SVG Defs for gradient (功能保留) */}
         <svg style={{ height: 0, width: 0 }}>
           <defs>
             <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
@@ -43,10 +37,11 @@ const CircularProgressBarWithGradient: React.FC<CircularProgressBarWithGradientP
             </linearGradient>
           </defs>
         </svg>
-        {/* Content in the middle */}
-        <div className="flex flex-col items-center justify-center">
-          <strong className="text-2xl font-bold text-[#1D2B3A]">{value}</strong>
-          <span className="text-sm text-gray-500">{label}</span>
+
+        {/* 使用 CSS Modules 替换 Tailwind 类名 */}
+        <div className={styles.circularProgressContent}>
+          <strong className={styles.circularProgressValue}>{value}</strong>
+          {/* 根据新设计，label 已被移到外部，此处不再需要 */}
         </div>
       </CircularProgressbarWithChildren>
     </div>

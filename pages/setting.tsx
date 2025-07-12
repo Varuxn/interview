@@ -78,7 +78,7 @@ export default function DemoPage() {
   const [step, setStep] = useState(1);//面试步骤
   const { userId } = useAuth();
 
-  useStepRedirect(step, 3, '/demo');
+  useStepRedirect(step, 3, '/staff');
 
   const handlePosition = async () => {
       if (!selected) {

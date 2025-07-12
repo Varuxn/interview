@@ -14,6 +14,7 @@ import HorizontalProgressBar from '../components/HorizontalProgressBar';
 import { FeedbackData } from '../components/types'; // 从 types 文件导入
 import { skillColors, totalScoreGradientColors } from '../components/color'; // 从 utils 文件导入
 import { useRouter } from 'next/router';
+import styles from '../styles/Dashboard.module.css';
 
 // Initialize FFmpeg
 const ffmpeg = createFFmpeg({
@@ -628,6 +629,27 @@ export default function DemoPage() {
   }
 
   const { total, description, ...skills } = generatedFeedback;
+  // 1. 用于水平进度条的颜色对象
+  const skillColors: { [key: string]: string } = {
+    language: '#3B82F6',       // 蓝色 (对应 语言表达)
+    profession: '#8B5CF6',     // 紫色 (对应 专业能力)
+    logic: '#F97316',          // 橙色 (对应 逻辑思维)
+    expressiveness: '#14B8A6', // 青色 (对应 表现力)
+  };
+
+  // 2. 用于圆形进度条的渐变色定义
+  const totalScoreGradientColors = {
+    high: ['#10B981', '#6EE7B7'], // 优秀 (80+)
+    mid: ['#F59E0B', '#FCD34D'],   // 良好 (60-79)
+    low: ['#EF4444', '#F87171'],    // 有待提高 (<60)
+  };
+
+  // 3. 根据分数选择渐变色的辅助函数
+  const getGradientForScore = (score: number): string[] => {
+    if (score >= 80) return totalScoreGradientColors.high;
+    if (score >= 60) return totalScoreGradientColors.mid;
+    return totalScoreGradientColors.low;
+  };
 
   return (
     <AnimatePresence>
@@ -706,41 +728,39 @@ export default function DemoPage() {
                       : "Don't think you said anything. Want to try again?"}
                   </p>
                 </div>
-                  <div className="mt-8 p-6 bg-white rounded-lg shadow-md">
-                    <h2 className="text-2xl font-bold text-left text-[#1D2B3A] mb-6">
-                      Feedback
-                    </h2>
+                <div className="mt-8 p-6 bg-white rounded-lg shadow-md">
+                  <h2 className="text-2xl font-bold text-left text-[#1D2B3A] mb-6">
+                    Feedback
+                  </h2>
 
-                    {/* Total Score - Circular Progress Bar */}
-                    <div className="flex justify-center mb-8">
-                      <CircularProgressBarWithGradient
-                        value={total}
-                        label="Total Score"
-                        gradientColors={totalScoreGradientColors} // 使用导入的颜色
-                      />
-                    </div>
-
-                    {/* Individual Skills - Horizontal Progress Bars */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 mb-6">
-                      {Object.entries(skills).map(([key, value]) => (
-                        key !== 'description' && (
-                          <HorizontalProgressBar
-                            key={key}
-                            label={key.charAt(0).toUpperCase() + key.slice(1)}
-                            value={value as number}
-                            colorClass={skillColors[key]} // 使用导入的颜色
-                          />
-                        )
-                      ))}
-                    </div>
-
-                    {/* Description */}
-                    <div className="mt-4 text-sm flex gap-2.5 rounded-lg border border-[#EEEEEE] bg-[#FAFAFA] p-4 leading-6 text-gray-900 min-h-[100px]">
-                      <p className="prose prose-sm max-w-none">
-                        {description}
-                      </p>
-                    </div>
+                  {/* 圆形进度条 */}
+                  {/* Changed class here: Use Tailwind for sizing and centering */}
+                  <div className="mx-auto w-48 h-48 flex items-center justify-center"> {/* w-48 h-48 corresponds to 192px by 192px */}
+                    <CircularProgressBarWithGradient
+                      value={total}
+                      gradientColors={getGradientForScore(total)}
+                    />
                   </div>
+
+                  {/* 各项技能的水平进度条 */}
+                  <div className={styles.finalSkillsGrid}>
+                    {Object.entries(skills).map(([key, value]) => (
+                      <HorizontalProgressBar
+                        key={key}
+                        label={key.charAt(0).toUpperCase() + key.slice(1)}
+                        value={value as number}
+                        color={skillColors[key]}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Description */}
+                  <div className="mt-4 text-sm flex gap-2.5 rounded-lg border border-[#EEEEEE] bg-[#FAFAFA] p-4 leading-6 text-gray-900 min-h-[100px]">
+                    <p className="prose prose-sm max-w-none">
+                      {description}
+                    </p>
+                  </div>
+                </div>
               </motion.div>
             </div>
           ) : (

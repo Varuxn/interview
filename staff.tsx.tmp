@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from "@clerk/nextjs";
-import { FiAward, FiBarChart2, FiChevronRight, FiAlertTriangle, FiLoader } from 'react-icons/fi'; // Using react-icons for a clean look
+// import { FiAward, FiBarChart2, FiChevronRight, FiAlertTriangle, FiLoader } from 'react-icons/fi'; // Using react-icons for a clean look
+import { ChevronRight, ArrowRight,Award ,BarChart ,AlertTriangle, Loader } from '@/components/Icons';
 
 import CircularProgressBarWithGradient from '../components/CircularProgressBarWithGradient'; // Adjust path
 import HorizontalProgressBar from '../components/HorizontalProgressBar'; // Adjust path
@@ -97,12 +98,12 @@ const StageCard: React.FC<StageCardProps> = ({ title, stageKey, scores, onNaviga
           <p className={styles.notTestedText}>尚未进行此阶段测试。</p>
         )}
       </div>
-      <button className={styles.demoButton} onClick={() => onNavigate(stageKey)}>
-        {isTested ? '重新测试' : '前往测试'} 
-        <FiChevronRight />
-      </button>
       {/* <button className={styles.demoButton} onClick={() => onNavigate(stageKey)}>
-        {isTested ? '重新测试' : '前往测试'}
+        {isTested ? '查看详情' : '前往测试'} 
+        <FiChevronRight />
+      </button> */}
+      <button className={styles.demoButton} onClick={() => onNavigate(stageKey)}>
+        {isTested ? '查看详情' : '前往测试'}
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
@@ -117,7 +118,7 @@ const StageCard: React.FC<StageCardProps> = ({ title, stageKey, scores, onNaviga
             d="M8.25 4.5l7.5 7.5-7.5 7.5"
           />
         </svg>
-      </button> */}
+      </button>
     </Card>
   );
 };
@@ -184,7 +185,7 @@ const MainDashboard: React.FC = () => {
   if (loading) {
     return (
       <div className={styles.stateContainer}>
-        <FiLoader className={styles.loaderIcon} />
+        <Loader className="w-6 h-6" />
         <p>正在加载您的评估报告...</p>
       </div>
     );
@@ -194,7 +195,7 @@ const MainDashboard: React.FC = () => {
   if (error) {
     return (
       <div className={styles.stateContainer}>
-        <FiAlertTriangle className={styles.errorIcon} />
+        <AlertTriangle className={`${styles.errorIcon} w-5 h-5 text-red-500`} />
         <p>加载评估数据失败</p>
         <small>{error}</small>
         <button onClick={fetchEvaluationData} className={styles.retryButton}>重试</button>
@@ -219,7 +220,7 @@ const MainDashboard: React.FC = () => {
         <section className={styles.leftColumn}>
           <Card>
             <div className={styles.finalScoreHeader}>
-              <FiAward />
+              <Award className="w-5 h-5 text-yellow-500" />
               <h2>最终综合评估</h2>
             </div>
             {typeof finalScores !== 'string' ? (
@@ -249,7 +250,7 @@ const MainDashboard: React.FC = () => {
         {/* --- RIGHT COLUMN: STAGE DETAILS --- */}
         <section className={styles.rightColumn}>
            <div className={styles.stageGridHeader}>
-             <FiBarChart2/>
+             <BarChart className="w-5 h-5 text-blue-500" />
              <h2>各阶段表现</h2>
            </div>
            <div className={styles.stageGrid}>

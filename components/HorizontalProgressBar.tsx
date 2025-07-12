@@ -1,22 +1,27 @@
 import React from 'react';
+import styles from '../styles/Dashboard.module.css'; // 引入新的样式文件
 
 interface HorizontalProgressBarProps {
   label: string;
   value: number; // 0-100
-  colorClass?: string; // Tailwind CSS 颜色类，例如 'bg-blue-500'
+  color: string; // 将 colorClass 替换为 color，直接接收颜色值
 }
 
-const HorizontalProgressBar: React.FC<HorizontalProgressBarProps> = ({ label, value, colorClass = 'bg-blue-500' }) => {
+const HorizontalProgressBar: React.FC<HorizontalProgressBarProps> = ({ label, value, color }) => {
   return (
-    <div className="mb-4">
-      <div className="flex justify-between items-center mb-1">
-        <span className="text-sm font-medium text-gray-700">{label}</span>
-        <span className="text-sm font-semibold text-gray-900">{value}</span>
+    // 使用 CSS Modules 替换 Tailwind 类名
+    <div className={styles.horizontalProgressWrapper}>
+      <div className={styles.horizontalProgressHeader}>
+        <span className={styles.horizontalProgressLabel}>{label}</span>
+        <span className={styles.horizontalProgressValue}>{value}</span>
       </div>
-      <div className="w-full bg-gray-200 rounded-full h-2.5">
+      <div className={styles.horizontalProgressTrack}>
         <div
-          className={`h-2.5 rounded-full ${colorClass}`}
-          style={{ width: `${value}%` }}
+          className={styles.horizontalProgressFill}
+          style={{
+            width: `${value}%`,
+            backgroundColor: color, // 直接使用 color prop 设置背景色
+          }}
         ></div>
       </div>
     </div>

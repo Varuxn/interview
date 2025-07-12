@@ -1,4 +1,4 @@
-import "@/styles/globals.css";
+import "@/styles/globals.css"; // Correctly imports your global CSS (including Tailwind)
 import type { AppProps } from "next/app";
 import { ClerkProvider } from "@clerk/nextjs";
 import Head from "next/head";
