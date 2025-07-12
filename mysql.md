@@ -242,3 +242,27 @@ POST /api/interviewers
 6. **RESTful设计**：遵循REST原则设计API端点
 
 这个实现可以满足您的需求，处理所有表格的创建和更新操作，并提供清晰的请求响应格式。
+
+跳转 demo 传递参数：
+
+```js
+// 在跳转的代码中（如按钮点击事件）
+import { useRouter } from 'next/router';
+
+function SomeComponent() {
+  const router = useRouter();
+
+  const navigateToDemo = (stage: string) => {
+    router.push({
+      pathname: '/demo',
+      query: { stage }, // 传递环节标识
+    });
+  };
+
+  return (
+    <button onClick={() => navigateToDemo('technical')}>
+      进入技术面试环节
+    </button>
+  );
+}
+```

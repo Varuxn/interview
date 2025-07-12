@@ -120,12 +120,40 @@ CREATE TABLE schedules (
 
 -- 创建评估结果表
 CREATE TABLE evaluations (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id VARCHAR(50),  -- 关联用户ID
-    eval_name VARCHAR(100) NOT NULL,  -- 指标的名称
-    score INT,  -- 该指标的得分
-    description TEXT,  -- 更细致的评估内容
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    -- 基础信息列
+    user_id VARCHAR(50) NOT NULL,
+    description TEXT,
+    
+    -- 自我介绍环节(introduction)的5个指标
+    introduction_language INT,
+    introduction_profession INT,
+    introduction_logic INT,
+    introduction_expressiveness INT,
+    introduction_total INT,
+    
+    -- 技术问答环节(technology)的5个指标
+    technology_language INT,
+    technology_profession INT,
+    technology_logic INT,
+    technology_expressiveness INT,
+    technology_total INT,
+    
+    -- 情景案例分析环节(analysis)的5个指标
+    analysis_language INT,
+    analysis_profession INT,
+    analysis_logic INT,
+    analysis_expressiveness INT,
+    analysis_total INT,
+    
+    -- 最终评估的5个指标
+    final_language INT,
+    final_profession INT,
+    final_logic INT,
+    final_expressiveness INT,
+    final_total INT,
+    
+    -- 主键
+    PRIMARY KEY (user_id)
 );
 
 -- 创建岗位信息表

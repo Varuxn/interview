@@ -1,17 +1,12 @@
 // pages/api/initialize-user-evaluation.ts
 import { NextApiRequest, NextApiResponse } from 'next';
-import pool from './databases/db_init'; // Adjust path as needed for your project structure
-
-// --- FIX START ---
-// Import RowDataPacket and ResultSetHeader directly from 'mysql2'
-import { RowDataPacket, ResultSetHeader } from 'mysql2'; 
-// Import your custom types from your types file
-import { ApiResponse, UserRequest, EvaluationRequest } from './databases/types'; 
-// --- FIX END ---
+import pool from './databases/db_init';
+import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { ApiResponse, UserRequest } from './databases/types';
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<ApiResponse<string | UserRequest | EvaluationRequest[] | null>>
+  res: NextApiResponse<ApiResponse<string | UserRequest | null>>
 ) {
   if (req.method !== 'POST') {
     return res.status(405).json({
@@ -42,7 +37,7 @@ export default async function handler(
       isNewUser = true;
       const [insertUserResult]: [ResultSetHeader, any] = await pool.execute(
         `INSERT INTO users (id, name) VALUES (?, ?)`,
-        [userId, `User_${userId}`] // You might want a more sophisticated default name
+        [userId, `User_${userId}`]
       );
 
       if (insertUserResult.affectedRows === 0) {
@@ -50,55 +45,67 @@ export default async function handler(
       }
     }
 
-    // 2. Initialize evaluation records in 'evaluations' table
-    // Define the evaluation sections and metrics
-    const sections = ['introduction', 'technology', 'analysis'];
-    const metrics = ['language', 'profession', 'logic', 'expressiveness', 'total'];
-
-    // Collect all evaluation records to insert
-    const evaluationRecords: Omit<EvaluationRequest, 'user_id'>[] = []; // Omit user_id as it's added below
-
-    sections.forEach(section => {
-      metrics.forEach(metric => {
-        // e.g., introduction_language, introduction_total
-        evaluationRecords.push({
-          eval_name: `${section}_${metric}`,
-          score: -1,
-          description: '未测试'
-        });
-      });
-    });
-
-    // Add final metrics
-    metrics.forEach(metric => {
-      // e.g., final_language, final_total
-      evaluationRecords.push({
-        eval_name: `final_${metric}`,
-        score: -1,
-        description: '未测试'
-      });
-    });
-
-    // Prepare batch insert values
-    const insertValues: any[] = [];
-    let placeholders: string[] = [];
-
-    evaluationRecords.forEach(record => {
-      insertValues.push(userId, record.eval_name, record.score, record.description);
-      placeholders.push('(?, ?, ?, ?)');
-    });
-
-    const insertEvaluationsQuery = `
-      INSERT INTO evaluations (user_id, eval_name, score, description)
-      VALUES ${placeholders.join(', ')}
+    // 2. Initialize evaluation record in 'evaluations' table with new structure
+    const initializeEvaluationQuery = `
+      INSERT INTO evaluations (
+        user_id, 
+        description,
+        introduction_language, introduction_profession, introduction_logic, introduction_expressiveness, introduction_total,
+        technology_language, technology_profession, technology_logic, technology_expressiveness, technology_total,
+        analysis_language, analysis_profession, analysis_logic, analysis_expressiveness, analysis_total,
+        final_language, final_profession, final_logic, final_expressiveness, final_total
+      ) VALUES (
+        ?, 
+        ?,
+        ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?
+      )
+      ON DUPLICATE KEY UPDATE
+        description = VALUES(description),
+        introduction_language = VALUES(introduction_language),
+        introduction_profession = VALUES(introduction_profession),
+        introduction_logic = VALUES(introduction_logic),
+        introduction_expressiveness = VALUES(introduction_expressiveness),
+        introduction_total = VALUES(introduction_total),
+        technology_language = VALUES(technology_language),
+        technology_profession = VALUES(technology_profession),
+        technology_logic = VALUES(technology_logic),
+        technology_expressiveness = VALUES(technology_expressiveness),
+        technology_total = VALUES(technology_total),
+        analysis_language = VALUES(analysis_language),
+        analysis_profession = VALUES(analysis_profession),
+        analysis_logic = VALUES(analysis_logic),
+        analysis_expressiveness = VALUES(analysis_expressiveness),
+        analysis_total = VALUES(analysis_total),
+        final_language = VALUES(final_language),
+        final_profession = VALUES(final_profession),
+        final_logic = VALUES(final_logic),
+        final_expressiveness = VALUES(final_expressiveness),
+        final_total = VALUES(final_total)
     `;
 
+    // All scores initialize to -1 and description to '未测试'
+    const initializationValues = [
+      userId,
+      '未测试',
+      // introduction metrics
+      -1, -1, -1, -1, -1,
+      // technology metrics
+      -1, -1, -1, -1, -1,
+      // analysis metrics
+      -1, -1, -1, -1, -1,
+      // final metrics
+      -1, -1, -1, -1, -1
+    ];
+
     const [insertEvalResult]: [ResultSetHeader, any] = await pool.execute(
-      insertEvaluationsQuery,
-      insertValues
+      initializeEvaluationQuery,
+      initializationValues
     );
 
-    if (insertEvalResult.affectedRows === 0) {
+    if (insertEvalResult.affectedRows === 0 && !isNewUser) {
       throw new Error('Failed to initialize evaluation records.');
     }
 
@@ -107,7 +114,7 @@ export default async function handler(
       message: isNewUser
         ? `User ${userId} initialized and evaluation records created successfully.`
         : `User ${userId} already exists. Evaluation records initialized/re-initialized successfully.`,
-      data: null // Or you could return the created evaluation records
+      data: null
     });
 
   } catch (error) {

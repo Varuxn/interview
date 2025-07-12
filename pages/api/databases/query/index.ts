@@ -1,4 +1,4 @@
-// pages/api/query.ts
+// pages/api/databases/query.ts
 import { NextApiRequest, NextApiResponse } from 'next';
 import pool from '../db_init'; // 确保路径正确，根据您的项目结构调整
 import { QueryRequest, QueryResponse, RowData } from '../types'; // 确保路径正确
@@ -6,88 +6,216 @@ import { RowDataPacket } from 'mysql2'; // 导入 RowDataPacket 直接从 mysql2
 
 export default async function handler(
   req: NextApiRequest,
-  // NextApiResponse 的泛型参数直接使用 QueryResponse，
-  // 因为 QueryResponse 本身已经有默认的泛型类型处理了 data 字段
   res: NextApiResponse<QueryResponse<RowData | RowData[] | null>>
 ) {
-  // query 路由通常使用 GET 方法来获取数据
-  if (req.method !== 'GET') {
-    return res.status(405).json({
+  try {
+    if (req.method === 'GET') {
+      await handleGetRequest(req, res);
+    } else if (req.method === 'POST') {
+      await handlePostRequest(req, res);
+    } else {
+      return res.status(405).json({
+        success: false,
+        message: 'Method Not Allowed. Only GET and POST are allowed.',
+        data: null
+      });
+    }
+  } catch (error) {
+    console.error('API handler error:', error);
+    let errorMessage = 'An unexpected error occurred';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+    return res.status(500).json({
       success: false,
-      message: 'Method Not Allowed. Only GET is allowed for queries.',
-      data: null // 根据 QueryResponse 类型，data 可以是 null
+      message: errorMessage,
+      data: null
+    });
+  }
+}
+
+async function handleGetRequest(
+  req: NextApiRequest,
+  res: NextApiResponse<QueryResponse<RowData | RowData[] | null>>
+) {
+  // 从 req.query 中解析参数
+  const queryParams: QueryRequest = {
+    table: req.query.table as string,
+    id: req.query.id
+      ? isNaN(Number(req.query.id))
+        ? req.query.id.toString()
+        : Number(req.query.id)
+      : undefined
+  };
+  console.log('Query 参数为:', queryParams);
+
+  const validTables = ['users', 'settings', 'schedules', 'evaluations', 'positions', 'interviewers'];
+  if (!queryParams.table || !validTables.includes(queryParams.table)) {
+    const response: QueryResponse = {
+      success: false,
+      message: 'Invalid or missing table name',
+      data: null
+    };
+    return res.status(400).json(response);
+  }
+
+  let query: string;
+  let params: (string | number)[] = [];
+
+  if (queryParams.id !== undefined) {
+    query = `SELECT * FROM ${queryParams.table} WHERE id = ?`;
+    params = [queryParams.id];
+  } else {
+    query = `SELECT * FROM ${queryParams.table}`;
+  }
+
+  const [rows]: [RowDataPacket[], any] = await pool.query(query, params);
+  const typedRows = rows as RowData[];
+
+  const responseData = queryParams.id !== undefined
+    ? typedRows.length > 0
+      ? typedRows[0]
+      : null
+    : typedRows;
+
+  const response: QueryResponse<RowData | RowData[] | null> = {
+    success: true,
+    message: queryParams.id !== undefined
+      ? (responseData ? 'Record fetched successfully' : 'Record not found')
+      : 'All records fetched successfully',
+    data: responseData
+  };
+
+  console.log('Query 响应为:', response);
+  return res.status(200).json(response);
+}
+
+async function handlePostRequest(
+  req: NextApiRequest,
+  res: NextApiResponse<QueryResponse<null>>
+) {
+  const { table, action, criteria, values } = req.body;
+
+  if (!table || !action) {
+    return res.status(400).json({
+      success: false,
+      message: 'Missing table or action in request body',
+      data: null
+    });
+  }
+
+  const validTables = ['users', 'settings', 'schedules', 'evaluations', 'positions', 'interviewers'];
+  if (!validTables.includes(table)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid table name',
+      data: null
     });
   }
 
   try {
-    // 从 req.query 中解析参数
-    const queryParams: QueryRequest = {
-      table: req.query.table as string, // req.query.table 可能是 string | string[] | undefined
-      id: req.query.id
-        ? isNaN(Number(req.query.id)) // 检查是否是数字，因为 id 可以是 string 或 number
-          ? req.query.id.toString()
-          : Number(req.query.id)
-        : undefined
-    };
-    console.log('Query 参数为:', queryParams);
+    if (action === 'update') {
+      if (!criteria || !values) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing criteria or values for update action',
+          data: null
+        });
+      }
 
-    const validTables = ['users', 'settings', 'schedules', 'evaluations', 'positions', 'interviewers'];
-    if (!queryParams.table || !validTables.includes(queryParams.table)) {
-      const response: QueryResponse = {
-        success: false,
-        message: 'Invalid or missing table name',
-        data: null
-      };
-      return res.status(400).json(response);
-    }
+      // Construct SET clause
+      const setClauses: string[] = [];
+      const setValues: (string | number)[] = [];
+      for (const key in values) {
+        if (Object.prototype.hasOwnProperty.call(values, key)) {
+          setClauses.push(`${key} = ?`);
+          setValues.push(values[key]);
+        }
+      }
 
-    let query: string;
-    let params: (string | number)[] = [];
+      // Construct WHERE clause
+      const whereClauses: string[] = [];
+      const whereValues: (string | number)[] = [];
+      for (const key in criteria) {
+        if (Object.prototype.hasOwnProperty.call(criteria, key)) {
+          whereClauses.push(`${key} = ?`);
+          whereValues.push(criteria[key]);
+        }
+      }
 
-    if (queryParams.id !== undefined) {
-      query = `SELECT * FROM ${queryParams.table} WHERE id = ?`;
-      params = [queryParams.id];
+      if (setClauses.length === 0 || whereClauses.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'No valid fields to update or criteria provided',
+          data: null
+        });
+      }
+
+      const query = `UPDATE ${table} SET ${setClauses.join(', ')} WHERE ${whereClauses.join(' AND ')}`;
+      const params = [...setValues, ...whereValues];
+
+      console.log('UPDATE query:', query, 'with params:', params);
+      const [result]: [any, any] = await pool.query(query, params);
+
+      if (result.affectedRows > 0) {
+        return res.status(200).json({
+          success: true,
+          message: 'Record updated successfully',
+          data: null
+        });
+      } else {
+        return res.status(404).json({
+          success: false,
+          message: 'Record not found or no changes made',
+          data: null
+        });
+      }
+    } else if (action === 'insert') {
+        if (!values) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing values for insert action',
+                data: null
+            });
+        }
+
+        const columns = Object.keys(values).join(', ');
+        const placeholders = Object.values(values).map(() => '?').join(', ');
+        const insertValues = Object.values(values);
+
+        const query = `INSERT INTO ${table} (${columns}) VALUES (${placeholders})`;
+        const [result]: [any, any] = await pool.query(query, insertValues);
+
+        if (result.affectedRows > 0) {
+            return res.status(201).json({
+                success: true,
+                message: 'Record inserted successfully',
+                data: null
+            });
+        } else {
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to insert record',
+                data: null
+            });
+        }
     } else {
-      query = `SELECT * FROM ${queryParams.table}`;
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid action specified. Supported actions: update, insert.',
+        data: null
+      });
     }
-
-    // 执行查询，并明确指定结果的类型为 RowDataPacket[]
-    const [rows]: [RowDataPacket[], any] = await pool.query(query, params);
-
-    // 将 RowDataPacket[] 转换为 RowData[]。
-    // 由于 RowData 扩展了 RowDataPacket，直接断言通常是安全的。
-    const typedRows = rows as RowData[];
-
-    // 根据是否存在 ID 参数，返回单个记录或记录数组
-    const responseData = queryParams.id !== undefined
-      ? typedRows.length > 0
-        ? typedRows[0] // 如果有 ID，返回第一条记录
-        : null         // 如果有 ID 但未找到记录，返回 null
-      : typedRows;     // 如果没有 ID，返回所有记录数组
-
-    const response: QueryResponse<RowData | RowData[] | null> = { // 明确泛型类型
-      success: true,
-      message: queryParams.id !== undefined
-        ? (responseData ? 'Record fetched successfully' : 'Record not found')
-        : 'All records fetched successfully',
-      data: responseData
-    };
-
-    console.log('Query 响应为:', response);
-    // console.log('返回:', res.status(200).json(response));
-    return res.status(200).json(response);
   } catch (error) {
-    console.error('Query error:', error);
-    let errorMessage = 'Database query failed';
+    console.error('POST request error:', error);
+    let errorMessage = 'Database operation failed';
     if (error instanceof Error) {
       errorMessage = error.message;
     }
-
-    const response: QueryResponse<null> = { // 错误时 data 为 null
+    return res.status(500).json({
       success: false,
       message: errorMessage,
       data: null
-    };
-    return res.status(500).json(response);
+    });
   }
 }

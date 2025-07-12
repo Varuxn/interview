@@ -13,6 +13,7 @@ import CircularProgressBarWithGradient from '../components/CircularProgressBarWi
 import HorizontalProgressBar from '../components/HorizontalProgressBar';
 import { FeedbackData } from '../components/types'; // 从 types 文件导入
 import { skillColors, totalScoreGradientColors } from '../components/color'; // 从 utils 文件导入
+import { useRouter } from 'next/router';
 
 // Initialize FFmpeg
 const ffmpeg = createFFmpeg({
@@ -24,6 +25,7 @@ const ffmpeg = createFFmpeg({
 function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(" ");
 }
+
 
 export default function DemoPage() {
   // Use proper types for selected and selectedInterviewer, initialized to null
@@ -75,6 +77,11 @@ export default function DemoPage() {
   // 控制音频是否已经手动触发过播放
   const [audioStarted, setAudioStarted] = useState(false);
   const debug = useState(true);
+  const router = useRouter();
+  const { stage } = router.query; // 获取环节标识
+
+  // 设置默认值
+  const currentStage = typeof stage === 'string' ? stage : 'final';
 
   // Get userId and isLoaded from Clerk's useAuth hook
   const { userId, isLoaded } = useAuth();
@@ -295,6 +302,14 @@ export default function DemoPage() {
       setStatus("Processing");
       setStatus("Transcribing");
       setStatus("提交中...");
+      setGeneratedFeedback({
+          language: 20,
+          logic: 100,
+          profession: 40,
+          expressiveness: 70,
+          total: 90,
+          description: "测试用文本",
+        });
       setSubmitting(false);
       setIsSuccess(true);
       setCompleted(true);
@@ -478,6 +493,120 @@ export default function DemoPage() {
     }, 1000);
   };
   
+  interface EvaluationUpdatePayload {
+  table: string;
+  action: 'update' | 'insert';
+  criteria?: { [key: string]: any }; // For update operations
+  values: { [key: string]: any }; // For insert or update values
+  }
+  useEffect(() => {
+    // Ensure userId is loaded and not null, and generatedFeedback exists
+    if (!isLoaded || !userId || !generatedFeedback) {
+      console.log('Skipping evaluation update: userId or feedback not ready.');
+      return;
+    }
+
+    const updateEvaluationMetrics = async () => {
+      console.log(`Attempting to update evaluation for stage: ${currentStage} for user: ${userId}`);
+
+      // Construct the column names based on the currentStage
+      const columnsToUpdate: { [key: string]: any } = {
+        description: generatedFeedback.description, // description is shared across all stages
+      };
+
+      // Dynamically add stage-specific metrics to the update payload
+      columnsToUpdate[`${currentStage}_language`] = generatedFeedback.language;
+      columnsToUpdate[`${currentStage}_profession`] = generatedFeedback.profession;
+      columnsToUpdate[`${currentStage}_logic`] = generatedFeedback.logic;
+      columnsToUpdate[`${currentStage}_expressiveness`] = generatedFeedback.expressiveness;
+      columnsToUpdate[`${currentStage}_total`] = generatedFeedback.total;
+
+      // Attempt to UPDATE first
+      let updatePayload: EvaluationUpdatePayload = {
+        table: 'evaluations',
+        action: 'update',
+        criteria: { user_id: userId },
+        values: columnsToUpdate,
+      };
+
+      try {
+        let response = await fetch('/api/databases/query', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updatePayload),
+        });
+
+        let result = await response.json();
+
+        if (response.ok && result.success) {
+          console.log(`Successfully updated evaluation for user ${userId}, stage ${currentStage}:`, result.message);
+        } else if (response.status === 404 && result.message === 'Record not found or no changes made') {
+          // If update failed because record not found, attempt to INSERT
+          console.log(`No existing record for user ${userId}. Attempting to insert...`);
+
+          let insertPayload: EvaluationUpdatePayload = {
+            table: 'evaluations',
+            action: 'insert',
+            values: {
+              user_id: userId, // Include user_id for insertion
+              ...columnsToUpdate,
+            },
+          };
+
+          // For an insert, if a column is not provided, it will default to NULL or its default value.
+          // To ensure all stage columns exist when inserting, you might need to initialize them
+          // to NULL or 0 for other stages not currently being evaluated.
+          // This requires fetching the full list of columns from your table schema or explicitly
+          // adding them here. For simplicity, we'll only add the current stage's values.
+          // If the database schema defines NOT NULL for these columns without defaults,
+          // you'll need to explicitly set them (e.g., to 0) for all stages in the initial insert.
+          // Example of explicitly setting all stage columns for a new insert:
+          const allStageMetrics = ['language', 'profession', 'logic', 'expressiveness', 'total'];
+          const stages = ['introduction', 'technology', 'analysis', 'final'];
+          stages.forEach(stage => {
+            allStageMetrics.forEach(metric => {
+              const colName = `${stage}_${metric}`;
+              // Only set if not already present from currentStage evaluation
+              if (!(colName in insertPayload.values)) {
+                insertPayload.values[colName] = null; // Or 0, depending on your desired default
+              }
+            });
+          });
+
+
+          response = await fetch('/api/databases/query', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(insertPayload),
+          });
+
+          result = await response.json();
+
+          if (response.ok && result.success) {
+            console.log(`Successfully inserted new evaluation record for user ${userId}, stage ${currentStage}:`, result.message);
+          } else {
+            console.error(`Failed to insert evaluation record for user ${userId}:`, result.message);
+            const errorText = await response.text();
+            console.error(`Network response for insert was not ok: ${response.status} - ${errorText}`);
+          }
+        } else {
+          console.error(`Failed to update evaluation for user ${userId}, stage ${currentStage}:`, result.message);
+          const errorText = await response.text();
+          console.error(`Network response for update was not ok: ${response.status} - ${errorText}`);
+        }
+      } catch (error) {
+        console.error(`Error updating/inserting evaluation for user ${userId}:`, error);
+      }
+      console.log('Finished attempting to update evaluation for this feedback change.');
+    };
+
+    updateEvaluationMetrics();
+  }, [generatedFeedback, userId, isLoaded, currentStage]);
+
   // Render logic based on loading state
   if (loading) {
     return (
@@ -556,39 +685,6 @@ export default function DemoPage() {
                     视频不会存储在服务器上，并且会在您离开页面后消失。
                   </p>
                 </div>
-                <Link
-                  href="https://github.com/Tameyer41/liftoff"
-                  target="_blank"
-                  className="group rounded-full pl-[8px] min-w-[180px] pr-4 py-2 text-[13px] font-semibold transition-all flex items-center justify-center bg-[#1E2B3A] text-white hover:[linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1)), #0D2247] no-underline flex gap-x-2  active:scale-95 scale-100 duration-75"
-                  style={{
-                    boxShadow:
-                      "0px 1px 4px rgba(13, 34, 71, 0.17), inset 0px 0px 0px 1px #061530, inset 0px 0px 0px 2px rgba(255, 255, 255, 0.1)",
-                  }}
-                >
-                  <span className="w-5 h-5 rounded-full bg-[#407BBF] flex items-center justify-center">
-                    <svg
-                      className="w-[16px] h-[16px] text-white"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M4.75 7.75C4.75 6.64543 5.64543 5.75 6.75 5.75H17.25C18.3546 5.75 19.25 6.64543 19.25 7.75V16.25C19.25 17.3546 18.3546 18.25 17.25 18.25H6.75C5.64543 18.25 4.75 17.3546 4.75 16.25V7.75Z"
-                      ></path>
-                      <path
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M5.5 6.5L12 12.25L18.5 6.5"
-                      ></path>
-                    </svg>
-                  </span>
-                  Star on Github
-                </Link>
               </motion.div>
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
