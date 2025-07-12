@@ -41,7 +41,7 @@ async function handleGetRequest(
   // 从 req.query 中解析参数
   const queryParams: QueryRequest = {
     table: req.query.table as string,
-    id: req.query.id
+    id: req.query.id // This 'id' refers to the value passed in the URL query, which will be the user_id for 'evaluations'
       ? isNaN(Number(req.query.id))
         ? req.query.id.toString()
         : Number(req.query.id)
@@ -62,12 +62,21 @@ async function handleGetRequest(
   let query: string;
   let params: (string | number)[] = [];
 
+  // --- MODIFICATION START ---
   if (queryParams.id !== undefined) {
-    query = `SELECT * FROM ${queryParams.table} WHERE id = ?`;
-    params = [queryParams.id];
+    // If the table is 'evaluations', use 'user_id' for the WHERE clause
+    if (queryParams.table === 'evaluations') {
+      query = `SELECT * FROM ${queryParams.table} WHERE user_id = ?`;
+      params = [queryParams.id];
+    } else {
+      // For other tables, assume 'id' is the primary key
+      query = `SELECT * FROM ${queryParams.table} WHERE id = ?`;
+      params = [queryParams.id];
+    }
   } else {
     query = `SELECT * FROM ${queryParams.table}`;
   }
+  // --- MODIFICATION END ---
 
   const [rows]: [RowDataPacket[], any] = await pool.query(query, params);
   const typedRows = rows as RowData[];

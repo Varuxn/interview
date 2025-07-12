@@ -12,8 +12,8 @@
 * `eval_resume.ts` 调用llm对简历的文本进行评估，结果储存到了 `interview/data/resume/temp.txt` 中
 * `transcribe.ts` 语音听写的后端，调用科大讯飞的 api
 * `synthesis.ts` 语音合成的后端
-* `db_init.ts` 数据库后端初始化部分（在做）
-* `db_server.ts` 数据库后端主体部分（在做）
+* `db_init.ts` 数据库后端初始化部分
+* `/databases` 数据库后端主体部分
 * `types.ts` 数据库请求格式规范
 
 **未做**
