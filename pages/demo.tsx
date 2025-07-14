@@ -1,1109 +1,648 @@
-import { AnimatePresence, motion } from "framer-motion";
-import { v4 as uuid } from "uuid";
-import Link from "next/link";
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import Webcam from "react-webcam";
-import { createFFmpeg, fetchFile } from "@ffmpeg/ffmpeg";
-import { useAuth } from "@clerk/nextjs"; // Import useAuth to get userId
-import useStepRedirect from './api/jump_fuc';
-// Ensure this path is correct based on your project structure
-import { fetchUserSettingsAndDetails } from './api/databases/fetchUserSettings';
-import { PositionRequest, InterviewerRequest } from './api/databases/types'; // Import your type interfaces
-import CircularProgressBarWithGradient from '../components/CircularProgressBarWithGradient';
-import HorizontalProgressBar from '../components/HorizontalProgressBar';
-import { FeedbackData } from '../components/types'; // 从 types 文件导入
-import { skillColors, totalScoreGradientColors } from '../components/color'; // 从 utils 文件导入
-import { useRouter } from 'next/router';
-import styles from '../styles/Dashboard.module.css';
+import { motion } from "framer-motion";
+import { v4 as uuid } from "uuid";
 
-// Initialize FFmpeg
-const ffmpeg = createFFmpeg({
-  corePath: "https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js",
-  log: true,
-});
-
-// Helper function: merge multiple CSS class names, filtering out empty values
-function classNames(...classes: string[]) {
-  return classes.filter(Boolean).join(" ");
+interface Message {
+  id: string;
+  text: string;
+  sender: "user" | "alex" | "system";
 }
 
+interface Device {
+  deviceId: string;
+  kind: string;
+  label: string;
+  groupId: string;
+}
 
-export default function DemoPage() {
-  // Use proper types for selected and selectedInterviewer, initialized to null
-  const [selected, setSelected] = useState<PositionRequest | null>({
-    id: 1,
-    name: "人工智能",
-    description: "机器学习工程师、算法研究员、NLP工程师...",
-    difficulty: "hard",
-  });
-  const [selectedInterviewer, setSelectedInterviewer] = useState<InterviewerRequest | null>({
-    id: "Alex",
-    name: "Alex",
-    description: "高级算法工程师 | 性格：理性冷静｜面试风格：深挖技术细节，重视代码严谨性",
-    country : "CN",
-    level: "L4",
-  });
-
-  const [step, setStep] = useState(3); // 面试步骤
-  const [loading, setLoading] = useState(true); // 加载状态 (true initially because we're fetching data)
-  const webcamRef = useRef<Webcam | null>(null); // 存储 Webcam 组件.current未挂载=null，挂载指向组件实例
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null); // 引用媒体录制器
-  const [capturing, setCapturing] = useState(false); // 是否正在录制
-  const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]); // 存储录制的视频数据块
-  const [seconds, setSeconds] = useState(150); // 倒计时秒数
-  const [videoEnded, setVideoEnded] = useState(false); // 视频是否结束
-  const [recordingPermission, setRecordingPermission] = useState(true); // 录制权限
-  const [cameraLoaded, setCameraLoaded] = useState(false); // 摄像头是否加载
-  const vidRef = useRef<HTMLVideoElement>(null); // 引用视频元素，语法同webcamRef
-  const [isSubmitting, setSubmitting] = useState(false); // 是否正在提交数据
-  const [status, setStatus] = useState("Processing"); // 当前状态
-  const [isSuccess, setIsSuccess] = useState(false); // 成功
-  const [isVisible, setIsVisible] = useState(true); // 控制某些UI元素是否可见
-  const [isDesktop, setIsDesktop] = useState(false); // 是否为桌面设备
-  const [completed, setCompleted] = useState(false); // 是否开始
-  const [transcript, setTranscript] = useState(""); // 转录文本
-  const [generatedFeedback, setGeneratedFeedback] = useState<FeedbackData>({
-    language : 10,
-    profession :30,
-    logic :50,
-    expressiveness :90,
-    total :70,
-    description :"面试表现良好，语言表达清晰，逻辑思维严谨，专业知识扎实，创新能力突出。建议在抗压表现方面继续提升。",
-  }); // 生成的反馈
-  const [generatedQuestion, setGeneratedQuestion] = useState("请简单介绍一下你自己"); // 生成的问题
-  const [generatedAudio, setGeneratedAudio] = useState<string | undefined>(); // 存储生成的语音
-  const audioRef = useRef<HTMLAudioElement>(null);
-  // 控制音频是否播放完毕
-  const [audioEnded, setAudioEnded] = useState(false);
-  // 控制音频是否已经手动触发过播放
-  const [audioStarted, setAudioStarted] = useState(false);
-  const debug = useState(true);
-  const router = useRouter();
-  const { stage } = router.query; // 获取环节标识
-
-  // 设置默认值
-  const currentStage = typeof stage === 'string' ? stage : 'final';
-
-  // Get userId and isLoaded from Clerk's useAuth hook
-  const { userId, isLoaded } = useAuth();
-  // --- Start of new/modified code for fetching initial data ---
-  useEffect(() => {
-    // Only proceed if Clerk user data is loaded and userId is available
-    if (!isLoaded || !userId) {
-      // If not loaded or no user, keep loading state or handle accordingly
-      // For now, we'll just return and wait for userId to be available
-      return;
-    }
-
-    const loadUserSettings = async () => {
-      setLoading(true); // Indicate that data is being loaded
-      try {
-        const data = await fetchUserSettingsAndDetails(userId);
-        if (data) {
-          setSelected(data.selected);
-          setSelectedInterviewer(data.selectedInterviewer);
-          console.log("User settings and details loaded successfully:", data);
-        } else {
-          // Handle case where settings or details are not found for the user
-          console.warn(`User settings or details not found for ID: ${userId}. 
-                       Defaulting to null or consider setting default values.`);
-          setSelected(null); // Explicitly set to null if not found
-          setSelectedInterviewer(null); // Explicitly set to null if not found
-          // Optionally, set an error state here if defaults are not acceptable
-        }
-      } catch (error) {
-        console.error("Failed to load user settings and details:", error);
-        // Handle error, e.g., display an error message to the user
-        setSelected(null); // Clear previous values on error
-        setSelectedInterviewer(null);
-        // Perhaps set an error state here to show an error message on UI
-      } finally {
-        setLoading(false); // Data loading complete (whether successful or with error)
-      }
-    };
-
-    loadUserSettings();
-  }, [userId, isLoaded]); // Dependency array: re-run when userId or isLoaded changes
-
-
-  useStepRedirect(step, 1, '/setting');
-
-  useEffect(() => {//设备检测
-    // if(debug)
-    // {
-    //   setAudioEnded(true);
-    // }
-    setIsDesktop(window.innerWidth >= 768);
-  }, []);
-
-  useEffect(() => {
-    if (videoEnded) {
-      const element = document.getElementById("startTimer");
-
-      if (element) {
-        element.style.display = "flex";// 显示计时器UI
-      }
-
-      setCapturing(true);
-      setIsVisible(false);
-
-      //初始化媒体录制器
-      mediaRecorderRef.current = new MediaRecorder(
-        webcamRef?.current?.stream as MediaStream
-      );
-      mediaRecorderRef.current.addEventListener(//视频数据监听调用handleDataAvailable
-        "dataavailable",
-        handleDataAvailable
-      );
-      mediaRecorderRef.current.start();//开始录制
-    }
-  }, [videoEnded, webcamRef, setCapturing, mediaRecorderRef]);
-
-  const handleStartCaptureClick = useCallback(() => {//开始录制
-    const startTimer = document.getElementById("startTimer");
-    if (startTimer) {
-      startTimer.style.display = "none";
-    }
-
-    if (vidRef.current) {
-      vidRef.current.play();//播放引导视频
-    }
-  }, [webcamRef, setCapturing, mediaRecorderRef]);
-
-  const handleDataAvailable = useCallback(//视频数据收集到recordedChunks
-    ({ data }: BlobEvent) => {
-      if (data.size > 0) {
-        setRecordedChunks((prev) => prev.concat(data));
-      }
-    },
-    [setRecordedChunks]
-  );
-
-  const handleStopCaptureClick = useCallback(() => {//停止录制
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop();
-    }
-    setCapturing(false);
-  }, [mediaRecorderRef, webcamRef, setCapturing]);
-
-  useEffect(() => {//倒计时控制
-    let timer: any = null;
-    if (capturing) {
-      timer = setInterval(() => {
-        setSeconds((seconds) => seconds - 1);
-      }, 1000);
-      if (seconds === 0) {
-        handleStopCaptureClick();
-        setCapturing(false);
-        setSeconds(0);
-      }
-    }
-    return () => {
-      clearInterval(timer);
-    };
-  });
-
-  const getQuestion = useCallback(async () => {
-    // This check is still vital for runtime safety, even with TypeScript's help below
-    if (!selected) {
-      console.error("Selected position is not loaded yet. Cannot generate question.");
-      return;
-    }
-
-    const response = await fetch("http://localhost:5000/api/v1/generate_question", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        // TypeScript now knows 'selected' is not null here due to the check above
-        domain: selected.description,
-        difficulty: selected.difficulty,
-      }),
-    });
-    const result = await response.json();
-    if (result.success && result.data && result.data.question) {
-      setGeneratedQuestion(result.data.question);
-    } else {
-      setGeneratedQuestion("未能生成面试问题，请重试。");
-    }
-  }, [selected]); // Dependency array: recreate getQuestion if 'selected' changes
-
-  // Define synthesizeSpeech similarly
-  const synthesizeSpeech = useCallback(async () => {
-    console.log('已进入音频生成函数');
-    if (!generatedQuestion) {
-      setStatus("Please provide text to synthesize.");
-      console.log('Please provide text to synthesize.');
-      return;
-    }
-
-    if (!selectedInterviewer) {
-      console.error("Selected interviewer is not loaded yet. Cannot synthesize speech.");
-      return;
-    }
-
-    setGeneratedAudio(undefined);
-    console.log('开始尝试生成面试官音频');
-    const person =
-      selectedInterviewer.name === "Alex"
-        ? `x5_lingfeiyi_flow`
-        : selectedInterviewer.name === "Bob"
-        ? `x4_lingfeizhe_oral`
-        : `x5_lingyuyan_flow`;
+const DualCameraRecorder = () => {
+  // Refs
+  const webcamRef1 = useRef<Webcam>(null);
+  const videoRef2 = useRef<HTMLVideoElement>(null);
+  const mediaRecorderRef1 = useRef<MediaRecorder | null>(null);
+  const mediaRecorderRef2 = useRef<MediaRecorder | null>(null);
+  
+  // Video and audio chunks
+  const recordedChunksRef1 = useRef<Blob[]>([]);
+  const recordedChunksRef2 = useRef<Blob[]>([]);
+  
+  // State management
+  const [recording, setRecording] = useState(false);
+  const [countdown, setCountdown] = useState(150); // 默认150秒
+  const [messages, setMessages] = useState<Message[]>([
+    { id: uuid(), text: "你好，我是Alex！准备好开始面试了吗？", sender: "alex" },
+    { id: uuid(), text: "我已经准备好了，随时可以开始。", sender: "user" }
+  ]);
+  
+  // Device management
+  const [videoDevices, setVideoDevices] = useState<Device[]>([]);
+  const [audioDevices, setAudioDevices] = useState<Device[]>([]);
+  const [selectedVideoDevice1, setSelectedVideoDevice1] = useState<string>("");
+  const [selectedVideoDevice2, setSelectedVideoDevice2] = useState<string>("");
+  const [selectedAudioDevice, setSelectedAudioDevice] = useState<string>("");
+  const [cameraLoaded, setCameraLoaded] = useState(false);
+  const [recordingPermission, setRecordingPermission] = useState(false);
+  const [deviceError, setDeviceError] = useState<string | null>(null);
+  const [camera2Error, setCamera2Error] = useState(false);
+  const [camera2Stream, setCamera2Stream] = useState<MediaStream | null>(null);
+  const [camera1Ready, setCamera1Ready] = useState(false);
+  
+  // 初始化录制设置
+  const initializeRecording = () => {
+    recordedChunksRef1.current = [];
+    recordedChunksRef2.current = [];
+    setRecording(false);
+    setCountdown(150);
+  };
+  
+  // 添加新消息到对话框
+  const addMessage = (text: string, sender: "user" | "alex" | "system" = "user") => {
+    setMessages(prev => [...prev, { id: uuid(), text, sender }]);
+  };
+  
+  // 获取设备列表
+  const getDevices = useCallback(async () => {
     try {
-      const response = await fetch('/api/synthesis', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: generatedQuestion,
-          voice: person, // Now safe
-          debug: true
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.log('面试官音频生成失败', errorData);
-        throw new Error(errorData.details || `HTTP error! Status: ${response.status}`);
-      }
-
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-      setGeneratedAudio(audioUrl);
-      console.log('Audio generated successfully!');
-
-    } catch (err) {
-      console.error('Error synthesizing speech:', err);
-      setStatus(`Failed to synthesize speech: ${err instanceof Error ? err.message : String(err)}`);
-    }
-  }, [generatedQuestion, selectedInterviewer]);
-
-  //生成题目
-  useEffect(() => {
-    if(!debug) {
-      if (step === 3) {
-        getQuestion();
-        // console.log("generatedQuestion内容: ", generatedQuestion)
-        // synthesizeSpeech()
-      }
-    }
-  }, [step]);
-
-  useEffect(() => {
-      if(generatedQuestion) {
-        synthesizeSpeech()
-      }
-  }, [generatedQuestion]);
-
-  const handleDownload = async () => {
-    if(debug)
-    {
-      setSubmitting(true);
-      setStatus("Processing");
-      setStatus("Transcribing");
-      setStatus("提交中...");
-      setGeneratedFeedback({
-          language: 20,
-          logic: 100,
-          profession: 40,
-          expressiveness: 70,
-          total: 90,
-          description: "测试用文本",
-        });
-      setSubmitting(false);
-      setIsSuccess(true);
-      setCompleted(true);
-      return;
-    }
-    if (recordedChunks.length) {
-      setSubmitting(true);
-      setStatus("Processing");
-  
-      const file = new Blob(recordedChunks, { type: `video/webm` });
-      const unique_id = uuid();
+      setDeviceError(null);
+      setCamera2Error(false);
       
-      console.log("recordedChunks 的长度为:", recordedChunks.length); // 检查是否有数据
-      console.log("Blob size:", file.size); // 检查生成的 Blob 是否有效
-
-      if (!ffmpeg.isLoaded()) {
-        await ffmpeg.load();
-      }
-  
-      ffmpeg.FS("writeFile", `${unique_id}.webm`, await fetchFile(file));
-      console.log("FFmpeg FS的文件:", ffmpeg.FS("readdir", "/")); // 检查文件是否写入
-
-      await ffmpeg.run(
-        "-i", `${unique_id}.webm`,
-        "-vn", "-acodec", "libmp3lame",
-        "-ac", "1", "-ar", "16000", "-f", "mp3",
-        `${unique_id}.mp3`
-      );
-  
-      const fileData = ffmpeg.FS("readFile", `${unique_id}.mp3`);
-      const audioFile = new File([fileData.buffer], `${unique_id}.mp3`, { type: "audio/mp3" });
-
-      console.log("MP3 文件大小:", fileData.length); // 检查输出文件是否有效
-
-      // 1. 先转写音频
-      const transcribeForm = new FormData();
-      transcribeForm.append("file", audioFile, `${unique_id}.mp3`);
-      // transcribeForm.append("model", "whisper-1");
-  
-      const question = generatedQuestion;
-  
-      setStatus("Transcribing");
-      
-      console.log("FormData内容:");
-      for (const [key, value] of transcribeForm.entries()) {
-        console.log(key, value); // 检查字段名和文件是否附加成功
-      }
-      const transcribeRes = await fetch(
-        `/api/transcribe?question=${encodeURIComponent(question)}`,
-        {
-          method: "POST",
-          body: transcribeForm,
-        }
-      );
-      const transcribeResult = await transcribeRes.json();
-  
-      let transcript = "";
-      if (transcribeRes.ok && transcribeResult.transcript) {
-        transcript = transcribeResult.transcript;
-        setTranscript(transcript);
-      } else {
-        setTranscript(transcribeResult.error || "转写失败");
-        setSubmitting(false);
-        return;
-      }
-  
-      console.log("组装多模态表单")
-      // 2. 再组装多模态表单，上传到 submit_response
-      const formData = new FormData();
-      formData.append("question", question);
-      formData.append("text_response", transcript); // 用转写文本
-      formData.append("audio_response", audioFile, `${unique_id}.mp3`);
-      formData.append("video_response", file, `${unique_id}.webm`);
-  
-      setStatus("提交中...");
-  
-      const upload = await fetch("http://localhost:5000/api/v1/submit_response", {
-        method: "POST",
-        body: formData,
+      // 首先请求摄像头和麦克风权限
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: true, 
+        audio: true 
       });
-  
-      const results = await upload.json();
-      setSubmitting(false);
-  
-      if (upload.ok && results.success) {
-        setIsSuccess(true);
-        setCompleted(true);
-        const evaluation = results.data.evaluation;
-        // setGeneratedFeedback(evaluation.feedback);
-        setGeneratedFeedback({
-          language: evaluation.language_expression,
-          logic: evaluation.logical_thinking,
-          profession: evaluation.professional_knowledge,
-          expressiveness: evaluation.innovation,
-          total: evaluation.overall_score,
-          description: evaluation.feedback
-        });
-      } else {
-        setIsSuccess(false);
-        setGeneratedFeedback({
-          language: 0,
-          logic: 0,
-          profession: 0,
-          expressiveness: 0,
-          total: 0,
-          description: "error: " + (results.error || "提交失败，请稍后再试。"),
-        });
-      }
-  
-      setTimeout(function () {
-        setRecordedChunks([]);
-      }, 1500);
-    }
-  };
-
-  // 视频 onPlay 时，音频只在第一次播放
-  const handleVideoPlay = () => {
-    if (!audioStarted) {
-      const audio = audioRef.current;
-      if (audio) {
-        audio.currentTime = 0;
-        audio.play();
-        setAudioEnded(false);
-        setAudioStarted(true);
-      }
-    }
-  };
-
-  // 音频 onEnded 时，暂停视频
-  const handleAudioEnded = () => {
-    setAudioEnded(true);
-    const video = vidRef.current;
-    if (video) {
-      video.pause();
-    }
-    setVideoEnded(true); // 新增：音频结束时也触发 videoEnded
-  };
-
-  // 视频 onEnded 时，如果音频未结束则循环播放视频，否则不循环
-  const handleVideoEnded = () => {
-    if (!audioEnded) {
-      // 循环播放视频，但不再重播音频
-      const video = vidRef.current;
-      if (video) {
-        video.currentTime = 0;
-        video.play();
-      }
-    }
-    else setVideoEnded(true);
-    // 如果音频已结束，视频自然停止
-  };
-
-  // 如果 generatedAudio 变化，重置 audioEnded 和 audioStarted
-  useEffect(() => {
-    setAudioEnded(false);
-    setAudioStarted(false);
-    // 自动重置音频 currentTime
-    if (audioRef.current) {
-      audioRef.current.currentTime = 0;
-    }
-  }, [generatedAudio]);
-
-  //数值重置函数
-  function restartVideo() {
-    setRecordedChunks([]);
-    setVideoEnded(false);
-    setCapturing(false);
-    setIsVisible(true);
-    setSeconds(150);
-  }
-  
-  const videoConstraints = isDesktop
-    ? { width: 1280, height: 720, facingMode: "user" }
-    : { width: 480, height: 640, facingMode: "user" };
-
-  //处理摄像头成功加载后的回调
-  const handleUserMedia = () => {
-    setTimeout(() => {
-      setLoading(false);
-      setCameraLoaded(true);
-    }, 1000);
-  };
-  
-  interface EvaluationUpdatePayload {
-  table: string;
-  action: 'update' | 'insert';
-  criteria?: { [key: string]: any }; // For update operations
-  values: { [key: string]: any }; // For insert or update values
-  }
-  useEffect(() => {
-    // Ensure userId is loaded and not null, and generatedFeedback exists
-    if (!isLoaded || !userId || !generatedFeedback) {
-      console.log('Skipping evaluation update: userId or feedback not ready.');
-      return;
-    }
-
-    const updateEvaluationMetrics = async () => {
-      console.log(`Attempting to update evaluation for stage: ${currentStage} for user: ${userId}`);
-
-      // Construct the column names based on the currentStage
-      const columnsToUpdate: { [key: string]: any } = {
-        description: generatedFeedback.description, // description is shared across all stages
-      };
-
-      // Dynamically add stage-specific metrics to the update payload
-      columnsToUpdate[`${currentStage}_language`] = generatedFeedback.language;
-      columnsToUpdate[`${currentStage}_profession`] = generatedFeedback.profession;
-      columnsToUpdate[`${currentStage}_logic`] = generatedFeedback.logic;
-      columnsToUpdate[`${currentStage}_expressiveness`] = generatedFeedback.expressiveness;
-      columnsToUpdate[`${currentStage}_total`] = generatedFeedback.total;
-
-      // Attempt to UPDATE first
-      let updatePayload: EvaluationUpdatePayload = {
-        table: 'evaluations',
-        action: 'update',
-        criteria: { user_id: userId },
-        values: columnsToUpdate,
-      };
-
-      try {
-        let response = await fetch('/api/databases/query', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updatePayload),
-        });
-
-        let result = await response.json();
-
-        if (response.ok && result.success) {
-          console.log(`Successfully updated evaluation for user ${userId}, stage ${currentStage}:`, result.message);
-        } else if (response.status === 404 && result.message === 'Record not found or no changes made') {
-          // If update failed because record not found, attempt to INSERT
-          console.log(`No existing record for user ${userId}. Attempting to insert...`);
-
-          let insertPayload: EvaluationUpdatePayload = {
-            table: 'evaluations',
-            action: 'insert',
-            values: {
-              user_id: userId, // Include user_id for insertion
-              ...columnsToUpdate,
-            },
-          };
-
-          // For an insert, if a column is not provided, it will default to NULL or its default value.
-          // To ensure all stage columns exist when inserting, you might need to initialize them
-          // to NULL or 0 for other stages not currently being evaluated.
-          // This requires fetching the full list of columns from your table schema or explicitly
-          // adding them here. For simplicity, we'll only add the current stage's values.
-          // If the database schema defines NOT NULL for these columns without defaults,
-          // you'll need to explicitly set them (e.g., to 0) for all stages in the initial insert.
-          // Example of explicitly setting all stage columns for a new insert:
-          const allStageMetrics = ['language', 'profession', 'logic', 'expressiveness', 'total'];
-          const stages = ['introduction', 'technology', 'analysis', 'final'];
-          stages.forEach(stage => {
-            allStageMetrics.forEach(metric => {
-              const colName = `${stage}_${metric}`;
-              // Only set if not already present from currentStage evaluation
-              if (!(colName in insertPayload.values)) {
-                insertPayload.values[colName] = null; // Or 0, depending on your desired default
-              }
-            });
-          });
-
-
-          response = await fetch('/api/databases/query', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(insertPayload),
-          });
-
-          result = await response.json();
-
-          if (response.ok && result.success) {
-            console.log(`Successfully inserted new evaluation record for user ${userId}, stage ${currentStage}:`, result.message);
-          } else {
-            console.error(`Failed to insert evaluation record for user ${userId}:`, result.message);
-            const errorText = await response.text();
-            console.error(`Network response for insert was not ok: ${response.status} - ${errorText}`);
-          }
+      
+      // 关闭临时流
+      stream.getTracks().forEach(track => track.stop());
+      
+      setRecordingPermission(true);
+      
+      // 然后枚举设备
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      
+      const videoDevices = devices.filter(device => device.kind === "videoinput");
+      const audioDevices = devices.filter(device => device.kind === "audioinput");
+      
+      setVideoDevices(videoDevices);
+      setAudioDevices(audioDevices);
+      
+      if (videoDevices.length > 0) {
+        // 尝试找到不同的摄像头设备
+        const frontCamera = videoDevices.find(d => 
+          d.label.toLowerCase().includes("front") || 
+          d.label.toLowerCase().includes("user") ||
+          d.label.toLowerCase().includes("facetime")
+        );
+        
+        const backCamera = videoDevices.find(d => 
+          d.label.toLowerCase().includes("back") || 
+          d.label.toLowerCase().includes("environment") ||
+          d.label.toLowerCase().includes("rear")
+        );
+        
+        // 设置摄像头1 - 优先使用前置摄像头
+        if (frontCamera) {
+          setSelectedVideoDevice1(frontCamera.deviceId);
         } else {
-          console.error(`Failed to update evaluation for user ${userId}, stage ${currentStage}:`, result.message);
-          const errorText = await response.text();
-          console.error(`Network response for update was not ok: ${response.status} - ${errorText}`);
+          setSelectedVideoDevice1(videoDevices[0].deviceId);
         }
-      } catch (error) {
-        console.error(`Error updating/inserting evaluation for user ${userId}:`, error);
+        
+        // 设置摄像头2 - 优先使用后置摄像头
+        if (backCamera && backCamera.deviceId !== frontCamera?.deviceId) {
+          setSelectedVideoDevice2(backCamera.deviceId);
+        } else if (videoDevices.length > 1) {
+          // 使用不同的设备
+          setSelectedVideoDevice2(videoDevices[1].deviceId);
+        } else if (videoDevices.length === 1) {
+          // 只有一个摄像头，设置为同一个设备
+          setSelectedVideoDevice2(videoDevices[0].deviceId);
+        } else {
+          setSelectedVideoDevice2("");
+        }
       }
-      console.log('Finished attempting to update evaluation for this feedback change.');
+      
+      if (audioDevices.length > 0) {
+        setSelectedAudioDevice(audioDevices[0].deviceId);
+      }
+      
+      setCameraLoaded(true);
+      addMessage("设备已加载完成", "system");
+    } catch (error) {
+      console.error("获取设备列表失败:", error);
+      setDeviceError("无法访问摄像头和麦克风，请检查权限设置");
+      addMessage("获取设备权限失败，请允许访问摄像头和麦克风", "system");
+    }
+  }, []);
+  
+  // 重新加载设备
+  const reloadDevices = async () => {
+    setCameraLoaded(false);
+    setCamera2Error(false);
+    // 释放摄像头2流
+    if (camera2Stream) {
+      camera2Stream.getTracks().forEach(track => track.stop());
+      setCamera2Stream(null);
+    }
+    await getDevices();
+  };
+
+  // 初始化摄像头2流
+  const initializeCamera2 = useCallback(async () => {
+    if (!cameraLoaded || !recordingPermission || !selectedVideoDevice2) return;
+    
+    try {
+      // 重置摄像头2错误状态
+      setCamera2Error(false);
+      
+      // 如果已有流，先释放
+      if (camera2Stream) {
+        camera2Stream.getTracks().forEach(track => track.stop());
+        setCamera2Stream(null);
+      }
+      
+      // 获取摄像头2流
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { deviceId: selectedVideoDevice2 }
+      });
+      
+      setCamera2Stream(stream);
+      
+      // 将流绑定到video元素
+      if (videoRef2.current) {
+        videoRef2.current.srcObject = stream;
+      }
+    } catch (error) {
+      console.error("摄像头2初始化失败:", error);
+      setCamera2Error(true);
+      addMessage("摄像头2初始化失败，请检查设备连接", "system");
+    }
+  }, [cameraLoaded, recordingPermission, selectedVideoDevice2, camera2Stream]);
+
+  // 开始录制
+  const startRecording = useCallback(async () => {
+    if (!webcamRef1.current || !cameraLoaded || !camera1Ready) return;
+    
+    try {
+      // 获取视频流
+      const stream1 = webcamRef1.current.stream;
+      if (!stream1) {
+        throw new Error("无法获取摄像头1的视频流");
+      }
+      
+      // 初始化视频录制器
+      mediaRecorderRef1.current = new MediaRecorder(stream1);
+      
+      // 如果摄像头2流可用，初始化第二个录制器
+      if (camera2Stream && !camera2Error) {
+        mediaRecorderRef2.current = new MediaRecorder(camera2Stream);
+      }
+      
+      // 获取音频流
+      const audioStream = await navigator.mediaDevices.getUserMedia({
+        audio: selectedAudioDevice ? { deviceId: selectedAudioDevice } : true
+      });
+      
+      // 合并音频到第一个流（如果需要）
+      if (stream1 && audioStream) {
+        stream1.addTrack(audioStream.getAudioTracks()[0]);
+      }
+      
+      // 设置视频数据可用时的处理
+      mediaRecorderRef1.current.ondataavailable = (e: BlobEvent) => {
+        if (e.data.size > 0) {
+          recordedChunksRef1.current.push(e.data);
+        }
+      };
+      
+      if (mediaRecorderRef2.current) {
+        mediaRecorderRef2.current.ondataavailable = (e: BlobEvent) => {
+          if (e.data.size > 0) {
+            recordedChunksRef2.current.push(e.data);
+          }
+        };
+      }
+      
+      // 开始录制
+      mediaRecorderRef1.current.start();
+      
+      if (mediaRecorderRef2.current) {
+        mediaRecorderRef2.current.start();
+      }
+      
+      setRecording(true);
+      addMessage("录制已开始", "system");
+    } catch (error) {
+      console.error("开始录制失败:", error);
+      addMessage("开始录制失败，请检查设备权限", "system");
+      setDeviceError("录制启动失败，请重试");
+    }
+  }, [cameraLoaded, selectedAudioDevice, camera2Stream, camera2Error, camera1Ready]);
+  
+  // 停止录制
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef1.current) {
+      mediaRecorderRef1.current.stop();
+    }
+    
+    if (mediaRecorderRef2.current) {
+      mediaRecorderRef2.current.stop();
+    }
+    
+    setRecording(false);
+    addMessage("录制已停止", "system");
+    
+    // 处理录制的视频数据
+    if (recordedChunksRef1.current.length > 0) {
+      const videoBlob1 = new Blob(recordedChunksRef1.current, { type: "video/webm" });
+      console.log("摄像头 1 视频:", videoBlob1);
+    }
+    
+    if (recordedChunksRef2.current.length > 0) {
+      const videoBlob2 = new Blob(recordedChunksRef2.current, { type: "video/webm" });
+      console.log("摄像头 2 视频:", videoBlob2);
+    }
+    
+    // 重置录制状态
+    initializeRecording();
+  }, []);
+  
+  // 处理倒计时逻辑
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    if (recording && countdown > 0) {
+      timer = setTimeout(() => {
+        setCountdown(prev => prev - 1);
+      }, 1000);
+    } else if (countdown === 0 && recording) {
+      stopRecording();
+    }
+    
+    return () => {
+      if (timer) clearTimeout(timer);
     };
-
-    updateEvaluationMetrics();
-  }, [generatedFeedback, userId, isLoaded, currentStage]);
-
-  // Render logic based on loading state
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen bg-[#F2F3F5]">
-        <p className="text-xl text-[#1E2B3A]">Loading interview settings...</p>
-      </div>
-    );
-  }
-
-  if (!selected || !selectedInterviewer) {
-      return (
-          <div className="flex justify-center items-center min-h-screen bg-[#F2F3F5]">
-              <p className="text-xl text-[#1E2B3A]">
-                  Interview settings not found. Please ensure your user profile is set up.
-              </p>
-              {/* You could add a button here to navigate to a settings page or provide a way to select defaults */}
-          </div>
-      );
-  }
-
-  const { total, description, ...skills } = generatedFeedback;
-  // 1. 用于水平进度条的颜色对象
-  const skillColors: { [key: string]: string } = {
-    language: '#3B82F6',       // 蓝色 (对应 语言表达)
-    profession: '#8B5CF6',     // 紫色 (对应 专业能力)
-    logic: '#F97316',          // 橙色 (对应 逻辑思维)
-    expressiveness: '#14B8A6', // 青色 (对应 表现力)
+  }, [recording, countdown, stopRecording]);
+  
+  // 组件挂载时初始化
+  useEffect(() => {
+    initializeRecording();
+    getDevices();
+    
+    // 组件卸载时清理
+    return () => {
+      if (mediaRecorderRef1.current) mediaRecorderRef1.current.stop();
+      if (mediaRecorderRef2.current) mediaRecorderRef2.current.stop();
+      
+      // 释放摄像头2流
+      if (camera2Stream) {
+        camera2Stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [getDevices]);
+  
+  // 设备或选择变更时初始化摄像头2
+  useEffect(() => {
+    if (cameraLoaded && recordingPermission && selectedVideoDevice2) {
+      initializeCamera2();
+    }
+  }, [cameraLoaded, recordingPermission, selectedVideoDevice2, initializeCamera2]);
+  
+  // 处理摄像头1准备就绪
+  useEffect(() => {
+    if (webcamRef1.current?.video?.readyState === 4) {
+      setCamera1Ready(true);
+    }
+  }, [webcamRef1.current?.video?.readyState]);
+  
+  // 处理对话框输入
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      const input = e.currentTarget;
+      const text = input.value.trim();
+      if (text) {
+        addMessage(text);
+        input.value = "";
+      }
+    }
   };
-
-  // 2. 用于圆形进度条的渐变色定义
-  const totalScoreGradientColors = {
-    high: ['#10B981', '#6EE7B7'], // 优秀 (80+)
-    mid: ['#F59E0B', '#FCD34D'],   // 良好 (60-79)
-    low: ['#EF4444', '#F87171'],    // 有待提高 (<60)
-  };
-
-  // 3. 根据分数选择渐变色的辅助函数
-  const getGradientForScore = (score: number): string[] => {
-    if (score >= 80) return totalScoreGradientColors.high;
-    if (score >= 60) return totalScoreGradientColors.mid;
-    return totalScoreGradientColors.low;
+  
+  const handleSendMessage = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+    const text = input.value.trim();
+    if (text) {
+      addMessage(text);
+      input.value = "";
+    }
   };
 
   return (
-    <AnimatePresence>
-       (
-        <div className="w-full min-h-screen flex flex-col px-4 pt-2 pb-8 md:px-8 md:py-2 bg-[#FCFCFC] relative overflow-x-hidden">
-
-          {completed ? (
-            <div className="w-full flex flex-col max-w-[1080px] mx-auto mt-[10vh] overflow-y-auto pb-8 md:pb-12">
-              <motion.div
-                initial={{ y: 20 }}
-                animate={{ y: 0 }}
-                transition={{ duration: 0.35, ease: [0.075, 0.82, 0.165, 1] }}
-                className="relative md:aspect-[16/9] w-full max-w-[1080px] overflow-hidden bg-[#1D2B3A] rounded-lg ring-1 ring-gray-900/5 shadow-md flex flex-col items-center justify-center"
-              >
-                <video
-                  className="w-full h-full rounded-lg"
-                  controls
-                  crossOrigin="anonymous"
-                  autoPlay
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-blue-900 text-white p-6">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-3xl font-bold text-center mb-8">双摄像头面试系统</h1>
+        
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* 第一列 - 摄像头区域 */}
+          <div className="w-full lg:w-1/3 flex flex-col gap-6">
+            {/* 摄像头 1 - 固定高度容器 */}
+            <div className="bg-gray-800 rounded-2xl overflow-hidden border-2 border-blue-500 flex-1 min-h-[300px] relative">
+              <div className="p-3 bg-gray-900 bg-opacity-80 flex justify-between items-center">
+                <span className="text-blue-400 font-semibold">摄像头 1</span>
+                <select
+                  value={selectedVideoDevice1}
+                  onChange={(e) => setSelectedVideoDevice1(e.target.value)}
+                  className="bg-gray-700 text-white px-2 py-1 rounded text-sm"
+                  disabled={recording}
                 >
-                  <source
-                    src={URL.createObjectURL(
-                      new Blob(recordedChunks, { type: "video/mp4" })
-                    )}
-                    type="video/mp4"
+                  {videoDevices.map(device => (
+                    <option key={device.deviceId} value={device.deviceId}>
+                      {device.label || `摄像头 ${videoDevices.indexOf(device) + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {cameraLoaded && recordingPermission ? (
+                <div className="w-full h-full aspect-video">
+                  <Webcam
+                    audio={false}
+                    ref={webcamRef1}
+                    className="w-full h-full object-cover"
+                    screenshotFormat="image/jpeg"
+                    videoConstraints={{ 
+                      deviceId: selectedVideoDevice1,
+                      facingMode: "user"
+                    }}
+                    forceScreenshotSourceSize={true}
+                    mirrored={true}
+                    onUserMedia={() => setCamera1Ready(true)}
                   />
-                </video>
-              </motion.div>
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  delay: 0.5,
-                  duration: 0.15,
-                  ease: [0.23, 1, 0.82, 1],
-                }}
-                className="flex flex-col md:flex-row items-center mt-2 md:mt-4 md:justify-between space-y-1 md:space-y-0"
-              >
-                <div className="flex flex-row items-center space-x-1">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={2}
-                    stroke="currentColor"
-                    className="w-4 h-4 text-[#407BBF] shrink-0"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
-                    />
-                  </svg>
-                  <p className="text-[14px] font-normal leading-[20px] text-[#1a2b3b]">
-                    视频不会存储在服务器上，并且会在您离开页面后消失。
-                  </p>
-                </div>
-              </motion.div>
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  delay: 0.5,
-                  duration: 0.15,
-                  ease: [0.23, 1, 0.82, 1],
-                }}
-                className="mt-8 flex flex-col"
-              >
-                <div>
-                  <h2 className="text-xl font-semibold text-left text-[#1D2B3A] mb-2">
-                    Transcript
-                  </h2>
-                  <p className="prose prose-sm max-w-none">
-                    {transcript.length > 0
-                      ? transcript
-                      : "Don't think you said anything. Want to try again?"}
-                  </p>
-                </div>
-                <div className="mt-8 p-6 bg-white rounded-lg shadow-md">
-                  <h2 className="text-2xl font-bold text-left text-[#1D2B3A] mb-6">
-                    Feedback
-                  </h2>
-
-                  {/* 圆形进度条 */}
-                  {/* Changed class here: Use Tailwind for sizing and centering */}
-                  <div className="mx-auto w-48 h-48 flex items-center justify-center"> {/* w-48 h-48 corresponds to 192px by 192px */}
-                    <CircularProgressBarWithGradient
-                      value={total}
-                      gradientColors={getGradientForScore(total)}
-                    />
-                  </div>
-
-                  {/* 各项技能的水平进度条 */}
-                  <div className={styles.finalSkillsGrid}>
-                    {Object.entries(skills).map(([key, value]) => (
-                      <HorizontalProgressBar
-                        key={key}
-                        label={key.charAt(0).toUpperCase() + key.slice(1)}
-                        value={value as number}
-                        color={skillColors[key]}
-                      />
-                    ))}
-                  </div>
-
-                  {/* Description */}
-                  <div className="mt-4 text-sm flex gap-2.5 rounded-lg border border-[#EEEEEE] bg-[#FAFAFA] p-4 leading-6 text-gray-900 min-h-[100px]">
-                    <p className="prose prose-sm max-w-none">
-                      {description}
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          ) : (
-            <div className="h-full w-full items-center flex flex-col mt-[10vh]">
-              {recordingPermission ? (
-                <div className="w-full flex flex-col max-w-[1080px] mx-auto justify-center">
-                  <h2 className="text-2xl font-semibold text-left text-[#1D2B3A] mb-2">
-                    {generatedQuestion}
-                  </h2>
-                  <span className="text-[14px] leading-[20px] text-[#1a2b3b] font-normal mb-4">
-                    请在点击按钮和问题说明后，开始回答问题。
-                  </span>
-                  <motion.div
-                    initial={{ y: -20 }}
-                    animate={{ y: 0 }}
-                    transition={{
-                      duration: 0.35,
-                      ease: [0.075, 0.82, 0.965, 1],
-                    }}
-                    className="relative aspect-[16/9] w-full max-w-[1080px] overflow-hidden bg-[#1D2B3A] rounded-lg ring-1 ring-gray-900/5 shadow-md"
-                  >
-                    {!cameraLoaded && (
-                      <div className="text-white absolute top-1/2 left-1/2 z-20 flex items-center">
-                        <svg
-                          className="animate-spin h-4 w-4 text-white mx-auto my-0.5"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth={3}
-                          ></circle>
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          ></path>
-                        </svg>
-                      </div>
-                    )}
-                    <div className="relative z-10 h-full w-full rounded-lg">
-                      <div className="absolute top-5 lg:top-10 left-5 lg:left-10 z-20">
-                        <span className="inline-flex items-center rounded-md bg-gray-100 px-2.5 py-0.5 text-sm font-medium text-gray-800">
-                          {new Date(seconds * 1000).toISOString().slice(14, 19)}
-                        </span>
-                      </div>
-                      {isVisible && ( // If the video is visible (on screen) we show it
-                        <div className="block absolute top-[10px] sm:top-[20px] lg:top-[40px] left-auto right-[10px] sm:right-[20px] md:right-10 h-[80px] sm:h-[140px] md:h-[180px] aspect-video rounded z-20">
-                          <div className="h-full w-full aspect-video rounded md:rounded-lg lg:rounded-xl">
-                            <video
-                              id="question-video"
-                              ref={vidRef}
-                              onPlay={handleVideoPlay}
-                              onEnded={handleVideoEnded}
-                              controls={false}
-                              playsInline
-                              className="h-full object-cover w-full rounded-md md:rounded-[12px] aspect-video"
-                              crossOrigin="anonymous"
-                              muted
-                            >
-                              <source
-                                src={
-                                  selectedInterviewer.name === "Alex"
-                                    ? "https://liftoff-public.s3.amazonaws.com/JohnTechnical.mp4"
-                                    : selectedInterviewer.name === "Bob"
-                                    ? "https://liftoff-public.s3.amazonaws.com/RichardTechnical.mp4"
-                                    : "https://liftoff-public.s3.amazonaws.com/SarahTechnical.mp4"
-                                }
-                                type="video/mp4"
-                              />
-                            </video>
-                            {/* 音频播放，视频开始时播放，音频结束时暂停视频 */}
-                            <audio
-                              id="generated-audio-player"
-                              ref={audioRef}
-                              src={generatedAudio}
-                              onEnded={handleAudioEnded}
-                              // controls // 可选：开发时调试用
-                            />
-                          </div>
-                      </div>
-                      )}
-                      <Webcam
-                        mirrored
-                        audio
-                        muted
-                        ref={webcamRef}
-                        videoConstraints={videoConstraints}
-                        onUserMedia={handleUserMedia}
-                        onUserMediaError={(error) => {
-                          setRecordingPermission(false);
-                        }}
-                        className="absolute z-10 min-h-[100%] min-w-[100%] h-auto w-auto object-cover"
-                      />
-                    </div>
-                    {loading && (
-                      <div className="absolute flex h-full w-full items-center justify-center">
-                        <div className="relative h-[112px] w-[112px] rounded-lg object-cover text-[2rem]">
-                          <div className="flex h-[112px] w-[112px] items-center justify-center rounded-[0.5rem] bg-[#4171d8] !text-white">
-                            Loading...
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {cameraLoaded && (
-                      <div className="absolute bottom-0 left-0 z-50 flex h-[82px] w-full items-center justify-center">
-                        {recordedChunks.length > 0 ? (
-                          <>
-                            {isSuccess ? (
-                              <button
-                                className="cursor-disabled group rounded-full min-w-[140px] px-4 py-2 text-[13px] font-semibold group inline-flex items-center justify-center text-sm text-white duration-150 bg-green-500 hover:bg-green-600 hover:text-slate-100 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600 active:scale-100 active:bg-green-800 active:text-green-100"
-                                style={{
-                                  boxShadow:
-                                    "0px 1px 4px rgba(27, 71, 13, 0.17), inset 0px 0px 0px 1px #5fc767, inset 0px 0px 0px 2px rgba(255, 255, 255, 0.1)",
-                                }}
-                              >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-5 w-5 mx-auto"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                  strokeWidth={2}
-                                >
-                                  <motion.path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                    initial={{ pathLength: 0 }}
-                                    animate={{ pathLength: 1 }}
-                                    transition={{ duration: 0.5 }}
-                                  />
-                                </svg>
-                              </button>
-                            ) : (
-                              <div className="flex flex-row gap-2">
-                                {!isSubmitting && (
-                                  <button
-                                    onClick={() => restartVideo()}
-                                    className="group rounded-full px-4 py-2 text-[13px] font-semibold transition-all flex items-center justify-center bg-white text-[#1E2B3A] hover:[linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1)), #0D2247] no-underline flex gap-x-2  active:scale-95 scale-100 duration-75"
-                                  >
-                                    Restart
-                                  </button>
-                                )}
-                                <button
-                                  onClick={handleDownload}
-                                  disabled={isSubmitting}
-                                  className="group rounded-full min-w-[140px] px-4 py-2 text-[13px] font-semibold transition-all flex items-center justify-center bg-[#1E2B3A] text-white hover:[linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1)), #0D2247] no-underline flex  active:scale-95 scale-100 duration-75  disabled:cursor-not-allowed"
-                                  style={{
-                                    boxShadow:
-                                      "0px 1px 4px rgba(13, 34, 71, 0.17), inset 0px 0px 0px 1px #061530, inset 0px 0px 0px 2px rgba(255, 255, 255, 0.1)",
-                                  }}
-                                >
-                                  <span>
-                                    {isSubmitting ? (
-                                      <div className="flex items-center justify-center gap-x-2">
-                                        <svg
-                                          className="animate-spin h-5 w-5 text-slate-50 mx-auto"
-                                          xmlns="http://www.w3.org/2000/svg"
-                                          fill="none"
-                                          viewBox="0 0 24 24"
-                                        >
-                                          <circle
-                                            className="opacity-25"
-                                            cx="12"
-                                            cy="12"
-                                            r="10"
-                                            stroke="currentColor"
-                                            strokeWidth={3}
-                                          ></circle>
-                                          <path
-                                            className="opacity-75"
-                                            fill="currentColor"
-                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                          ></path>
-                                        </svg>
-                                        <span>{status}</span>
-                                      </div>
-                                    ) : (
-                                      <div className="flex items-center justify-center gap-x-2">
-                                        <span>Process transcript</span>
-                                        <svg
-                                          className="w-5 h-5"
-                                          viewBox="0 0 24 24"
-                                          fill="none"
-                                          xmlns="http://www.w3.org/2000/svg"
-                                        >
-                                          <path
-                                            d="M13.75 6.75L19.25 12L13.75 17.25"
-                                            stroke="white"
-                                            strokeWidth="1.5"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                          />
-                                          <path
-                                            d="M19 12H4.75"
-                                            stroke="white"
-                                            strokeWidth="1.5"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                          />
-                                        </svg>
-                                      </div>
-                                    )}
-                                  </span>
-                                </button>
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <div className="absolute bottom-[6px] md:bottom-5 left-5 right-5">
-                            <div className="lg:mt-4 flex flex-col items-center justify-center gap-2">
-                              {capturing ? (
-                                <div
-                                  id="stopTimer"
-                                  onClick={handleStopCaptureClick}
-                                  className="flex h-10 w-10 flex-col items-center justify-center rounded-full bg-transparent text-white hover:shadow-xl ring-4 ring-white  active:scale-95 scale-100 duration-75 cursor-pointer"
-                                >
-                                  <div className="h-5 w-5 rounded bg-red-500 cursor-pointer"></div>
-                                </div>
-                              ) : (
-                                <button
-                                  id="startTimer"
-                                  onClick={handleStartCaptureClick}
-                                  className="flex h-8 w-8 sm:h-8 sm:w-8 flex-col items-center justify-center rounded-full bg-red-500 text-white hover:shadow-xl ring-4 ring-white ring-offset-gray-500 ring-offset-2 active:scale-95 scale-100 duration-75"
-                                ></button>
-                              )}
-                              <div className="w-12"></div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    <div
-                      className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20 text-5xl text-white font-semibold text-center"
-                      id="countdown"
-                    ></div>
-                  </motion.div>
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{
-                      delay: 0.5,
-                      duration: 0.15,
-                      ease: [0.23, 1, 0.82, 1],
-                    }}
-                    className="flex flex-row space-x-1 mt-4 items-center"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={2}
-                      stroke="currentColor"
-                      className="w-4 h-4 text-[#407BBF]"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
-                      />
-                    </svg>
-                    <p className="text-[14px] font-normal leading-[20px] text-[#1a2b3b]">
-                      Video is not stored on our servers, it is solely used for
-                      transcription.
-                    </p>
-                  </motion.div>
                 </div>
               ) : (
-                <div className="w-full flex flex-col max-w-[1080px] mx-auto justify-center">
-                  <motion.div
-                    initial={{ y: 20 }}
-                    animate={{ y: 0 }}
-                    transition={{
-                      duration: 0.35,
-                      ease: [0.075, 0.82, 0.165, 1],
-                    }}
-                    className="relative md:aspect-[16/9] w-full max-w-[1080px] overflow-hidden bg-[#1D2B3A] rounded-lg ring-1 ring-gray-900/5 shadow-md flex flex-col items-center justify-center"
-                  >
-                    <p className="text-white font-medium text-lg text-center max-w-3xl">
-                      Camera permission is denied. We don{`'`}t store your
-                      attempts anywhere, but we understand not wanting to give
-                      us access to your camera. Try again by opening this page
-                      in an incognito window {`(`}or enable permissions in your
-                      browser settings{`)`}.
-                    </p>
-                  </motion.div>
-                  <div className="flex flex-row space-x-4 mt-8 justify-end">
-                    <button
-                      onClick={() => setStep(1)}
-                      className="group max-w-[200px] rounded-full px-4 py-2 text-[13px] font-semibold transition-all flex items-center justify-center bg-[#f5f7f9] text-[#1E2B3A] no-underline active:scale-95 scale-100 duration-75"
-                      style={{
-                        boxShadow: "0 1px 1px #0c192714, 0 1px 3px #0c192724",
-                      }}
-                    >
-                      Restart demo
-                    </button>
-                    <Link
-                      href="https://github.com/Tameyer41/liftoff"
-                      target="_blank"
-                      className="group rounded-full pl-[8px] min-w-[180px] pr-4 py-2 text-[13px] font-semibold transition-all flex items-center justify-center bg-[#1E2B3A] text-white hover:[linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1)), #0D2247] no-underline flex gap-x-2  active:scale-95 scale-100 duration-75"
-                      style={{
-                        boxShadow:
-                          "0px 1px 4px rgba(13, 34, 71, 0.17), inset 0px 0px 0px 1px #061530, inset 0px 0px 0px 2px rgba(255, 255, 255, 0.1)",
-                      }}
-                    >
-                      <span className="w-5 h-5 rounded-full bg-[#407BBF] flex items-center justify-center">
-                        <svg
-                          className="w-[16px] h-[16px] text-white"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            stroke="currentColor"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M4.75 7.75C4.75 6.64543 5.64543 5.75 6.75 5.75H17.25C18.3546 5.75 19.25 6.64543 19.25 7.75V16.25C19.25 17.3546 18.3546 18.25 17.25 18.25H6.75C5.64543 18.25 4.75 17.3546 4.75 16.25V7.75Z"
-                          ></path>
-                          <path
-                            stroke="currentColor"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M5.5 6.5L12 12.25L18.5 6.5"
-                          ></path>
-                        </svg>
-                      </span>
-                      Star on Github
-                    </Link>
+                <div className="w-full h-[300px] bg-gray-700 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-3"></div>
+                    <p>加载摄像头中...</p>
+                    {!recordingPermission && (
+                      <p className="text-sm text-red-400 mt-2">请允许摄像头访问权限</p>
+                    )}
+                  </div>
+                </div>
+              )}
+              {cameraLoaded && !camera1Ready && (
+                <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center">
+                  <div className="text-center p-4">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto mb-3"></div>
+                    <p className="text-blue-300">正在初始化摄像头1...</p>
                   </div>
                 </div>
               )}
             </div>
+            
+            {/* 摄像头 2 - 固定高度容器 */}
+            <div className="bg-gray-800 rounded-2xl overflow-hidden border-2 border-green-500 flex-1 min-h-[300px] relative">
+              <div className="p-3 bg-gray-900 bg-opacity-80 flex justify-between items-center">
+                <span className="text-green-400 font-semibold">摄像头 2</span>
+                <select
+                  value={selectedVideoDevice2}
+                  onChange={(e) => setSelectedVideoDevice2(e.target.value)}
+                  className="bg-gray-700 text-white px-2 py-1 rounded text-sm"
+                  disabled={recording || camera2Error}
+                >
+                  {videoDevices.map(device => (
+                    <option key={device.deviceId} value={device.deviceId}>
+                      {device.label || `摄像头 ${videoDevices.indexOf(device) + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {cameraLoaded && recordingPermission ? (
+                camera2Error ? (
+                  <div className="w-full h-[300px] bg-red-900 bg-opacity-30 flex items-center justify-center">
+                    <div className="text-center p-4">
+                      <div className="text-red-400 mb-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                      </div>
+                      <p className="text-red-300">摄像头2无法启动</p>
+                      <button 
+                        onClick={reloadDevices}
+                        className="mt-2 text-white bg-red-600 hover:bg-red-500 px-3 py-1 rounded text-sm"
+                      >
+                        重新加载设备
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-full h-full aspect-video">
+                    <video
+                      ref={videoRef2}
+                      className="w-full h-full object-cover"
+                      autoPlay
+                      playsInline
+                      muted
+                    />
+                  </div>
+                )
+              ) : (
+                <div className="w-full h-[300px] bg-gray-700 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500 mx-auto mb-3"></div>
+                    <p>加载摄像头中...</p>
+                  </div>
+                </div>
+              )}
+              {camera2Stream && !camera2Error && !videoRef2.current?.srcObject && (
+                <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center">
+                  <div className="text-center p-4">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500 mx-auto mb-3"></div>
+                    <p className="text-green-300">正在初始化摄像头2...</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* 第二列 - 面试官和控制区域 */}
+          <div className="w-full lg:w-1/4 flex flex-col gap-6">
+            {/* 面试官图片 - 固定高度容器 */}
+            <div className="bg-gray-800 rounded-2xl overflow-hidden flex-1 flex flex-col min-h-[300px]">
+              <div className="bg-gradient-to-r from-yellow-600 to-yellow-700 p-4 text-center font-semibold">
+                <span className="text-white">面试官 Alex</span>
+              </div>
+              <div className="flex-1 flex items-center justify-center p-4">
+                <div className="relative">
+                  <img 
+                    src="/placeholders/Alex.webp" 
+                    alt="Alex" 
+                    className="w-48 h-48 rounded-full object-cover border-4 border-yellow-500"
+                  />
+                  <div className="absolute bottom-2 right-2 w-6 h-6 bg-green-500 rounded-full border-2 border-gray-900"></div>
+                </div>
+              </div>
+            </div>
+            
+            {/* 控制面板 - 固定高度容器 */}
+            <div className="bg-gray-800 rounded-2xl p-6 flex flex-col gap-6 min-h-[300px]">
+              {/* 状态提示 */}
+              <div className="text-center">
+                {recording ? (
+                  <div className="flex items-center justify-center">
+                    <div className="w-3 h-3 bg-red-500 rounded-full mr-2 animate-pulse"></div>
+                    <span className="font-medium">
+                      录制中 - 剩余时间: {countdown}秒
+                    </span>
+                  </div>
+                ) : cameraLoaded ? (
+                  camera1Ready ? (
+                    <span className="text-green-400">设备准备就绪</span>
+                  ) : (
+                    <span className="text-yellow-400">初始化中...</span>
+                  )
+                ) : (
+                  <span className="text-yellow-400">正在加载设备...</span>
+                )}
+              </div>
+              
+              {/* 麦克风选择 */}
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">麦克风设备</label>
+                <select
+                  value={selectedAudioDevice}
+                  onChange={(e) => setSelectedAudioDevice(e.target.value)}
+                  className="w-full bg-gray-700 text-white px-3 py-2 rounded"
+                  disabled={recording}
+                >
+                  {audioDevices.map(device => (
+                    <option key={device.deviceId} value={device.deviceId}>
+                      {device.label || `麦克风 ${audioDevices.indexOf(device) + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              {/* 控制按钮 */}
+              <div className="flex flex-col gap-4">
+                <button
+                  onClick={startRecording}
+                  disabled={recording || !cameraLoaded || !recordingPermission || !camera1Ready}
+                  className={`px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center ${
+                    recording || !cameraLoaded || !recordingPermission || !camera1Ready
+                      ? "bg-gray-600 cursor-not-allowed"
+                      : "bg-green-600 hover:bg-green-500"
+                  }`}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                  </svg>
+                  开始录制
+                </button>
+                
+                <button
+                  onClick={stopRecording}
+                  disabled={!recording}
+                  className={`px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center ${
+                    !recording
+                      ? "bg-gray-600 cursor-not-allowed"
+                      : "bg-red-600 hover:bg-red-500"
+                  }`}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
+                  </svg>
+                  停止录制
+                </button>
+                
+                {deviceError && (
+                  <div className="mt-4 p-3 bg-red-900 bg-opacity-50 rounded-lg">
+                    <p className="text-red-300 text-sm mb-2">{deviceError}</p>
+                    <button 
+                      onClick={reloadDevices}
+                      className="text-white bg-red-600 hover:bg-red-500 px-3 py-1 rounded text-sm w-full"
+                    >
+                      重新加载设备
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          {/* 第三列 - 聊天对话框 - 固定高度容器 */}
+          <div className="w-full lg:w-2/5 h-full">
+            <div className="bg-gray-800 rounded-2xl flex flex-col overflow-hidden border border-gray-700 h-full min-h-[650px]">
+              <div className="bg-gradient-to-r from-blue-700 to-blue-800 p-4 text-center font-semibold">
+                面试对话
+              </div>
+              
+              <div className="flex-1 p-4 overflow-y-auto" style={{ maxHeight: '500px' }}>
+                {messages.map((message) => (
+                  <motion.div
+                    key={message.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`mb-4 flex ${
+                      message.sender === "user" ? "justify-end" : "justify-start"
+                    }`}
+                  >
+                    <div
+                      className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl ${
+                        message.sender === "user"
+                          ? "bg-blue-600 rounded-br-none"
+                          : message.sender === "alex"
+                          ? "bg-gray-700 rounded-bl-none"
+                          : "bg-purple-600"
+                      }`}
+                    >
+                      <div className="font-semibold text-xs mb-1 text-gray-300">
+                        {message.sender === "user"
+                          ? "你"
+                          : message.sender === "alex"
+                          ? "Alex"
+                          : "系统"}
+                      </div>
+                      <div>{message.text}</div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+              
+              <div className="p-4 border-t border-gray-700 bg-gray-900">
+                <div className="flex">
+                  <input
+                    type="text"
+                    placeholder="输入消息..."
+                    className="flex-1 bg-gray-800 rounded-l-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onKeyDown={handleInputKeyDown}
+                  />
+                  <button
+                    onClick={handleSendMessage}
+                    className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-r-xl transition-colors"
+                  >
+                    发送
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* 底部状态栏 */}
+        <div className="mt-8 text-center text-sm text-gray-400">
+          {recordingPermission ? (
+            <div className="flex items-center justify-center">
+              <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+              <span>摄像头和麦克风权限已授权</span>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center">
+              <div className="w-2 h-2 bg-red-500 rounded-full mr-2"></div>
+              <span>请允许摄像头和麦克风访问权限</span>
+            </div>
           )}
         </div>
-      )
-    </AnimatePresence>
+      </div>
+    </div>
   );
-}
+};
+
+export default DualCameraRecorder;

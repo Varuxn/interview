@@ -1,109 +1,197 @@
-/* --- Base Container & Header --- */
+/* 全局样式 */
 .dashboardContainer {
-  /* Removed --font-family definition, it should be global or set by Tailwind */
-  font-family: var(--font-family, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif); /* Fallback font-family */
-  background-color: var(--bg-color);
-  color: var(--text-primary);
   min-height: 100vh;
-  padding: 2rem;
+  background: linear-gradient(135deg, #f5f7ff 0%, #f0f2f9 100%);
+  padding: 2rem 1rem;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
 
 .header {
-  margin-bottom: 2rem;
+  margin-bottom: 2.5rem;
+  text-align: center;
 }
 
 .title {
   font-size: 2.25rem;
   font-weight: 700;
-  margin-bottom: 0.25rem;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.5px;
 }
 
 .subtitle {
   font-size: 1.1rem;
-  color: var(--text-secondary);
+  color: #64748b;
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.6;
 }
 
-/* --- Card Base Style --- */
-.card {
-  background-color: var(--card-bg-color);
-  border-radius: var(--border-radius);
-  border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-sm);
-  padding: 1.5rem;
-  transition: box-shadow 0.2s ease-in-out;
+.headerDivider {
+  height: 4px;
+  width: 80px;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  margin: 1.5rem auto;
+  border-radius: 2px;
 }
 
-.card:hover {
-  box-shadow: var(--shadow-md);
-}
-
-/* --- Main Grid Layout --- */
+/* 主网格布局 */
 .mainGrid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 @media (min-width: 1024px) {
   .mainGrid {
-    grid-template-columns: 0.8fr 1fr; 
+    grid-template-columns: 1fr 1fr;
   }
 }
 
-.leftColumn, .rightColumn {
+/* 左侧列样式 */
+.leftColumn {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
 
-/* --- Final Score Card (Left Column) --- */
+.finalScoreCard {
+  padding: 2rem;
+  border-radius: 18px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.finalScoreCard:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08);
+}
+
 .finalScoreHeader {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  font-size: 1.25rem;
-  font-weight: 600;
   margin-bottom: 1.5rem;
 }
 
-.finalScoreCircularProgress {
-  margin: 0 auto;
-  width: 180px; 
-  height: 180px;
+.finalScoreHeader h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.headerIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(99, 102, 241, 0.1);
+  border-radius: 12px;
+  color: #6366f1;
+}
+
+.finalScoreVisualization {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  margin: 0 auto 2rem;
+}
+
+.finalScoreText {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.totalScore {
+  display: block;
+  font-size: 3rem;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1;
+}
+
+.totalLabel {
+  display: block;
+  font-size: 1rem;
+  color: #64748b;
+  font-weight: 500;
 }
 
 .finalSkillsGrid {
   display: grid;
-  gap: 1.25rem;
-  margin-top: 2rem;
-  margin-bottom: 1.5rem;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-bottom: 2rem;
 }
 
 .evaluationSummary {
-  font-size: 0.95rem;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  text-align: center;
-  padding: 1rem;
-  background-color: #f9fafb;
-  border-radius: 8px;
+  background: #f8fafc;
+  border-radius: 14px;
+  padding: 1.5rem;
+  border-left: 4px solid #6366f1;
 }
 
-.notTestedTextLarge {
-  text-align: center;
+.summaryHeader {
   font-size: 1.1rem;
-  color: var(--text-secondary);
-  padding: 3rem 1rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 0.75rem;
 }
 
-/* --- Stage Cards (Right Column) --- */
+.summaryText {
+  color: #475569;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.finalNotTested {
+  text-align: center;
+  padding: 3rem 0;
+}
+
+.emptyStateIllustration {
+  font-size: 4rem;
+  margin-bottom: 1.5rem;
+  opacity: 0.3;
+}
+
+.notTestedMessage {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+}
+
+.notTestedHint {
+  color: #94a3b8;
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+/* 右侧列样式 */
+.rightColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
 .stageGridHeader {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-size: 1.25rem;
-    font-weight: 600;
-    margin-bottom: -0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.stageGridHeader h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1e293b;
 }
 
 .stageGrid {
@@ -117,186 +205,623 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
-@media (min-width: 1280px) {
+
+@media (min-width: 1024px) {
   .stageGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
+/* 阶段卡片样式 */
 .stageCard {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  padding: 1.5rem;
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+
+.testedCard {
+  background: white;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.untestedCard {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+}
+
+.stageCard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07);
 }
 
 .stageCardHeader {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 1rem;
+  align-items: center;
+  margin-bottom: 1.25rem;
 }
 
 .stageTitle {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 600;
+  color: #1e293b;
 }
 
 .stageTotalScoreBadge {
-  font-weight: 600;
-  padding: 0.25rem 0.75rem;
-  border-radius: 999px;
-  background-color: #E5E7EB;
-  color: var(--text-primary);
-}
-
-.stageCardBody {
-  flex-grow: 1;
-  margin-bottom: 1.5rem;
-}
-
-.stageSkills p {
-  margin: 0.5rem 0;
-  color: var(--text-secondary);
-}
-
-.stageSkills p strong {
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
-.notTestedText {
-  color: var(--text-secondary);
-  min-height: 100px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+  color: white;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
+.stageCardBody {
+  margin-bottom: 1.5rem;
+}
+
+.stageSkills {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.skillRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.skillLabel {
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.skillValueContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.skillValueBar {
+  height: 8px;
+  border-radius: 4px;
+  background: #e2e8f0;
+  position: relative;
+  flex-grow: 1;
+  overflow: hidden;
+}
+
+.skillValue {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1e293b;
+  min-width: 30px;
+  text-align: right;
+}
+
+.notTestedContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 0;
+}
+
+.emptyStateIcon {
+  font-size: 2.5rem;
+  opacity: 0.2;
+  margin-bottom: 0.75rem;
+}
+
+.notTestedText {
+  color: #94a3b8;
+  text-align: center;
+  font-size: 0.95rem;
+}
+
+/* 按钮样式 */
 .demoButton {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  width: 100%;
   padding: 0.75rem 1rem;
-  background-color: var(--card-bg-color);
-  color: var(--accent-color);
-  border: 1px solid var(--accent-color);
-  border-radius: 8px;
-  font-weight: 600;
+  border-radius: 10px;
+  font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s, color 0.2s;
+  transition: all 0.2s ease;
+  width: 100%;
+  border: none;
+  font-size: 0.95rem;
 }
 
-.demoButton:hover {
-  background-color: var(--accent-color);
+.startButton {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
   color: white;
 }
 
-/* --- Loading / Error States --- */
-.stateContainer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  font-family: var(--font-family, 'Inter', sans-serif); /* Fallback font-family */
-  background-color: var(--bg-color);
-  text-align: center;
-  padding: 1rem;
+.retestButton {
+  background: transparent;
+  color: #6366f1;
+  border: 1px solid #c7d2fe;
 }
 
-.loaderIcon {
-  font-size: 3rem;
-  color: var(--accent-color);
-  animation: spin 1.5s linear infinite;
+.startButton:hover {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  box-shadow: 0 4px 6px rgba(99, 102, 241, 0.2);
+}
+
+.retestButton:hover {
+  background: rgba(99, 102, 241, 0.05);
+  border-color: #a5b4fc;
+}
+
+.buttonIcon {
+  transition: transform 0.2s ease;
+}
+
+.demoButton:hover .buttonIcon {
+  transform: translateX(3px);
+}
+
+/* 加载状态 */
+.stateContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+}
+
+.loaderContainer {
+  text-align: center;
+  max-width: 300px;
+}
+
+.loaderSpinner {
+  width: 60px;
+  height: 60px;
+  border: 5px solid rgba(99, 102, 241, 0.2);
+  border-top: 5px solid #6366f1;
+  border-radius: 50%;
+  margin: 0 auto 1.5rem;
+  animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 错误状态 */
+.errorContainer {
+  text-align: center;
+  max-width: 400px;
+  padding: 2rem;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
 }
 
 .errorIcon {
   font-size: 3rem;
-  color: #EF4444; /* Red */
-}
-
-.stateContainer p {
-  font-size: 1.25rem;
-  margin-top: 1rem;
-  color: var(--text-primary);
-}
-
-.stateContainer small {
-  color: var(--text-secondary);
-  margin-top: 0.25rem;
+  color: #ef4444;
   margin-bottom: 1.5rem;
 }
 
+.errorTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+}
+
+.errorMessage {
+  color: #64748b;
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+}
+
 .retryButton {
-  padding: 0.75rem 1.5rem;
-  background-color: var(--accent-color);
+  background: #6366f1;
   color: white;
   border: none;
-  border-radius: 8px;
-  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
 }
 
 .retryButton:hover {
-  background-color: #2563EB; /* Darker blue */
+  background: #4f46e5;
+  box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);
+}
+/* ========== 统一进度条样式 ========== */
+.progressBarContainer {
+  margin-bottom: 1.5rem;
 }
 
-/* --- Circular Progress Bar Content --- */
-.circularProgressContent {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.circularProgressValue {
-  font-size: 2.75rem; 
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1;
-}
-
-/* --- Horizontal Progress Bar --- */
-.horizontalProgressWrapper {
-  width: 100%;
-}
-
-.horizontalProgressHeader {
+.progressBarHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0.5rem;
 }
 
-.horizontalProgressLabel {
-  font-size: 0.9rem;
+.progressBarLabel {
+  font-size: 0.95rem;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: #475569;
 }
 
-.horizontalProgressValue {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--text-primary);
+.progressBarValue {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #1e293b;
+  min-width: 40px;
+  text-align: right;
 }
 
-.horizontalProgressTrack {
-  width: 100%;
-  background-color: var(--border-color);
-  border-radius: 999px;
-  height: 0.6rem; 
+.progressBarBackground {
+  height: 12px;
+  background-color: #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
 }
 
-.horizontalProgressFill {
+.progressBarFill {
   height: 100%;
-  border-radius: 999px;
-  transition: width 0.5s ease-in-out;
+  border-radius: 8px;
+  transition: width 0.8s cubic-bezier(0.22, 0.61, 0.36, 1);
+  position: relative;
+  z-index: 1;
+}
+
+.progressBarFill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to right, rgba(255,255,255,0.3), rgba(255,255,255,0));
+  border-radius: 8px;
+}
+
+/* ========== 最终评估部分优化 ========== */
+.finalScoreContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.finalScoreVisualization {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  margin: 0 auto;
+}
+
+.finalScoreText {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.totalScore {
+  display: block;
+  font-size: 3.5rem;
+  font-weight: 800;
+  color: #1e293b;
+  line-height: 1;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.totalLabel {
+  display: block;
+  font-size: 1.1rem;
+  color: #64748b;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.finalSkillsGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.8rem;
+  margin: 1rem 0;
+}
+
+.evaluationSummary {
+  background: linear-gradient(to bottom right, #f8fafc, #f1f5f9);
+  border-radius: 16px;
+  padding: 1.8rem;
+  border-left: 4px solid #6366f1;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+}
+
+.summaryHeader {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+.summaryHeader::before {
+  content: '';
+  display: block;
+  width: 6px;
+  height: 24px;
+  background: #6366f1;
+  border-radius: 3px;
+  margin-right: 10px;
+}
+
+.summaryText {
+  color: #475569;
+  line-height: 1.8;
+  margin: 0;
+  font-size: 1rem;
+}
+
+/* ========== 阶段卡片优化 ========== */
+.stageSkills {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 0.5rem 0;
+}
+
+/* ========== 响应式调整 ========== */
+@media (min-width: 768px) {
+  .progressBarBackground {
+    height: 14px;
+  }
+  
+  .progressBarLabel {
+    font-size: 1.05rem;
+  }
+  
+  .progressBarValue {
+    font-size: 1.2rem;
+  }
+  
+  .finalSkillsGrid {
+    gap: 2rem;
+  }
+}
+/* ========== 布局重构 ========== */
+.mainGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.row1 {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 1.5rem;
+}
+
+.row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.finalScoreSection {
+  display: flex;
+  flex-direction: column;
+}
+
+.stageCardsSection {
+  display: flex;
+  flex-direction: column;
+}
+
+.descriptionSection, .radarSection {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ========== 最终评估卡片优化 ========== */
+.finalScoreCard {
+  padding: 1.5rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.finalScoreContent {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.finalScoreVisualization {
+  position: relative;
+  width: 150px;
+  height: 150px;
+}
+
+.totalScore {
+  display: block;
+  font-size: 2.8rem;
+  font-weight: 800;
+  color: #1e293b;
+  line-height: 1;
+}
+
+.totalLabel {
+  display: block;
+  font-size: 1rem;
+  color: #64748b;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* ========== 阶段卡片区域优化 ========== */
+.stageCardsRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  flex: 1;
+}
+
+.compactStageCard {
+  padding: 1rem;
+}
+
+.compactStageCard .stageCardHeader {
+  margin-bottom: 0.8rem;
+}
+
+.compactStageCard .stageTitle {
+  font-size: 1rem;
+}
+
+.compactStageCard .stageTotalScoreBadge {
+  width: 35px;
+  height: 35px;
+  font-size: 0.9rem;
+}
+
+.compactStageCard .stageSkills {
+  gap: 0.8rem;
+}
+
+.compactStageCard .demoButton {
+  padding: 0.6rem;
+  font-size: 0.85rem;
+}
+
+/* ========== 描述卡片优化 ========== */
+.descriptionCard {
+  padding: 1.5rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.descriptionHeader {
+  margin-bottom: 1.2rem;
+}
+
+.descriptionHeader h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.descriptionContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.summaryText {
+  color: #475569;
+  line-height: 1.8;
+  margin-bottom: 1.5rem;
+  font-size: 1.05rem;
+}
+
+.finalSkillsCompact {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-top: auto;
+}
+
+/* ========== 雷达图卡片优化 ========== */
+.radarCard {
+  padding: 1.5rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.radarHeader {
+  margin-bottom: 1.2rem;
+}
+
+.radarHeader h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.radarContainer {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+}
+
+/* ========== 进度条紧凑模式 ========== */
+.compactProgressBar {
+  margin-bottom: 1rem;
+}
+
+.compactProgressBar .progressBarHeader {
+  margin-bottom: 0.3rem;
+}
+
+.compactProgressBar .progressBarLabel {
+  font-size: 0.9rem;
+}
+
+.compactProgressBar .progressBarValue {
+  font-size: 1rem;
+}
+
+.compactProgressBar .progressBarBackground {
+  height: 8px;
+}
+
+/* ========== 响应式调整 ========== */
+@media (max-width: 1024px) {
+  .row1, .row2 {
+    grid-template-columns: 1fr;
+  }
+  
+  .stageCardsRow {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .radarContainer {
+    min-height: 250px;
+  }
+}
+
+@media (max-width: 768px) {
+  .stageCardsRow {
+    grid-template-columns: 1fr;
+  }
+  
+  .finalScoreVisualization {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .totalScore {
+    font-size: 2.2rem;
+  }
 }

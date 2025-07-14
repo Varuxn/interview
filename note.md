@@ -25,8 +25,14 @@
 
 
 * 面试界面双机位
+* demo 循环/交互性语言
+* 真人视频
+ 
+* 简历分析
+* 文件版的技术报告
 * 功能表
 * 小组讨论
+* 题库
 
 ### 评估环节
 
@@ -175,4 +181,46 @@ CREATE TABLE interviewers (
     INDEX idx_country (country),
     INDEX idx_level (level)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='面试官信息表';
+```
+
+## llm_chat 后端请求与响应格式
+
+请求格式：
+
+```json
+{
+  "system_prompt": "你是一个专业的AI助手，请用中文回答用户的问题。",
+  "user_prompt": "请解释量子计算的基本原理",
+  "model": "gpt-3.5-turbo", // 可选
+  "temperature": 0.7 // 可选
+}
+```
+
+响应格式:
+
+```json
+{
+  "success": true,
+  "llm_response": {
+    "id": "chatcmpl-123",
+    "object": "chat.completion",
+    "created": 1677652288,
+    "model": "gpt-3.5-turbo",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "量子计算是利用量子力学原理处理信息的计算方式..."
+        },
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 56,
+      "completion_tokens": 300,
+      "total_tokens": 356
+    }
+  }
+}
 ```
