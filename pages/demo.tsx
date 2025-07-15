@@ -23,6 +23,41 @@ interface Message {
   sender: string;
 }
 
+interface LLMChatRequest {
+  system_prompt: string;
+  user_prompt: string;
+  model?: string;
+  temperature?: number;
+}
+
+interface LLMResponseMessage {
+  role: string;
+  content: string;
+}
+
+interface LLMResponseChoice {
+  index: number;
+  message: LLMResponseMessage;
+  finish_reason: string;
+}
+
+interface LLMResponseUsage {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+}
+
+interface LLMChatResponse {
+  success: boolean;
+  llm_response: {
+    id: string;
+    object: string;
+    created: number;
+    model: string;
+    choices: LLMResponseChoice[];
+    usage: LLMResponseUsage;
+  };
+}
 
 const DualCameraRecorder = () => {
   // Refs
@@ -37,7 +72,10 @@ const DualCameraRecorder = () => {
     // { id: uuid(), text: "你好，我是Alex！准备好开始面试了吗？", sender: "alex" },
     // { id: uuid(), text: "我已经准备好了，随时可以开始。", sender: "user" }
   ]);
-  
+  const [chatrecord, setChatRecord] = useState<string>("");
+  const [chatinit, setChatInit] = useState<boolean>(false);
+  const [systeminitprompt, setSystemInitPrompt] = useState<string>("你是一个面试官，负责对候选人进行技术面试。请根据候选人的回答给出反馈和建议。");
+
   // Device management
   const [videoDevices, setVideoDevices] = useState<Device[]>([]);
   const [audioDevices, setAudioDevices] = useState<Device[]>([]);
@@ -50,11 +88,21 @@ const DualCameraRecorder = () => {
   const [camera2Error, setCamera2Error] = useState(false);
   const [camera2Ready, setCamera2Ready] = useState(false);
   const [camera1Ready, setCamera1Ready] = useState(false);
-  const [questionIndex, setQuestionIndex] = useState(0);
   const { userId, isLoaded } = useAuth();
   const router = useRouter();
   const { stage } = router.query;
   const currentStage = typeof stage === 'string' ? stage : 'final';
+  const stagename= currentStage === 'introduction' ? '自我介绍环节' : currentStage === 'technology' ? '技术问答环节' : currentStage === 'analysis' ? '情景分析环节' :'最终环节';
+
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const question_total = 10; // 假设有10个问题
+  const [generatedQuestion, setGeneratedQuestion] = useState("请简单介绍一下你自己");
+  const [generatedAudio, setGeneratedAudio] = useState<string | undefined>(); // 存储生成的语音
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [audioStarted, setAudioStarted] = useState(false);
+  const [audioData, setAudioData] = useState(new Array(20).fill(0));
+
+
 
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<PositionRequest | null>({
@@ -63,28 +111,21 @@ const DualCameraRecorder = () => {
     description: "机器学习工程师、算法研究员、NLP工程师...",
     difficulty: "hard",
   });
-  const [selectedInterviewer, setSelectedInterviewer] = useState<InterviewerRequest | null>({
-    id: "Alex",
-    name: "Alex",
-    description: "高级算法工程师 | 性格：理性冷静｜面试风格：深挖技术细节，重视代码严谨性",
-    country : "CN",
-    level: "L4",
-  });
-  const [generatedFeedback, setGeneratedFeedback] = useState<FeedbackData>({
-    language : 10,
-    profession :30,
-    logic :50,
-    expressiveness :90,
-    total :70,
-    description :"面试表现良好，语言表达清晰，逻辑思维严谨，专业知识扎实，创新能力突出。建议在抗压表现方面继续提升。",
-  });
-  
+  const [selectedInterviewer, setSelectedInterviewer] = useState<InterviewerRequest | null>(
+    // {
+    // id: "Alex",
+    // name: "Alex",
+    // description: "高级算法工程师 | 性格：理性冷静｜面试风格：深挖技术细节，重视代码严谨性",
+    // country : "CN",
+    // level: "L4",
+    // }
+);
+
   // 录制和保存状态
   const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [status, setStatus] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
-  const [completed, setCompleted] = useState(false);
   const [transcript, setTranscript] = useState("");
   // FFmpeg实例
   const ffmpegRef = useRef<any>(null);
@@ -135,12 +176,15 @@ const DualCameraRecorder = () => {
   }, [userId, isLoaded]);
 
   useEffect(() => {
-    if (selectedInterviewer) {
+    if (selectedInterviewer && !chatinit) {
       addMessage(`面试官已切换为 ${selectedInterviewer.name}`, "system");
       addMessage("你好，我是Alex！准备好开始面试了吗？", selectedInterviewer.name);
       addMessage("我已经准备好了，随时可以开始。", "user");
+      const system_prompt = `你是一名名为${selectedInterviewer.name}的面试官，负责对候选人进行${selected?.name}领域的面试。你的设定为${selectedInterviewer?.description}。请根据历史的聊天记录和候选人的回答给出上一步的衔接和下一步的询问。`;
+      setSystemInitPrompt(system_prompt);
+      setChatInit(true);
     }
-  }, [setSelectedInterviewer]); 
+  }, [selectedInterviewer]); 
 
   // 初始化录制设置
   const initializeRecording = () => {
@@ -152,6 +196,7 @@ const DualCameraRecorder = () => {
   // 添加新消息到对话框
   const addMessage = (text: string, sender: string ) => {
     setMessages(prev => [...prev, { id: uuid(), text, sender }]);
+    setChatRecord(prev => prev + `\n${sender}: ${text}`);
   };
   
   // 获取设备列表
@@ -391,6 +436,13 @@ const DualCameraRecorder = () => {
         throw new Error(transcribeResult.error || "转写失败");
       }
 
+      if (questionIndex < question_total ) {
+        getnextquestion();
+      }
+      else {
+        savechatrecord();
+      }
+
       // 3. 准备保存文件
       const storagePath = `${userId}/${currentStage}`;
       const timestamp = new Date().getTime(); // 添加时间戳确保文件名唯一
@@ -434,7 +486,7 @@ const DualCameraRecorder = () => {
       setStatus("保存文件中...");
 
       // 使用时间戳生成唯一文件名
-      const baseFilename = `${currentStage}_${timestamp}`;
+      const baseFilename = `${currentStage}_${questionIndex}`;
 
       // 保存文件
       await Promise.all([
@@ -461,12 +513,10 @@ const DualCameraRecorder = () => {
 
       setIsProcessing(false);
       setIsSuccess(true);
-      setCompleted(true);
       setStatus("保存完成!");
 
       setTimeout(() => {
         setIsSuccess(false);
-        setCompleted(false);
         initializeRecording();
         setStatus("");
       }, 1500);
@@ -544,11 +594,213 @@ const DualCameraRecorder = () => {
     }
   };
 
+  useEffect(() => {
+    if (!audioRef.current) return;
+
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const analyser = audioContext.createAnalyser();
+    const source = audioContext.createMediaElementSource(audioRef.current);
+    
+    source.connect(analyser);
+    analyser.connect(audioContext.destination);
+    analyser.fftSize = 64;
+    
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    
+    const updateWaveform = () => {
+      if (!audioStarted) return;
+      
+      analyser.getByteFrequencyData(dataArray);
+      const reducedData = Array.from({length: 20}, (_, i) => {
+        const start = Math.floor(i * bufferLength / 20);
+        const end = Math.floor((i + 1) * bufferLength / 20);
+        return Math.max(...dataArray.slice(start, end)) / 2.55;
+      });
+      setAudioData(reducedData);
+      requestAnimationFrame(updateWaveform);
+    };
+    
+    if (audioStarted) {
+      updateWaveform();
+    }
+    
+    return () => {
+      source.disconnect();
+      analyser.disconnect();
+    };
+  }, [audioStarted]);
+
+  const [problemIsLoading, setProblemIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchLLMResponse = async (
+    system_prompt: string,
+    user_prompt: string,
+    setGeneratedQuestion: (content: string) => void,
+    model: string = 'gpt-3.5-turbo',
+    temperature: number = 0.7
+  ) => {
+    setProblemIsLoading(true);
+    setError(null);
+
+    try {
+      const requestBody: LLMChatRequest = {
+        system_prompt,
+        user_prompt,
+        model,
+        temperature
+      };
+
+      const response = await fetch('/api/llm_chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        throw new Error(`请求失败: ${response.status}`);
+      }
+
+      const data: LLMChatResponse = await response.json();
+
+      if (data.success && data.llm_response.choices.length > 0) {
+        setGeneratedQuestion(data.llm_response.choices[0].message.content);
+      } else {
+        throw new Error('未获取到有效的响应内容');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '未知错误');
+      console.error('调用LLM接口出错:', err);
+    } finally {
+      setProblemIsLoading(false);
+    }
+  };
+
+  const synthesizeSpeech = useCallback(async () => {
+    console.log('已进入音频生成函数');
+    if (!generatedQuestion) {
+      // setStatus("Please provide text to synthesize.");
+      console.log('Please provide text to synthesize.');
+      return;
+    }
+
+    if (!selectedInterviewer) {
+      console.error("Selected interviewer is not loaded yet. Cannot synthesize speech.");
+      return;
+    }
+
+    setGeneratedAudio(undefined);
+    console.log('开始尝试生成面试官音频');
+    const person =
+      selectedInterviewer.name === "Alex"
+        ? `x5_lingfeiyi_flow`
+        : selectedInterviewer.name === "Bob"
+        ? `x4_lingfeizhe_oral`
+        : `x5_lingyuyan_flow`;
+    try {
+      const response = await fetch('/api/synthesis', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: generatedQuestion,
+          voice: person, // Now safe
+          debug: true
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.log('面试官音频生成失败', errorData);
+        throw new Error(errorData.details || `HTTP error! Status: ${response.status}`);
+      }
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      setGeneratedAudio(audioUrl);
+      console.log('Audio generated successfully!');
+      console.log("音频路径:", generatedAudio);
+
+    } catch (err) {
+      console.error('Error synthesizing speech:', err);
+      setStatus(`Failed to synthesize speech: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }, [setGeneratedQuestion]);
+
+  useEffect(() => {
+    // 自动重置音频 currentTime
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+    }
+  }, [generatedAudio]);
+
+  const getnextquestion = async () => {
+    try {
+      addMessage(`${transcript}`,"user");
+      await fetchLLMResponse(
+        systeminitprompt,
+        `请根据以下对话内容和候选人的回答生成下一个问题：\n${chatrecord}`,
+        setGeneratedQuestion
+      );
+      console.log("生成的问题:", generatedQuestion);
+      synthesizeSpeech();
+      addMessage(`${generatedQuestion}`,selectedInterviewer?.name || "面试官");
+      setQuestionIndex(prev => prev + 1);
+    } catch (err) {
+      console.error('调用失败:', err);
+    }
+  };
+
+  const savechatrecord = async (): Promise<boolean> => {
+    // 构造存储路径和唯一文件名
+    const storagePath = `${userId}/${stage}`;
+    const filename = `${currentStage}_chatrecord.txt`;
+
+    // 创建文本Blob
+    const textBlob = new Blob([chatrecord], { type: 'text/plain' });
+
+    const formData = new FormData();
+    formData.append('file', textBlob, filename);
+    formData.append('path', storagePath);
+    formData.append('type', 'text');
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        const response = await fetch('/api/saveFile', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`保存失败 (HTTP ${response.status}): ${errorText}`);
+        }
+
+        const result = await response.json();
+        console.log(`文本文件保存成功: ${filename}`, result);
+        return true;
+      } catch (error) {
+        console.error(`第 ${attempt + 1}/${5} 次尝试失败:`, error);
+        
+        if (attempt === 5 - 1) {
+          throw error; // 最后一次尝试后抛出错误
+        }
+        
+        // 指数退避等待 (1s, 2s, 4s...)
+        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
+      }
+    }
+    return false;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-blue-900 text-white p-6">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-center mb-8">双机位面试系统</h1>
-        
+        <h1 className="text-3xl font-bold text-center mb-8">{stagename}</h1>
         <div className="flex flex-col lg:flex-row gap-8">
           {/* 第一列 - 摄像头区域 */}
           <div className="w-full lg:w-1/3 flex flex-col gap-6">
@@ -896,3 +1148,45 @@ const DualCameraRecorder = () => {
 };
 
 export default DualCameraRecorder;
+
+// {isVisible && (
+//                         <div className="block absolute top-[10px] sm:top-[20px] lg:top-[40px] left-auto right-[10px] sm:right-[20px] md:right-10 h-[80px] sm:h-[140px] md:h-[180px] aspect-video rounded z-20">
+//                           <div className="h-full w-full aspect-video rounded md:rounded-lg lg:rounded-xl relative">
+//                             {/* 显示对应面试官的图片 */}
+//                             <img
+//                               src={`/placeholders/${selectedInterviewer.name}.webp`}
+//                               alt={selectedInterviewer.name}
+//                               className="h-full object-cover w-full rounded-md md:rounded-[12px] aspect-video"
+//                             />
+                            
+//                             {/* 音频波形图容器 - 只在音频播放时显示 */}
+//                             {audioStarted && (
+//                             <div className="absolute inset-0 flex items-end justify-center p-2">
+//                               <div className="w-full h-1/2 flex items-end justify-center space-x-1 opacity-70">
+//                                 {audioData.map((value, i) => (
+//                                   <div 
+//                                     key={i}
+//                                     className="w-1 bg-white rounded-full"
+//                                     style={{
+//                                       height: `${value}%`,
+//                                       transition: 'height 0.05s ease-in-out'
+//                                     }}
+//                                   />
+//                                 ))}
+//                               </div>
+//                             </div>
+//                           )}
+                            
+//                             {/* 音频播放器 */}
+//                             <audio
+//                               id="generated-audio-player"
+//                               ref={audioRef}
+//                               src={generatedAudio}
+//                               onEnded={()=> setAudioEnded(true)}
+//                               // onPlay={()=> setAudioStarted(true)}
+//                               // onPause={handleAudioEnded}
+//                               // controls // 可选：开发时调试用
+//                             />
+//                           </div>
+//                         </div>
+//                       )
