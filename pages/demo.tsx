@@ -2,6 +2,13 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import Webcam from "react-webcam";
 import { motion } from "framer-motion";
 import { v4 as uuid } from "uuid";
+import { createFFmpeg,fetchFile } from '@ffmpeg/ffmpeg';
+
+import { useRouter } from 'next/router';
+import { useAuth } from "@clerk/nextjs";
+import { PositionRequest, InterviewerRequest } from './api/databases/types';
+import { fetchUserSettingsAndDetails } from './api/databases/fetchUserSettings';
+import { FeedbackData } from '../components/types';
 
 interface Message {
   id: string;
@@ -20,14 +27,11 @@ const DualCameraRecorder = () => {
   // Refs
   const webcamRef1 = useRef<Webcam>(null);
   const webcamRef2 = useRef<Webcam>(null);
-  const mediaRecorderRef1 = useRef<MediaRecorder | null>(null);
-  
-  // Video and audio chunks
-  const recordedChunksRef1 = useRef<Blob[]>([]);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   
   // State management
   const [recording, setRecording] = useState(false);
-  const [countdown, setCountdown] = useState(150); // 默认150秒
+  const [countdown, setCountdown] = useState(150);
   const [messages, setMessages] = useState<Message[]>([
     { id: uuid(), text: "你好，我是Alex！准备好开始面试了吗？", sender: "alex" },
     { id: uuid(), text: "我已经准备好了，随时可以开始。", sender: "user" }
@@ -45,10 +49,94 @@ const DualCameraRecorder = () => {
   const [camera2Error, setCamera2Error] = useState(false);
   const [camera2Ready, setCamera2Ready] = useState(false);
   const [camera1Ready, setCamera1Ready] = useState(false);
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const { userId, isLoaded } = useAuth();
+  const router = useRouter();
+  const { stage } = router.query;
+  const currentStage = typeof stage === 'string' ? stage : 'final';
+
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<PositionRequest | null>({
+    id: 1,
+    name: "人工智能",
+    description: "机器学习工程师、算法研究员、NLP工程师...",
+    difficulty: "hard",
+  });
+  const [selectedInterviewer, setSelectedInterviewer] = useState<InterviewerRequest | null>({
+    id: "Alex",
+    name: "Alex",
+    description: "高级算法工程师 | 性格：理性冷静｜面试风格：深挖技术细节，重视代码严谨性",
+    country : "CN",
+    level: "L4",
+  });
+  const [generatedFeedback, setGeneratedFeedback] = useState<FeedbackData>({
+    language : 10,
+    profession :30,
+    logic :50,
+    expressiveness :90,
+    total :70,
+    description :"面试表现良好，语言表达清晰，逻辑思维严谨，专业知识扎实，创新能力突出。建议在抗压表现方面继续提升。",
+  });
   
+  // 录制和保存状态
+  const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [status, setStatus] = useState("");
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [completed, setCompleted] = useState(false);
+  const [transcript, setTranscript] = useState("");
+  
+  // FFmpeg实例
+  const ffmpegRef = useRef<any>(null);
+  
+  // 初始化FFmpeg
+  useEffect(() => {
+    const initFFmpeg = async () => {
+      const { createFFmpeg } = await import('@ffmpeg/ffmpeg');
+      const ffmpeg = createFFmpeg({
+        corePath: "https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js",
+        log: true,
+      });
+      ffmpegRef.current = ffmpeg;
+    };
+    
+    initFFmpeg();
+  }, []);
+
+  // 用户设置和面试官信息
+  useEffect(() => {
+    if (!isLoaded || !userId) {
+      return;
+    }
+    const loadUserSettings = async () => {
+      setLoading(true);
+      try {
+        const data = await fetchUserSettingsAndDetails(userId);
+        if (data) {
+          setSelected(data.selected);
+          setSelectedInterviewer(data.selectedInterviewer);
+          console.log("User settings and details loaded successfully:", data);
+        } else {
+          console.warn(`User settings or details not found for ID: ${userId}. 
+                       Defaulting to null or consider setting default values.`);
+          setSelected(null);
+          setSelectedInterviewer(null); 
+        }
+      } catch (error) {
+        console.error("Failed to load user settings and details:", error);
+        setSelected(null); 
+        setSelectedInterviewer(null);
+      } finally {
+        setLoading(false); 
+      }
+    };
+
+    loadUserSettings();
+  }, [userId, isLoaded]);
+
   // 初始化录制设置
   const initializeRecording = () => {
-    recordedChunksRef1.current = [];
+    setRecordedChunks([]);
     setRecording(false);
     setCountdown(150);
   };
@@ -135,8 +223,18 @@ const DualCameraRecorder = () => {
     await getDevices();
   };
 
+  // 处理数据可用事件
+  const handleDataAvailable = useCallback(
+    ({ data }: BlobEvent) => {
+      if (data.size > 0) {
+        setRecordedChunks(prev => [...prev, data]);
+      }
+    },
+    [setRecordedChunks]
+  );
+
   // 开始录制
-  const startRecording = useCallback(async () => {
+  const startRecording = useCallback(() => {
     if (!webcamRef1.current || !cameraLoaded || !camera1Ready || !camera2Ready) return;
     
     try {
@@ -146,56 +244,205 @@ const DualCameraRecorder = () => {
         throw new Error("无法获取摄像头1的视频流");
       }
       
-      // 初始化视频录制器
-      mediaRecorderRef1.current = new MediaRecorder(stream1);
+      // 创建媒体录制器
+      mediaRecorderRef.current = new MediaRecorder(stream1);
       
-      // 获取音频流
-      const audioStream = await navigator.mediaDevices.getUserMedia({
-        audio: selectedAudioDevice ? { deviceId: selectedAudioDevice } : true
-      });
-      
-      // 合并音频到第一个流
-      if (stream1 && audioStream) {
-        stream1.addTrack(audioStream.getAudioTracks()[0]);
-      }
-      
-      // 设置视频数据可用时的处理
-      mediaRecorderRef1.current.ondataavailable = (e: BlobEvent) => {
-        if (e.data.size > 0) {
-          recordedChunksRef1.current.push(e.data);
-        }
-      };
+      // 设置事件监听器
+      mediaRecorderRef.current.addEventListener(
+        "dataavailable",
+        handleDataAvailable
+      );
       
       // 开始录制
-      mediaRecorderRef1.current.start();
+      mediaRecorderRef.current.start(1000); // 每1秒收集一次数据
       
       setRecording(true);
       addMessage("录制已开始", "system");
+      console.log("录制已开始");
     } catch (error) {
       console.error("开始录制失败:", error);
       addMessage("开始录制失败，请检查设备权限", "system");
       setDeviceError("录制启动失败，请重试");
     }
-  }, [cameraLoaded, selectedAudioDevice, camera1Ready, camera2Ready]);
+  }, [cameraLoaded, camera1Ready, camera2Ready, handleDataAvailable]);
   
   // 停止录制
-  const stopRecording = useCallback(() => {
-    if (mediaRecorderRef1.current) {
-      mediaRecorderRef1.current.stop();
+  const handleStopRecording = useCallback(() => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.removeEventListener(
+        "dataavailable",
+        handleDataAvailable
+      );
     }
     
     setRecording(false);
     addMessage("录制已停止", "system");
+    console.log("录制已停止");
     
     // 处理录制的视频数据
-    if (recordedChunksRef1.current.length > 0) {
-      const videoBlob1 = new Blob(recordedChunksRef1.current, { type: "video/webm" });
-      console.log("摄像头 1 视频:", videoBlob1);
+    if (recordedChunks.length > 0) {
+      handleSaveRecording();
     }
+  }, [recordedChunks, handleDataAvailable]);
+
+  // 处理倒计时结束
+  useEffect(() => {
+    if (countdown === 0 && recording) {
+      handleStopRecording();
+    }
+  }, [countdown, recording, handleStopRecording]);
+
+  // 保存录制内容
+  const handleSaveRecording = async () => {
+    if (recordedChunks.length === 0) return;
     
-    // 重置录制状态
-    initializeRecording();
-  }, []);
+    setIsProcessing(true);
+    setStatus("处理中");
+
+    try {
+      const file = new Blob(recordedChunks, { type: `video/webm` });
+      const unique_id = uuid();
+
+      // 确保FFmpeg已初始化
+      if (!ffmpegRef.current) {
+        throw new Error("FFmpeg not initialized");
+      }
+      
+      const ffmpeg = ffmpegRef.current;
+      
+      if (!ffmpeg.loaded) {
+        await ffmpeg.load();
+      }
+
+      // 1. 处理视频和音频
+      ffmpeg.FS("writeFile", `${unique_id}.webm`, await fetchFile(file));
+      await ffmpeg.run(
+        "-i",
+        `${unique_id}.webm`,
+        "-vn",
+        "-acodec",
+        "libmp3lame",
+        "-ac",
+        "1",
+        "-ar",
+        "16000",
+        "-f",
+        "mp3",
+        `${unique_id}.mp3`
+      );
+
+      const fileData = ffmpeg.FS("readFile", `${unique_id}.mp3`);
+      const audioFile = new File([fileData.buffer], `${unique_id}.mp3`, {
+        type: "audio/mp3",
+      });
+
+      // 2. 转录音频
+      const transcribeForm = new FormData();
+      transcribeForm.append("file", audioFile, `${unique_id}.mp3`);
+      const question = ""; // 这里可以根据需要设置问题
+
+      setStatus("转写中");
+      const transcribeRes = await fetch(
+        `/api/transcribe?question=${encodeURIComponent(question)}`,
+        {
+          method: "POST",
+          body: transcribeForm,
+        }
+      );
+      const transcribeResult = await transcribeRes.json();
+
+      let transcript = "";
+      if (transcribeRes.ok && transcribeResult.transcript) {
+        transcript = transcribeResult.transcript;
+        setTranscript(transcript);
+      } else {
+        throw new Error(transcribeResult.error || "转写失败");
+      }
+
+      // 3. 准备保存文件
+      const storagePath = `${userId}/${currentStage}`;
+      const timestamp = new Date().getTime(); // 添加时间戳确保文件名唯一
+
+      // 增强的保存函数，带重试逻辑
+      const saveFileToBackend = async (
+        dataBlob: Blob | File,
+        filename: string,
+        type: string,
+        retries = 3
+      ): Promise<boolean> => {
+        const formData = new FormData();
+        formData.append("file", dataBlob, filename);
+        formData.append("path", storagePath);
+        formData.append("type", type);
+
+        for (let i = 0; i < retries; i++) {
+          try {
+            const response = await fetch("/api/saveFile", {
+              method: "POST",
+              body: formData,
+            });
+
+            if (!response.ok) {
+              const errorText = await response.text();
+              throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
+
+            const result = await response.json();
+            console.log(`保存 ${type} 成功:`, result);
+            return true;
+          } catch (error) {
+            console.error(`保存 ${type} 第 ${i + 1} 次尝试失败:`, error);
+            if (i === retries - 1) throw error;
+            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // 指数退避
+          }
+        }
+        return false;
+      };
+
+      setStatus("保存文件中...");
+
+      // 使用时间戳生成唯一文件名
+      const baseFilename = `${currentStage}_${timestamp}`;
+
+      // 保存文件
+      await Promise.all([
+        saveFileToBackend(
+          file,
+          `${baseFilename}.webm`,
+          "video"
+        ),
+        saveFileToBackend(
+          audioFile,
+          `${baseFilename}.mp3`,
+          "audio"
+        ),
+        saveFileToBackend(
+          new Blob([transcript], { type: "text/plain" }),
+          `${baseFilename}.txt`,
+          "text"
+        ),
+      ]);
+
+      // 清理
+      ffmpeg.FS("unlink", `${unique_id}.webm`);
+      ffmpeg.FS("unlink", `${unique_id}.mp3`);
+
+      setIsProcessing(false);
+      setIsSuccess(true);
+      setCompleted(true);
+
+      setTimeout(() => {
+        setIsSuccess(false);
+        setCompleted(false);
+        initializeRecording();
+      }, 1500);
+    } catch (error) {
+      console.error("保存录制内容时出错:", error);
+      setIsProcessing(false);
+      setStatus("处理出错");
+    }
+  };
   
   // 处理倒计时逻辑
   useEffect(() => {
@@ -204,14 +451,12 @@ const DualCameraRecorder = () => {
       timer = setTimeout(() => {
         setCountdown(prev => prev - 1);
       }, 1000);
-    } else if (countdown === 0 && recording) {
-      stopRecording();
     }
     
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [recording, countdown, stopRecording]);
+  }, [recording, countdown]);
   
   // 组件挂载时初始化
   useEffect(() => {
@@ -220,7 +465,9 @@ const DualCameraRecorder = () => {
     
     // 组件卸载时清理
     return () => {
-      if (mediaRecorderRef1.current) mediaRecorderRef1.current.stop();
+      if (mediaRecorderRef.current) {
+        mediaRecorderRef.current.stop();
+      }
     };
   }, [getDevices]);
   
@@ -437,6 +684,11 @@ const DualCameraRecorder = () => {
                       录制中 - 剩余时间: {countdown}秒
                     </span>
                   </div>
+                ) : isProcessing ? (
+                  <div className="flex items-center justify-center">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full mr-2 animate-pulse"></div>
+                    <span className="font-medium">{status}</span>
+                  </div>
                 ) : cameraLoaded ? (
                   camera1Ready && camera2Ready ? (
                     <span className="text-green-400">设备准备就绪</span>
@@ -483,10 +735,10 @@ const DualCameraRecorder = () => {
                 </button>
                 
                 <button
-                  onClick={stopRecording}
-                  disabled={!recording}
+                  onClick={handleStopRecording}
+                  disabled={!recording || isProcessing}
                   className={`px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center ${
-                    !recording
+                    !recording || isProcessing
                       ? "bg-gray-600 cursor-not-allowed"
                       : "bg-red-600 hover:bg-red-500"
                   }`}
