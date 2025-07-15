@@ -731,6 +731,15 @@ const DualCameraRecorder = () => {
     }
   }, [setGeneratedQuestion]);
 
+  const startAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.play()
+        .then(() => {
+          setAudioStarted(true);
+        })
+        .catch(error => console.error("播放失败:", error));
+    }
+  };
   useEffect(() => {
     // 自动重置音频 currentTime
     if (audioRef.current) {
@@ -748,6 +757,7 @@ const DualCameraRecorder = () => {
       );
       console.log("生成的问题:", generatedQuestion);
       synthesizeSpeech();
+      startAudio();
       addMessage(`${generatedQuestion}`,selectedInterviewer?.name || "面试官");
       setQuestionIndex(prev => prev + 1);
     } catch (err) {
@@ -948,18 +958,43 @@ const DualCameraRecorder = () => {
           {/* 第二列 - 面试官和控制区域 */}
           <div className="w-full lg:w-1/4 flex flex-col gap-6">
             {/* 面试官图片 - 固定高度容器 */}
-            <div className="bg-gray-800 rounded-2xl overflow-hidden flex-1 flex flex-col min-h-[300px]">
+            <div className="bg-gray-800 rounded-2xl overflow-hidden flex-1 flex flex-col min-h-[300px] relative"> {/* 添加 relative 定位 */}
+              {/* 标题栏 */}
               <div className="bg-gradient-to-r from-yellow-600 to-yellow-700 p-4 text-center font-semibold">
                 <span className="text-white">面试官 {selectedInterviewer?.name || ""}</span>
               </div>
+
+              {/* 内容区域（包含头像和波形图） */}
               <div className="flex-1 flex items-center justify-center p-4">
-                <div className="relative">
-                  <img 
-                    src={`/placeholders/${selectedInterviewer?.name || "Alex"}.webp`} 
-                    alt={selectedInterviewer?.name || "Alex"} 
-                    className="w-48 h-48 rounded-full object-cover border-4 border-yellow-500"
-                  />
-                  <div className="absolute bottom-2 right-2 w-6 h-6 bg-green-500 rounded-full border-2 border-gray-900"></div>
+                <div className="relative w-full h-full"> {/* 确保容器可定位 */}
+                  {/* 面试官头像 */}
+                  <div className="flex justify-center">
+                    <img 
+                      src={`/placeholders/${selectedInterviewer?.name || "Alex"}.webp`} 
+                      alt={selectedInterviewer?.name || "Alex"} 
+                      className="w-48 h-48 rounded-full object-cover border-4 border-yellow-500 z-10 relative" /* 添加 z-index */
+                    />
+                    <div className="absolute bottom-5 right-[calc(50%-84px)] w-6 h-6 bg-green-500 rounded-full border-2 border-gray-900 z-20"></div>
+                  </div>
+
+                  {/* 音频波形图容器 */}
+                  {audioStarted && (
+                    <div className="absolute inset-0 top-auto h-1/3 flex items-end justify-center p-4 pb-8"> {/* 调整定位和间距 */}
+                      <div className="w-full max-w-[300px] flex items-end justify-center space-x-1 opacity-80">
+                        {audioData.map((value, i) => (
+                          <div 
+                            key={i}
+                            className="w-1.5 bg-yellow-400 rounded-full"
+                            style={{
+                              height: `${value}%`,
+                              transition: 'height 0.1s ease-in-out',
+                              minHeight: '2px' // 确保最小高度可见
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1148,45 +1183,3 @@ const DualCameraRecorder = () => {
 };
 
 export default DualCameraRecorder;
-
-// {isVisible && (
-//                         <div className="block absolute top-[10px] sm:top-[20px] lg:top-[40px] left-auto right-[10px] sm:right-[20px] md:right-10 h-[80px] sm:h-[140px] md:h-[180px] aspect-video rounded z-20">
-//                           <div className="h-full w-full aspect-video rounded md:rounded-lg lg:rounded-xl relative">
-//                             {/* 显示对应面试官的图片 */}
-//                             <img
-//                               src={`/placeholders/${selectedInterviewer.name}.webp`}
-//                               alt={selectedInterviewer.name}
-//                               className="h-full object-cover w-full rounded-md md:rounded-[12px] aspect-video"
-//                             />
-                            
-//                             {/* 音频波形图容器 - 只在音频播放时显示 */}
-//                             {audioStarted && (
-//                             <div className="absolute inset-0 flex items-end justify-center p-2">
-//                               <div className="w-full h-1/2 flex items-end justify-center space-x-1 opacity-70">
-//                                 {audioData.map((value, i) => (
-//                                   <div 
-//                                     key={i}
-//                                     className="w-1 bg-white rounded-full"
-//                                     style={{
-//                                       height: `${value}%`,
-//                                       transition: 'height 0.05s ease-in-out'
-//                                     }}
-//                                   />
-//                                 ))}
-//                               </div>
-//                             </div>
-//                           )}
-                            
-//                             {/* 音频播放器 */}
-//                             <audio
-//                               id="generated-audio-player"
-//                               ref={audioRef}
-//                               src={generatedAudio}
-//                               onEnded={()=> setAudioEnded(true)}
-//                               // onPlay={()=> setAudioStarted(true)}
-//                               // onPause={handleAudioEnded}
-//                               // controls // 可选：开发时调试用
-//                             />
-//                           </div>
-//                         </div>
-//                       )
