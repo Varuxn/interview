@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import Webcam from "react-webcam";
 import { motion } from "framer-motion";
 import { v4 as uuid } from "uuid";
-import { createFFmpeg,fetchFile } from '@ffmpeg/ffmpeg';
+import { fetchFile } from '@ffmpeg/ffmpeg';
 
 import { useRouter } from 'next/router';
 import { useAuth } from "@clerk/nextjs";
@@ -10,18 +10,19 @@ import { PositionRequest, InterviewerRequest } from './api/databases/types';
 import { fetchUserSettingsAndDetails } from './api/databases/fetchUserSettings';
 import { FeedbackData } from '../components/types';
 
-interface Message {
-  id: string;
-  text: string;
-  sender: "user" | "alex" | "system";
-}
-
 interface Device {
   deviceId: string;
   kind: string;
   label: string;
   groupId: string;
 }
+
+interface Message {
+  id: string;
+  text: string;
+  sender: string;
+}
+
 
 const DualCameraRecorder = () => {
   // Refs
@@ -33,8 +34,8 @@ const DualCameraRecorder = () => {
   const [recording, setRecording] = useState(false);
   const [countdown, setCountdown] = useState(150);
   const [messages, setMessages] = useState<Message[]>([
-    { id: uuid(), text: "你好，我是Alex！准备好开始面试了吗？", sender: "alex" },
-    { id: uuid(), text: "我已经准备好了，随时可以开始。", sender: "user" }
+    // { id: uuid(), text: "你好，我是Alex！准备好开始面试了吗？", sender: "alex" },
+    // { id: uuid(), text: "我已经准备好了，随时可以开始。", sender: "user" }
   ]);
   
   // Device management
@@ -85,7 +86,6 @@ const DualCameraRecorder = () => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [transcript, setTranscript] = useState("");
-  
   // FFmpeg实例
   const ffmpegRef = useRef<any>(null);
   
@@ -134,6 +134,14 @@ const DualCameraRecorder = () => {
     loadUserSettings();
   }, [userId, isLoaded]);
 
+  useEffect(() => {
+    if (selectedInterviewer) {
+      addMessage(`面试官已切换为 ${selectedInterviewer.name}`, "system");
+      addMessage("你好，我是Alex！准备好开始面试了吗？", selectedInterviewer.name);
+      addMessage("我已经准备好了，随时可以开始。", "user");
+    }
+  }, [setSelectedInterviewer]); 
+
   // 初始化录制设置
   const initializeRecording = () => {
     setRecordedChunks([]);
@@ -142,7 +150,7 @@ const DualCameraRecorder = () => {
   };
   
   // 添加新消息到对话框
-  const addMessage = (text: string, sender: "user" | "alex" | "system" = "user") => {
+  const addMessage = (text: string, sender: string ) => {
     setMessages(prev => [...prev, { id: uuid(), text, sender }]);
   };
   
@@ -350,26 +358,6 @@ const DualCameraRecorder = () => {
         `${unique_id}.mp3`
       );
 
-      // // 检查文件是否存在
-      // const files = ffmpeg.FS("readdir", "/");
-      // if (!files.includes(`${unique_id}.mp3`)) {
-      //   throw new Error(`转换失败，未生成 ${unique_id}.mp3 文件`);
-      // }
-
-      // const inputFileInfo = ffmpeg.FS("stat", `${unique_id}.webm`);
-      // console.log("输入文件信息:", {
-      //   size: inputFileInfo.size,
-      //   timestamp: new Date(inputFileInfo.mtime).toISOString()
-      // });
-
-      // // 尝试读取文件内容
-      // try {
-      //   const inputContent = ffmpeg.FS("readFile", `${unique_id}.webm`);
-      //   console.log("输入文件头10字节:", new Uint8Array(inputContent.slice(0, 10)));
-      // } catch (e) {
-      //   console.error("输入文件读取失败:", e);
-      // }
-
       const fileData = ffmpeg.FS("readFile", `${unique_id}.mp3`);
       const audioFile = new File([fileData.buffer], `${unique_id}.mp3`, {
         type: "audio/mp3",
@@ -541,7 +529,7 @@ const DualCameraRecorder = () => {
       const input = e.currentTarget;
       const text = input.value.trim();
       if (text) {
-        addMessage(text);
+        addMessage(text,"user");
         input.value = "";
       }
     }
@@ -551,7 +539,7 @@ const DualCameraRecorder = () => {
     const input = e.currentTarget.previousElementSibling as HTMLInputElement;
     const text = input.value.trim();
     if (text) {
-      addMessage(text);
+      addMessage(text,"user");
       input.value = "";
     }
   };
@@ -559,7 +547,7 @@ const DualCameraRecorder = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-blue-900 text-white p-6">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-center mb-8">双摄像头面试系统</h1>
+        <h1 className="text-3xl font-bold text-center mb-8">双机位面试系统</h1>
         
         <div className="flex flex-col lg:flex-row gap-8">
           {/* 第一列 - 摄像头区域 */}
@@ -710,13 +698,13 @@ const DualCameraRecorder = () => {
             {/* 面试官图片 - 固定高度容器 */}
             <div className="bg-gray-800 rounded-2xl overflow-hidden flex-1 flex flex-col min-h-[300px]">
               <div className="bg-gradient-to-r from-yellow-600 to-yellow-700 p-4 text-center font-semibold">
-                <span className="text-white">面试官 Alex</span>
+                <span className="text-white">面试官 {selectedInterviewer?.name || ""}</span>
               </div>
               <div className="flex-1 flex items-center justify-center p-4">
                 <div className="relative">
                   <img 
-                    src="/placeholders/Alex.webp" 
-                    alt="Alex" 
+                    src={`/placeholders/${selectedInterviewer?.name || "Alex"}.webp`} 
+                    alt={selectedInterviewer?.name || "Alex"} 
                     className="w-48 h-48 rounded-full object-cover border-4 border-yellow-500"
                   />
                   <div className="absolute bottom-2 right-2 w-6 h-6 bg-green-500 rounded-full border-2 border-gray-900"></div>
@@ -850,17 +838,17 @@ const DualCameraRecorder = () => {
                       className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl ${
                         message.sender === "user"
                           ? "bg-blue-600 rounded-br-none"
-                          : message.sender === "alex"
-                          ? "bg-gray-700 rounded-bl-none"
-                          : "bg-purple-600"
+                          : message.sender === "system"
+                          ? "bg-purple-600"
+                          : "bg-gray-700 rounded-bl-none"
                       }`}
                     >
                       <div className="font-semibold text-xs mb-1 text-gray-300">
                         {message.sender === "user"
                           ? "你"
-                          : message.sender === "alex"
-                          ? "Alex"
-                          : "系统"}
+                          : message.sender === "system"
+                          ? "系统"
+                          : selectedInterviewer?.name || "面试官"}
                       </div>
                       <div>{message.text}</div>
                     </div>
