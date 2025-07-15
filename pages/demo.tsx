@@ -19,13 +19,11 @@ interface Device {
 const DualCameraRecorder = () => {
   // Refs
   const webcamRef1 = useRef<Webcam>(null);
-  const videoRef2 = useRef<HTMLVideoElement>(null);
+  const webcamRef2 = useRef<Webcam>(null);
   const mediaRecorderRef1 = useRef<MediaRecorder | null>(null);
-  const mediaRecorderRef2 = useRef<MediaRecorder | null>(null);
   
   // Video and audio chunks
   const recordedChunksRef1 = useRef<Blob[]>([]);
-  const recordedChunksRef2 = useRef<Blob[]>([]);
   
   // State management
   const [recording, setRecording] = useState(false);
@@ -45,13 +43,12 @@ const DualCameraRecorder = () => {
   const [recordingPermission, setRecordingPermission] = useState(false);
   const [deviceError, setDeviceError] = useState<string | null>(null);
   const [camera2Error, setCamera2Error] = useState(false);
-  const [camera2Stream, setCamera2Stream] = useState<MediaStream | null>(null);
+  const [camera2Ready, setCamera2Ready] = useState(false);
   const [camera1Ready, setCamera1Ready] = useState(false);
   
   // 初始化录制设置
   const initializeRecording = () => {
     recordedChunksRef1.current = [];
-    recordedChunksRef2.current = [];
     setRecording(false);
     setCountdown(150);
   };
@@ -88,37 +85,32 @@ const DualCameraRecorder = () => {
       setAudioDevices(audioDevices);
       
       if (videoDevices.length > 0) {
-        // 尝试找到不同的摄像头设备
+        // 设置摄像头1 - 优先使用前置摄像头
         const frontCamera = videoDevices.find(d => 
           d.label.toLowerCase().includes("front") || 
           d.label.toLowerCase().includes("user") ||
           d.label.toLowerCase().includes("facetime")
         );
         
-        const backCamera = videoDevices.find(d => 
-          d.label.toLowerCase().includes("back") || 
-          d.label.toLowerCase().includes("environment") ||
-          d.label.toLowerCase().includes("rear")
-        );
-        
-        // 设置摄像头1 - 优先使用前置摄像头
         if (frontCamera) {
           setSelectedVideoDevice1(frontCamera.deviceId);
         } else {
           setSelectedVideoDevice1(videoDevices[0].deviceId);
         }
-        
+
         // 设置摄像头2 - 优先使用后置摄像头
-        if (backCamera && backCamera.deviceId !== frontCamera?.deviceId) {
+        const backCamera = videoDevices.find(d => 
+          d.label.toLowerCase().includes("back") || 
+          d.label.toLowerCase().includes("rear") ||
+          d.label.toLowerCase().includes("environment")
+        );
+
+        if (backCamera) {
           setSelectedVideoDevice2(backCamera.deviceId);
         } else if (videoDevices.length > 1) {
-          // 使用不同的设备
           setSelectedVideoDevice2(videoDevices[1].deviceId);
-        } else if (videoDevices.length === 1) {
-          // 只有一个摄像头，设置为同一个设备
-          setSelectedVideoDevice2(videoDevices[0].deviceId);
         } else {
-          setSelectedVideoDevice2("");
+          setSelectedVideoDevice2(videoDevices[0].deviceId);
         }
       }
       
@@ -139,49 +131,13 @@ const DualCameraRecorder = () => {
   const reloadDevices = async () => {
     setCameraLoaded(false);
     setCamera2Error(false);
-    // 释放摄像头2流
-    if (camera2Stream) {
-      camera2Stream.getTracks().forEach(track => track.stop());
-      setCamera2Stream(null);
-    }
+    setCamera2Ready(false);
     await getDevices();
   };
 
-  // 初始化摄像头2流
-  const initializeCamera2 = useCallback(async () => {
-    if (!cameraLoaded || !recordingPermission || !selectedVideoDevice2) return;
-    
-    try {
-      // 重置摄像头2错误状态
-      setCamera2Error(false);
-      
-      // 如果已有流，先释放
-      if (camera2Stream) {
-        camera2Stream.getTracks().forEach(track => track.stop());
-        setCamera2Stream(null);
-      }
-      
-      // 获取摄像头2流
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { deviceId: selectedVideoDevice2 }
-      });
-      
-      setCamera2Stream(stream);
-      
-      // 将流绑定到video元素
-      if (videoRef2.current) {
-        videoRef2.current.srcObject = stream;
-      }
-    } catch (error) {
-      console.error("摄像头2初始化失败:", error);
-      setCamera2Error(true);
-      addMessage("摄像头2初始化失败，请检查设备连接", "system");
-    }
-  }, [cameraLoaded, recordingPermission, selectedVideoDevice2, camera2Stream]);
-
   // 开始录制
   const startRecording = useCallback(async () => {
-    if (!webcamRef1.current || !cameraLoaded || !camera1Ready) return;
+    if (!webcamRef1.current || !cameraLoaded || !camera1Ready || !camera2Ready) return;
     
     try {
       // 获取视频流
@@ -193,17 +149,12 @@ const DualCameraRecorder = () => {
       // 初始化视频录制器
       mediaRecorderRef1.current = new MediaRecorder(stream1);
       
-      // 如果摄像头2流可用，初始化第二个录制器
-      if (camera2Stream && !camera2Error) {
-        mediaRecorderRef2.current = new MediaRecorder(camera2Stream);
-      }
-      
       // 获取音频流
       const audioStream = await navigator.mediaDevices.getUserMedia({
         audio: selectedAudioDevice ? { deviceId: selectedAudioDevice } : true
       });
       
-      // 合并音频到第一个流（如果需要）
+      // 合并音频到第一个流
       if (stream1 && audioStream) {
         stream1.addTrack(audioStream.getAudioTracks()[0]);
       }
@@ -215,20 +166,8 @@ const DualCameraRecorder = () => {
         }
       };
       
-      if (mediaRecorderRef2.current) {
-        mediaRecorderRef2.current.ondataavailable = (e: BlobEvent) => {
-          if (e.data.size > 0) {
-            recordedChunksRef2.current.push(e.data);
-          }
-        };
-      }
-      
       // 开始录制
       mediaRecorderRef1.current.start();
-      
-      if (mediaRecorderRef2.current) {
-        mediaRecorderRef2.current.start();
-      }
       
       setRecording(true);
       addMessage("录制已开始", "system");
@@ -237,16 +176,12 @@ const DualCameraRecorder = () => {
       addMessage("开始录制失败，请检查设备权限", "system");
       setDeviceError("录制启动失败，请重试");
     }
-  }, [cameraLoaded, selectedAudioDevice, camera2Stream, camera2Error, camera1Ready]);
+  }, [cameraLoaded, selectedAudioDevice, camera1Ready, camera2Ready]);
   
   // 停止录制
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef1.current) {
       mediaRecorderRef1.current.stop();
-    }
-    
-    if (mediaRecorderRef2.current) {
-      mediaRecorderRef2.current.stop();
     }
     
     setRecording(false);
@@ -256,11 +191,6 @@ const DualCameraRecorder = () => {
     if (recordedChunksRef1.current.length > 0) {
       const videoBlob1 = new Blob(recordedChunksRef1.current, { type: "video/webm" });
       console.log("摄像头 1 视频:", videoBlob1);
-    }
-    
-    if (recordedChunksRef2.current.length > 0) {
-      const videoBlob2 = new Blob(recordedChunksRef2.current, { type: "video/webm" });
-      console.log("摄像头 2 视频:", videoBlob2);
     }
     
     // 重置录制状态
@@ -291,21 +221,8 @@ const DualCameraRecorder = () => {
     // 组件卸载时清理
     return () => {
       if (mediaRecorderRef1.current) mediaRecorderRef1.current.stop();
-      if (mediaRecorderRef2.current) mediaRecorderRef2.current.stop();
-      
-      // 释放摄像头2流
-      if (camera2Stream) {
-        camera2Stream.getTracks().forEach(track => track.stop());
-      }
     };
   }, [getDevices]);
-  
-  // 设备或选择变更时初始化摄像头2
-  useEffect(() => {
-    if (cameraLoaded && recordingPermission && selectedVideoDevice2) {
-      initializeCamera2();
-    }
-  }, [cameraLoaded, recordingPermission, selectedVideoDevice2, initializeCamera2]);
   
   // 处理摄像头1准备就绪
   useEffect(() => {
@@ -313,7 +230,14 @@ const DualCameraRecorder = () => {
       setCamera1Ready(true);
     }
   }, [webcamRef1.current?.video?.readyState]);
-  
+
+  // 处理摄像头2准备就绪
+  useEffect(() => {
+    if (webcamRef2.current?.video?.readyState === 4) {
+      setCamera2Ready(true);
+    }
+  }, [webcamRef2.current?.video?.readyState]);
+
   // 处理对话框输入
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -346,7 +270,7 @@ const DualCameraRecorder = () => {
             {/* 摄像头 1 - 固定高度容器 */}
             <div className="bg-gray-800 rounded-2xl overflow-hidden border-2 border-blue-500 flex-1 min-h-[300px] relative">
               <div className="p-3 bg-gray-900 bg-opacity-80 flex justify-between items-center">
-                <span className="text-blue-400 font-semibold">摄像头 1</span>
+                <span className="text-blue-400 font-semibold">摄像头 1 (本地)</span>
                 <select
                   value={selectedVideoDevice1}
                   onChange={(e) => setSelectedVideoDevice1(e.target.value)}
@@ -374,6 +298,10 @@ const DualCameraRecorder = () => {
                     forceScreenshotSourceSize={true}
                     mirrored={true}
                     onUserMedia={() => setCamera1Ready(true)}
+                    onUserMediaError={() => {
+                      setCamera1Ready(false);
+                      addMessage("摄像头1加载失败", "system");
+                    }}
                   />
                 </div>
               ) : (
@@ -405,7 +333,7 @@ const DualCameraRecorder = () => {
                   value={selectedVideoDevice2}
                   onChange={(e) => setSelectedVideoDevice2(e.target.value)}
                   className="bg-gray-700 text-white px-2 py-1 rounded text-sm"
-                  disabled={recording || camera2Error}
+                  disabled={recording}
                 >
                   {videoDevices.map(device => (
                     <option key={device.deviceId} value={device.deviceId}>
@@ -415,47 +343,64 @@ const DualCameraRecorder = () => {
                 </select>
               </div>
               {cameraLoaded && recordingPermission ? (
-                camera2Error ? (
-                  <div className="w-full h-[300px] bg-red-900 bg-opacity-30 flex items-center justify-center">
-                    <div className="text-center p-4">
-                      <div className="text-red-400 mb-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                      </div>
-                      <p className="text-red-300">摄像头2无法启动</p>
-                      <button 
-                        onClick={reloadDevices}
-                        className="mt-2 text-white bg-red-600 hover:bg-red-500 px-3 py-1 rounded text-sm"
-                      >
-                        重新加载设备
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="w-full h-full aspect-video">
-                    <video
-                      ref={videoRef2}
-                      className="w-full h-full object-cover"
-                      autoPlay
-                      playsInline
-                      muted
-                    />
-                  </div>
-                )
+                <div className="w-full h-full aspect-video">
+                  <Webcam
+                    audio={false}
+                    ref={webcamRef2}
+                    className="w-full h-full object-cover"
+                    screenshotFormat="image/jpeg"
+                    videoConstraints={{ 
+                      deviceId: selectedVideoDevice2,
+                      facingMode: "environment"
+                    }}
+                    forceScreenshotSourceSize={true}
+                    mirrored={false}
+                    onUserMedia={() => setCamera2Ready(true)}
+                    onUserMediaError={() => {
+                      setCamera2Error(true);
+                      setCamera2Ready(false);
+                      addMessage("摄像头2加载失败", "system");
+                    }}
+                  />
+                </div>
               ) : (
                 <div className="w-full h-[300px] bg-gray-700 flex items-center justify-center">
                   <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500 mx-auto mb-3"></div>
                     <p>加载摄像头中...</p>
+                    {!recordingPermission && (
+                      <p className="text-sm text-red-400 mt-2">请允许摄像头访问权限</p>
+                    )}
                   </div>
                 </div>
               )}
-              {camera2Stream && !camera2Error && !videoRef2.current?.srcObject && (
+              {cameraLoaded && !camera2Ready && (
                 <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center">
                   <div className="text-center p-4">
-                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500 mx-auto mb-3"></div>
-                    <p className="text-green-300">正在初始化摄像头2...</p>
+                    {camera2Error ? (
+                      <>
+                        <div className="text-red-400 mb-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                        </div>
+                        <p className="text-red-300">摄像头2加载失败</p>
+                        <button 
+                          onClick={() => {
+                            setCamera2Error(false);
+                            setCamera2Ready(false);
+                          }}
+                          className="mt-2 text-white bg-red-600 hover:bg-red-500 px-3 py-1 rounded text-sm"
+                        >
+                          重试
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500 mx-auto mb-3"></div>
+                        <p className="text-green-300">正在初始化摄像头2...</p>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
@@ -493,7 +438,7 @@ const DualCameraRecorder = () => {
                     </span>
                   </div>
                 ) : cameraLoaded ? (
-                  camera1Ready ? (
+                  camera1Ready && camera2Ready ? (
                     <span className="text-green-400">设备准备就绪</span>
                   ) : (
                     <span className="text-yellow-400">初始化中...</span>
@@ -524,9 +469,9 @@ const DualCameraRecorder = () => {
               <div className="flex flex-col gap-4">
                 <button
                   onClick={startRecording}
-                  disabled={recording || !cameraLoaded || !recordingPermission || !camera1Ready}
+                  disabled={recording || !cameraLoaded || !recordingPermission || !camera1Ready || !camera2Ready}
                   className={`px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center ${
-                    recording || !cameraLoaded || !recordingPermission || !camera1Ready
+                    recording || !cameraLoaded || !recordingPermission || !camera1Ready || !camera2Ready
                       ? "bg-gray-600 cursor-not-allowed"
                       : "bg-green-600 hover:bg-green-500"
                   }`}
