@@ -227,7 +227,7 @@ const DualCameraRecorder = () => {
   const handleDataAvailable = useCallback(
     ({ data }: BlobEvent) => {
       if (data.size > 0) {
-        setRecordedChunks(prev => [...prev, data]);
+        setRecordedChunks(prev => prev.concat(data));
       }
     },
     [setRecordedChunks]
@@ -268,6 +268,13 @@ const DualCameraRecorder = () => {
   
   // 停止录制
   const handleStopRecording = useCallback(() => {
+    if (mediaRecorderRef.current?.stream) {
+    const audioTracks = mediaRecorderRef.current.stream.getAudioTracks();
+    console.log("音频轨道数量:", audioTracks.length);
+    audioTracks.forEach(track => {
+      console.log("音频轨道状态:", track.readyState, "限制:", track.getConstraints());
+    });
+  }
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
       mediaRecorderRef.current.removeEventListener(
@@ -279,6 +286,7 @@ const DualCameraRecorder = () => {
     setRecording(false);
     addMessage("录制已停止", "system");
     console.log("录制已停止");
+    console.log("录制内容为：", recordedChunks.length, "个数据块");
     
     // 处理录制的视频数据
     if (recordedChunks.length > 0) {
@@ -304,6 +312,9 @@ const DualCameraRecorder = () => {
       const file = new Blob(recordedChunks, { type: `video/webm` });
       const unique_id = uuid();
 
+      console.log("recordedChunks length:", recordedChunks.length);
+      console.log("Blob size:", file.size);
+
       // 确保FFmpeg已初始化
       if (!ffmpegRef.current) {
         throw new Error("FFmpeg not initialized");
@@ -311,12 +322,19 @@ const DualCameraRecorder = () => {
       
       const ffmpeg = ffmpegRef.current;
       
-      if (!ffmpeg.loaded) {
+      if (!ffmpeg.isLoaded()) {
         await ffmpeg.load();
       }
 
+      // const inputFile = ffmpeg.FS("readFile", `${unique_id}.webm`);
+      // if (inputFile.length === 0) {
+      //   throw new Error("输入文件为空或写入失败");
+      // }
+      // console.log("输入文件大小:", inputFile.length, "bytes");
       // 1. 处理视频和音频
+      setStatus("转换视频中...");
       ffmpeg.FS("writeFile", `${unique_id}.webm`, await fetchFile(file));
+      
       await ffmpeg.run(
         "-i",
         `${unique_id}.webm`,
@@ -332,28 +350,53 @@ const DualCameraRecorder = () => {
         `${unique_id}.mp3`
       );
 
+      // // 检查文件是否存在
+      // const files = ffmpeg.FS("readdir", "/");
+      // if (!files.includes(`${unique_id}.mp3`)) {
+      //   throw new Error(`转换失败，未生成 ${unique_id}.mp3 文件`);
+      // }
+
+      // const inputFileInfo = ffmpeg.FS("stat", `${unique_id}.webm`);
+      // console.log("输入文件信息:", {
+      //   size: inputFileInfo.size,
+      //   timestamp: new Date(inputFileInfo.mtime).toISOString()
+      // });
+
+      // // 尝试读取文件内容
+      // try {
+      //   const inputContent = ffmpeg.FS("readFile", `${unique_id}.webm`);
+      //   console.log("输入文件头10字节:", new Uint8Array(inputContent.slice(0, 10)));
+      // } catch (e) {
+      //   console.error("输入文件读取失败:", e);
+      // }
+
       const fileData = ffmpeg.FS("readFile", `${unique_id}.mp3`);
       const audioFile = new File([fileData.buffer], `${unique_id}.mp3`, {
         type: "audio/mp3",
       });
 
       // 2. 转录音频
+      setStatus("转写音频中...");
       const transcribeForm = new FormData();
       transcribeForm.append("file", audioFile, `${unique_id}.mp3`);
-      const question = ""; // 这里可以根据需要设置问题
 
-      setStatus("转写中");
       const transcribeRes = await fetch(
-        `/api/transcribe?question=${encodeURIComponent(question)}`,
+        `/api/transcribe`,
         {
           method: "POST",
           body: transcribeForm,
         }
       );
+      
+      if (!transcribeRes.ok) {
+        const errorText = await transcribeRes.text();
+        throw new Error(`转录失败: ${errorText}`);
+      }
+      
       const transcribeResult = await transcribeRes.json();
 
       let transcript = "";
-      if (transcribeRes.ok && transcribeResult.transcript) {
+      if (transcribeResult.transcript) {
         transcript = transcribeResult.transcript;
         setTranscript(transcript);
       } else {
@@ -431,16 +474,23 @@ const DualCameraRecorder = () => {
       setIsProcessing(false);
       setIsSuccess(true);
       setCompleted(true);
+      setStatus("保存完成!");
 
       setTimeout(() => {
         setIsSuccess(false);
         setCompleted(false);
         initializeRecording();
+        setStatus("");
       }, 1500);
     } catch (error) {
       console.error("保存录制内容时出错:", error);
       setIsProcessing(false);
       setStatus("处理出错");
+      
+      // 5秒后清除错误状态
+      setTimeout(() => {
+        setStatus("");
+      }, 5000);
     }
   };
   
@@ -534,7 +584,8 @@ const DualCameraRecorder = () => {
               {cameraLoaded && recordingPermission ? (
                 <div className="w-full h-full aspect-video">
                   <Webcam
-                    audio={false}
+                    muted={true}
+                    audio={true}
                     ref={webcamRef1}
                     className="w-full h-full object-cover"
                     screenshotFormat="image/jpeg"
@@ -764,8 +815,22 @@ const DualCameraRecorder = () => {
             </div>
           </div>
           
-          {/* 第三列 - 聊天对话框 - 固定高度容器 */}
-          <div className="w-full lg:w-2/5 h-full">
+          {/* 第三列 - 聊天对话框和状态显示 */}
+          <div className="w-full lg:w-2/5 h-full flex flex-col">
+            {/* 状态显示框 - 位于对话框上方，大小与录制按钮相似 */}
+            {status && (
+              <div className="mb-4 bg-blue-600 text-white py-3 px-6 rounded-xl flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className="w-3 h-3 bg-white rounded-full mr-2 animate-pulse"></div>
+                  <span>{status}</span>
+                </div>
+                {isProcessing && (
+                  <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+                )}
+              </div>
+            )}
+            
+            {/* 聊天对话框 */}
             <div className="bg-gray-800 rounded-2xl flex flex-col overflow-hidden border border-gray-700 h-full min-h-[650px]">
               <div className="bg-gradient-to-r from-blue-700 to-blue-800 p-4 text-center font-semibold">
                 面试对话
