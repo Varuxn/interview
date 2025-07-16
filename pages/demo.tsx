@@ -681,6 +681,7 @@ const DualCameraRecorder = () => {
 
   const synthesizeSpeech = useCallback(async () => {
     console.log('已进入音频生成函数');
+    console.log('当前生成的问题:', generatedQuestion);
     if (!generatedQuestion) {
       // setStatus("Please provide text to synthesize.");
       console.log('Please provide text to synthesize.');
@@ -709,7 +710,7 @@ const DualCameraRecorder = () => {
         body: JSON.stringify({
           text: generatedQuestion,
           voice: person, // Now safe
-          debug: true
+          debug: false
         }),
       });
 
@@ -721,25 +722,29 @@ const DualCameraRecorder = () => {
 
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
+
+      console.log('response为',response);
+      console.log('audioBlob为',audioBlob,);
+      console.log('audioUrl为',audioUrl);
+      
       setGeneratedAudio(audioUrl);
       console.log('Audio generated successfully!');
-      console.log("音频路径:", generatedAudio);
+      // console.log("音频路径:", generatedAudio);
+      
+      if (audioRef.current) {
+        audioRef.current.play()
+          .then(() => {
+            setAudioStarted(true);
+          })
+          .catch(error => console.error("播放失败:", error));
+      }
 
     } catch (err) {
       console.error('Error synthesizing speech:', err);
       setStatus(`Failed to synthesize speech: ${err instanceof Error ? err.message : String(err)}`);
     }
-  }, [setGeneratedQuestion]);
+  }, [generatedQuestion]);
 
-  const startAudio = () => {
-    if (audioRef.current) {
-      audioRef.current.play()
-        .then(() => {
-          setAudioStarted(true);
-        })
-        .catch(error => console.error("播放失败:", error));
-    }
-  };
   useEffect(() => {
     // 自动重置音频 currentTime
     if (audioRef.current) {
@@ -771,16 +776,6 @@ const DualCameraRecorder = () => {
     {
       console.log("转录文本:", transcript);
       addMessage(`${transcript}`,"user");
-      // if (questionIndex < question_total ){
-      //   getnextquestion();
-      // }
-      // savechatrecord();
-      // if (questionIndex >= question_total ){
-      //   addMessage(`恭喜您完成了该环节的面试，5秒后将自动跳转到staff界面`,"system");
-      //   setTimeout(() => {
-      //     router.push('/staff'); // 点击按钮5秒后跳转
-      //   }, 5000);
-      // }
     }
   }, [transcript]); // 当 transcript 变化时触发
 
@@ -788,7 +783,6 @@ const DualCameraRecorder = () => {
     // 检查条件：消息数量 > 3 且最后一条消息的发送者是 user
     const shouldProceed = messages.length > 3 && 
                         messages[messages.length - 1]?.sender === "user";
-
     if (shouldProceed) {
       if (questionIndex < question_total) {
         getnextquestion();
@@ -808,7 +802,7 @@ const DualCameraRecorder = () => {
     if (generatedQuestion) {
         console.log("生成的问题:", generatedQuestion);
         synthesizeSpeech();
-        startAudio();
+        // startAudio();
         addMessage(`${generatedQuestion}`,selectedInterviewer?.name || "面试官");
         setQuestionIndex(prev => prev + 1);
     }
@@ -856,7 +850,7 @@ const DualCameraRecorder = () => {
     return false;
   };
 
-  return (
+   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-blue-900 text-white p-6">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-center mb-8">{stagename}</h1>
@@ -1050,93 +1044,127 @@ const DualCameraRecorder = () => {
             
             {/* 控制面板 - 固定高度容器 */}
             <div className="bg-gray-800 rounded-2xl p-6 flex flex-col gap-6 min-h-[300px]">
-              {/* 状态提示 */}
-              <div className="text-center">
-                {recording ? (
-                  <div className="flex items-center justify-center">
-                    <div className="w-3 h-3 bg-red-500 rounded-full mr-2 animate-pulse"></div>
-                    <span className="font-medium">
-                      录制中 - 剩余时间: {countdown}秒
-                    </span>
-                  </div>
-                ) : isProcessing ? (
-                  <div className="flex items-center justify-center">
-                    <div className="w-3 h-3 bg-blue-500 rounded-full mr-2 animate-pulse"></div>
-                    <span className="font-medium">{status}</span>
-                  </div>
-                ) : cameraLoaded ? (
-                  camera1Ready && camera2Ready ? (
-                    <span className="text-green-400">设备准备就绪</span>
-                  ) : (
-                    <span className="text-yellow-400">初始化中...</span>
-                  )
-                ) : (
-                  <span className="text-yellow-400">正在加载设备...</span>
-                )}
-              </div>
-              
-              {/* 麦克风选择 */}
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">麦克风设备</label>
-                <select
-                  value={selectedAudioDevice}
-                  onChange={(e) => setSelectedAudioDevice(e.target.value)}
-                  className="w-full bg-gray-700 text-white px-3 py-2 rounded"
-                  disabled={recording}
-                >
-                  {audioDevices.map(device => (
-                    <option key={device.deviceId} value={device.deviceId}>
-                      {device.label || `麦克风 ${audioDevices.indexOf(device) + 1}`}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              {/* 控制按钮 */}
-              <div className="flex flex-col gap-4">
-                <button
-                  onClick={startRecording}
-                  disabled={recording || !cameraLoaded || !recordingPermission || !camera1Ready || !camera2Ready}
-                  className={`px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center ${
-                    recording || !cameraLoaded || !recordingPermission || !camera1Ready || !camera2Ready
-                      ? "bg-gray-600 cursor-not-allowed"
-                      : "bg-green-600 hover:bg-green-500"
-                  }`}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                  </svg>
-                  开始录制
-                </button>
-                
-                <button
-                  onClick={handleStopRecording}
-                  disabled={!recording || isProcessing}
-                  className={`px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center ${
-                    !recording || isProcessing
-                      ? "bg-gray-600 cursor-not-allowed"
-                      : "bg-red-600 hover:bg-red-500"
-                  }`}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
-                  </svg>
-                  停止录制
-                </button>
-                
-                {deviceError && (
-                  <div className="mt-4 p-3 bg-red-900 bg-opacity-50 rounded-lg">
-                    <p className="text-red-300 text-sm mb-2">{deviceError}</p>
-                    <button 
-                      onClick={reloadDevices}
-                      className="text-white bg-red-600 hover:bg-red-500 px-3 py-1 rounded text-sm w-full"
-                    >
-                      重新加载设备
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
+  {/* 状态提示 */}
+  <div className="text-center">
+    {recording ? (
+      <div className="flex items-center justify-center">
+        <div className="w-3 h-3 bg-red-500 rounded-full mr-2 animate-pulse"></div>
+        <span className="font-medium">
+          录制中 - 剩余时间: {countdown}秒
+        </span>
+      </div>
+    ) : isProcessing ? (
+      <div className="flex items-center justify-center">
+        <div className="w-3 h-3 bg-blue-500 rounded-full mr-2 animate-pulse"></div>
+        <span className="font-medium">{status}</span>
+      </div>
+    ) : cameraLoaded ? (
+      camera1Ready && camera2Ready ? (
+        <span className="text-green-400">设备准备就绪</span>
+      ) : (
+        <span className="text-yellow-400">初始化中...</span>
+      )
+    ) : (
+      <span className="text-yellow-400">正在加载设备...</span>
+    )}
+  </div>
+  
+  {/* 麦克风选择 */}
+  <div>
+    <label className="block text-sm text-gray-400 mb-2">麦克风设备</label>
+    <select
+      value={selectedAudioDevice}
+      onChange={(e) => setSelectedAudioDevice(e.target.value)}
+      className="w-full bg-gray-700 text-white px-3 py-2 rounded"
+      disabled={recording}
+    >
+      {audioDevices.map(device => (
+        <option key={device.deviceId} value={device.deviceId}>
+          {device.label || `麦克风 ${audioDevices.indexOf(device) + 1}`}
+        </option>
+      ))}
+    </select>
+  </div>
+  
+  {/* 控制按钮 */}
+  <div className="flex flex-col gap-4">
+    {/* 新增的音频播放按钮 - 修复版 */}
+    {generatedAudio && (
+      <button
+        onClick={() => {
+          if (audioRef.current) {
+            audioRef.current.load();
+            audioRef.current.play()
+              .then(() => {
+                console.log("音频开始播放");
+                setAudioStarted(true);
+              })
+              .catch(error => {
+                console.error("播放失败:", error);
+                alert("播放失败: 请点击一次页面任意位置后重试");
+              });
+          }
+        }}
+        className="px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center bg-purple-600 hover:bg-purple-500"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+        </svg>
+        播放问题音频
+      </button>
+    )}
+    
+    <button
+      onClick={startRecording}
+      disabled={recording || !cameraLoaded || !recordingPermission || !camera1Ready || !camera2Ready}
+      className={`px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center ${
+        recording || !cameraLoaded || !recordingPermission || !camera1Ready || !camera2Ready
+          ? "bg-gray-600 cursor-not-allowed"
+          : "bg-green-600 hover:bg-green-500"
+      }`}
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+      </svg>
+      开始录制
+    </button>
+    
+    <button
+      onClick={handleStopRecording}
+      disabled={!recording || isProcessing}
+      className={`px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center ${
+        !recording || isProcessing
+          ? "bg-gray-600 cursor-not-allowed"
+          : "bg-red-600 hover:bg-red-500"
+      }`}
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
+      </svg>
+      停止录制
+    </button>
+    
+    {deviceError && (
+      <div className="mt-4 p-3 bg-red-900 bg-opacity-50 rounded-lg">
+        <p className="text-red-300 text-sm mb-2">{deviceError}</p>
+        <button 
+          onClick={reloadDevices}
+          className="text-white bg-red-600 hover:bg-red-500 px-3 py-1 rounded text-sm w-full"
+        >
+          重新加载设备
+        </button>
+      </div>
+    )}
+  </div>
+  
+  {/* 隐藏的音频元素 - 确保添加在组件中 */}
+  <audio 
+    ref={audioRef} 
+    src={generatedAudio}
+    onError={(e) => console.error("音频加载错误", e)}
+    className="hidden"
+  />
+</div>
           </div>
           
           {/* 第三列 - 聊天对话框和状态显示 */}
