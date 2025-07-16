@@ -8,7 +8,6 @@ import { useRouter } from 'next/router';
 import { useAuth } from "@clerk/nextjs";
 import { PositionRequest, InterviewerRequest } from './api/databases/types';
 import { fetchUserSettingsAndDetails } from './api/databases/fetchUserSettings';
-import { FeedbackData } from '../components/types';
 
 interface Device {
   deviceId: string;
@@ -95,8 +94,8 @@ const DualCameraRecorder = () => {
   const stagename= currentStage === 'introduction' ? '自我介绍环节' : currentStage === 'technology' ? '技术问答环节' : currentStage === 'analysis' ? '情景分析环节' :'最终环节';
 
   const [questionIndex, setQuestionIndex] = useState(0);
-  const question_total = 10; // 假设有10个问题
-  const [generatedQuestion, setGeneratedQuestion] = useState("请简单介绍一下你自己");
+  const question_total = 3; // 每个环节的问题数目/对话轮数
+  const [generatedQuestion, setGeneratedQuestion] = useState<string>();
   const [generatedAudio, setGeneratedAudio] = useState<string | undefined>(); // 存储生成的语音
   const audioRef = useRef<HTMLAudioElement>(null);
   const [audioStarted, setAudioStarted] = useState(false);
@@ -180,9 +179,10 @@ const DualCameraRecorder = () => {
       addMessage(`面试官已切换为 ${selectedInterviewer.name}`, "system");
       addMessage("你好，我是Alex！准备好开始面试了吗？", selectedInterviewer.name);
       addMessage("我已经准备好了，随时可以开始。", "user");
-      const system_prompt = `你是一名名为${selectedInterviewer.name}的面试官，负责对候选人进行${selected?.name}领域的面试。你的设定为${selectedInterviewer?.description}。请根据历史的聊天记录和候选人的回答给出上一步的衔接和下一步的询问。`;
+      const system_prompt = `你是一名名为${selectedInterviewer.name}的面试官，负责对候选人进行${selected?.name}领域的面试。你的设定为${selectedInterviewer?.description}。请根据历史的聊天记录和候选人的回答给出上一步的衔接和下一步的询问。你只需要给出面试官说的话，不需要其他内容`;
       setSystemInitPrompt(system_prompt);
       setChatInit(true);
+      getnextquestion();
     }
   }, [selectedInterviewer]); 
 
@@ -196,7 +196,9 @@ const DualCameraRecorder = () => {
   // 添加新消息到对话框
   const addMessage = (text: string, sender: string ) => {
     setMessages(prev => [...prev, { id: uuid(), text, sender }]);
-    setChatRecord(prev => prev + `\n${sender}: ${text}`);
+    if(sender !== "system") {
+      setChatRecord(prev => prev + `\n${sender}: ${text}`);
+    }
   };
   
   // 获取设备列表
@@ -260,11 +262,11 @@ const DualCameraRecorder = () => {
       }
       
       setCameraLoaded(true);
-      addMessage("设备已加载完成", "system");
+      // addMessage("设备已加载完成", "system");
     } catch (error) {
       console.error("获取设备列表失败:", error);
       setDeviceError("无法访问摄像头和麦克风，请检查权限设置");
-      addMessage("获取设备权限失败，请允许访问摄像头和麦克风", "system");
+      // addMessage("获取设备权限失败，请允许访问摄像头和麦克风", "system");
     }
   }, []);
   
@@ -436,13 +438,6 @@ const DualCameraRecorder = () => {
         throw new Error(transcribeResult.error || "转写失败");
       }
 
-      if (questionIndex < question_total ) {
-        getnextquestion();
-      }
-      else {
-        savechatrecord();
-      }
-
       // 3. 准备保存文件
       const storagePath = `${userId}/${currentStage}`;
       const timestamp = new Date().getTime(); // 添加时间戳确保文件名唯一
@@ -597,7 +592,8 @@ const DualCameraRecorder = () => {
   useEffect(() => {
     if (!audioRef.current) return;
 
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    // const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     const analyser = audioContext.createAnalyser();
     const source = audioContext.createMediaElementSource(audioRef.current);
     
@@ -666,7 +662,11 @@ const DualCameraRecorder = () => {
 
       const data: LLMChatResponse = await response.json();
 
+      console.log('llm_chat响应为:', data);
+      // console.log('llm_chat响应内容为:', data.llm_response.choices[0].message.content);
+
       if (data.success && data.llm_response.choices.length > 0) {
+        console.log('llm_chat响应内容为:', data.llm_response.choices[0].message.content);
         setGeneratedQuestion(data.llm_response.choices[0].message.content);
       } else {
         throw new Error('未获取到有效的响应内容');
@@ -749,25 +749,74 @@ const DualCameraRecorder = () => {
 
   const getnextquestion = async () => {
     try {
-      addMessage(`${transcript}`,"user");
       await fetchLLMResponse(
         systeminitprompt,
-        `请根据以下对话内容和候选人的回答生成下一个问题：\n${chatrecord}`,
+        `请根据以下对话内容和候选人的回答生成下一个问题，如果下面没有任何记录那么你需要发出一个疑问来开启这个面试流程\n面试官与候选人的对话:\n${chatrecord}`,
         setGeneratedQuestion
       );
-      console.log("生成的问题:", generatedQuestion);
-      synthesizeSpeech();
-      startAudio();
-      addMessage(`${generatedQuestion}`,selectedInterviewer?.name || "面试官");
-      setQuestionIndex(prev => prev + 1);
+      // console.log("生成的问题:", generatedQuestion);
+      // synthesizeSpeech();
+      // startAudio();
+      // addMessage(`${generatedQuestion}`,selectedInterviewer?.name || "面试官");
+      // setQuestionIndex(prev => prev + 1);
     } catch (err) {
       console.error('调用失败:', err);
     }
   };
 
+  const [questionGenerating, setQuestionGenerating] = useState(false);  
+
+  useEffect(() => {
+    if (transcript)
+    {
+      console.log("转录文本:", transcript);
+      addMessage(`${transcript}`,"user");
+      // if (questionIndex < question_total ){
+      //   getnextquestion();
+      // }
+      // savechatrecord();
+      // if (questionIndex >= question_total ){
+      //   addMessage(`恭喜您完成了该环节的面试，5秒后将自动跳转到staff界面`,"system");
+      //   setTimeout(() => {
+      //     router.push('/staff'); // 点击按钮5秒后跳转
+      //   }, 5000);
+      // }
+    }
+  }, [transcript]); // 当 transcript 变化时触发
+
+  useEffect(() => {
+    // 检查条件：消息数量 > 3 且最后一条消息的发送者是 user
+    const shouldProceed = messages.length > 3 && 
+                        messages[messages.length - 1]?.sender === "user";
+
+    if (shouldProceed) {
+      if (questionIndex < question_total) {
+        getnextquestion();
+      }
+      savechatrecord();
+      
+      if (questionIndex >= question_total) {
+        addMessage(`恭喜您完成了该环节的面试，5秒后将自动跳转到staff界面`, "system");
+        setTimeout(() => {
+          router.push('/staff'); // 5秒后跳转
+        }, 5000);
+      }
+    }
+  }, [chatrecord]);
+
+  useEffect(() => {
+    if (generatedQuestion) {
+        console.log("生成的问题:", generatedQuestion);
+        synthesizeSpeech();
+        startAudio();
+        addMessage(`${generatedQuestion}`,selectedInterviewer?.name || "面试官");
+        setQuestionIndex(prev => prev + 1);
+    }
+  }, [generatedQuestion]); // 当 generatedQuestion 变化时触发
+
   const savechatrecord = async (): Promise<boolean> => {
     // 构造存储路径和唯一文件名
-    const storagePath = `${userId}/${stage}`;
+    const storagePath = `${userId}/${currentStage}`;
     const filename = `${currentStage}_chatrecord.txt`;
 
     // 创建文本Blob
@@ -848,7 +897,7 @@ const DualCameraRecorder = () => {
                     onUserMedia={() => setCamera1Ready(true)}
                     onUserMediaError={() => {
                       setCamera1Ready(false);
-                      addMessage("摄像头1加载失败", "system");
+                      // addMessage("摄像头1加载失败", "system");
                     }}
                   />
                 </div>
@@ -907,7 +956,7 @@ const DualCameraRecorder = () => {
                     onUserMediaError={() => {
                       setCamera2Error(true);
                       setCamera2Ready(false);
-                      addMessage("摄像头2加载失败", "system");
+                      // addMessage("摄像头2加载失败", "system");
                     }}
                   />
                 </div>
