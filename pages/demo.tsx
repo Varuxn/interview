@@ -679,6 +679,29 @@ const DualCameraRecorder = () => {
     }
   };
 
+  const [userInteracted, setUserInteracted] = useState(false);// 添加状态标记用户是否已交互
+  const [showPlayButton, setShowPlayButton] = useState(false);// 添加状态控制播放按钮显示
+
+  // 在组件顶部添加这个效果，用于解除自动播放限制
+  useEffect(() => {
+    const handleFirstInteraction = () => {
+      setUserInteracted(true);
+      document.removeEventListener('click', handleFirstInteraction);
+      document.removeEventListener('keydown', handleFirstInteraction);
+      document.removeEventListener('touchstart', handleFirstInteraction);
+    };
+
+    document.addEventListener('click', handleFirstInteraction);
+    document.addEventListener('keydown', handleFirstInteraction);
+    document.addEventListener('touchstart', handleFirstInteraction);
+
+    return () => {
+      document.removeEventListener('click', handleFirstInteraction);
+      document.removeEventListener('keydown', handleFirstInteraction);
+      document.removeEventListener('touchstart', handleFirstInteraction);
+    };
+  }, []);
+
   const synthesizeSpeech = useCallback(async () => {
     console.log('已进入音频生成函数');
     console.log('当前生成的问题:', generatedQuestion);
@@ -731,13 +754,26 @@ const DualCameraRecorder = () => {
       console.log('Audio generated successfully!');
       // console.log("音频路径:", generatedAudio);
       
-      if (audioRef.current) {
-        audioRef.current.play()
-          .then(() => {
-            setAudioStarted(true);
-          })
-          .catch(error => console.error("播放失败:", error));
-      }
+      // 添加自动播放逻辑
+      setTimeout(() => {
+        if (audioRef.current) {
+          if (userInteracted) {
+            audioRef.current.play()
+              .then(() => {
+                setAudioStarted(true);
+                console.log("自动播放成功");
+              })
+              .catch(error => {
+                console.error("自动播放失败:", error);
+                // 自动播放失败时显示播放按钮
+                setShowPlayButton(true);
+              });
+          } else {
+            // 用户尚未交互，显示播放按钮
+            setShowPlayButton(true);
+          }
+        }
+      }, 500); // 给音频加载一点时间
 
     } catch (err) {
       console.error('Error synthesizing speech:', err);
@@ -1088,19 +1124,18 @@ const DualCameraRecorder = () => {
   
   {/* 控制按钮 */}
   <div className="flex flex-col gap-4">
-    {/* 新增的音频播放按钮 - 修复版 */}
-    {generatedAudio && (
+    {/* 只在需要时显示播放按钮 */}
+    {showPlayButton && (
       <button
         onClick={() => {
           if (audioRef.current) {
-            audioRef.current.load();
             audioRef.current.play()
               .then(() => {
-                console.log("音频开始播放");
-                setAudioStarted(true);
+                console.log("手动播放成功");
+                setShowPlayButton(false);
               })
               .catch(error => {
-                console.error("播放失败:", error);
+                console.error("手动播放失败:", error);
                 alert("播放失败: 请点击一次页面任意位置后重试");
               });
           }
@@ -1157,12 +1192,14 @@ const DualCameraRecorder = () => {
     )}
   </div>
   
-  {/* 隐藏的音频元素 - 确保添加在组件中 */}
+  {/* 隐藏的音频元素 */}
   <audio 
     ref={audioRef} 
     src={generatedAudio}
     onError={(e) => console.error("音频加载错误", e)}
     className="hidden"
+    onPlay={() => setShowPlayButton(false)}
+    onEnded={() => setShowPlayButton(false)}
   />
 </div>
           </div>
