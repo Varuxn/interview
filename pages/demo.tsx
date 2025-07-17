@@ -1038,54 +1038,54 @@ const DualCameraRecorder = () => {
           
           {/* 第二列 - 面试官和控制区域 */}
           <div className="w-full lg:w-1/4 flex flex-col gap-6">
-  {/* 面试官卡片容器 */}
-  <div className="bg-gray-800 rounded-2xl overflow-hidden flex flex-col min-h-[300px]">
-    {/* 标题栏 */}
-    <div className="bg-gradient-to-r from-yellow-600 to-yellow-700 p-4 text-center font-semibold">
-      <span className="text-white">面试官 {selectedInterviewer?.name || ""}</span>
-    </div>
-
-    {/* 内容区域 - 使用flex列布局确保垂直空间分配 */}
-    <div className="flex-1 flex flex-col">
-      {/* 头像区域 - 占据60%高度 */}
-      <div className="flex-[3] flex items-center justify-center p-4 relative">
-        <div className="relative">
-          <img 
-            src={`/placeholders/${selectedInterviewer?.name || "Alex"}.webp`} 
-            alt={selectedInterviewer?.name || "Alex"} 
-            className="w-32 h-32 md:w-40 md:h-40 rounded-full object-cover border-4 border-yellow-500"
-          />
-          {/* 状态指示器 */}
-          <div className="absolute bottom-3 right-3 w-4 h-4 bg-green-500 rounded-full border-2 border-gray-900 z-20"></div>
-          {/* 语音状态提示 */}
-          {audioStarted && (
-            <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-yellow-500 text-black text-xs px-2 py-1 rounded-full animate-pulse">
-              {recording ? "录音中..." : "播放中..."}
+          {/* 面试官卡片容器 */}
+          <div className="bg-gray-800 rounded-2xl overflow-hidden flex flex-col min-h-[300px]">
+            {/* 标题栏 */}
+            <div className="bg-gradient-to-r from-yellow-600 to-yellow-700 p-4 text-center font-semibold">
+              <span className="text-white">面试官 {selectedInterviewer?.name || ""}</span>
             </div>
-          )}
-        </div>
-      </div>
 
-      {/* 波形图专用区域 - 占据40%高度 */}
-      <div className="flex-[2] min-h-[80px] flex items-center justify-center p-4 pt-0">
-        {audioStarted && (
-          <div className="w-full max-w-[300px] h-full flex items-end justify-center space-x-1.5">
-            {audioData.map((value, i) => (
-              <div 
-                key={i}
-                className="w-2 bg-gradient-to-t from-yellow-400 to-yellow-600 rounded-t-full transition-all duration-100 ease-out"
-                style={{
-                  height: `${value}%`,
-                  minHeight: '4px',
-                  opacity: 0.7 + (value / 100) * 0.3
-                }}
-              />
-            ))}
+            {/* 内容区域 - 使用flex列布局确保垂直空间分配 */}
+            <div className="flex-1 flex flex-col">
+              {/* 头像区域 - 占据60%高度 */}
+              <div className="flex-[3] flex items-center justify-center p-4 relative">
+                <div className="relative">
+                  <img 
+                    src={`/placeholders/${selectedInterviewer?.name || "Alex"}.webp`} 
+                    alt={selectedInterviewer?.name || "Alex"} 
+                    className="w-32 h-32 md:w-40 md:h-40 rounded-full object-cover border-4 border-yellow-500"
+                  />
+                  {/* 状态指示器 */}
+                  <div className="absolute bottom-3 right-3 w-4 h-4 bg-green-500 rounded-full border-2 border-gray-900 z-20"></div>
+                  {/* 语音状态提示 */}
+                  {audioStarted && (
+                    <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-yellow-500 text-black text-xs px-2 py-1 rounded-full animate-pulse">
+                      {recording ? "录音中..." : "面试中..."}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 波形图专用区域 - 占据40%高度 */}
+              <div className="flex-[2] min-h-[80px] flex items-center justify-center p-4 pt-0">
+                {audioStarted && (
+                  <div className="w-full max-w-[300px] h-full flex items-end justify-center space-x-1.5">
+                    {audioData.map((value, i) => (
+                      <div 
+                        key={i}
+                        className="w-2 bg-gradient-to-t from-yellow-400 to-yellow-600 rounded-t-full transition-all duration-100 ease-out"
+                        style={{
+                          height: `${value}%`,
+                          minHeight: '4px',
+                          opacity: 0.7 + (value / 100) * 0.3
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        )}
-      </div>
-    </div>
-  </div>
             
             {/* 控制面板 - 固定高度容器 */}
             <div className="bg-gray-800 rounded-2xl p-6 flex flex-col gap-6 min-h-[300px]">
@@ -1216,7 +1216,7 @@ const DualCameraRecorder = () => {
           {/* 第三列 - 聊天对话框和状态显示 */}
           <div className="w-full lg:w-2/5 h-full flex flex-col">
             {/* 状态显示框 - 位于对话框上方，大小与录制按钮相似 */}
-            {status && (
+            {/* {status && (
               <div className="mb-4 bg-blue-600 text-white py-3 px-6 rounded-xl flex items-center justify-between">
                 <div className="flex items-center">
                   <div className="w-3 h-3 bg-white rounded-full mr-2 animate-pulse"></div>
@@ -1226,7 +1226,7 @@ const DualCameraRecorder = () => {
                   <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
                 )}
               </div>
-            )}
+            )} */}
             
             {/* 聊天对话框 */}
             <div className="bg-gray-800 rounded-2xl flex flex-col overflow-hidden border border-gray-700 h-full min-h-[650px]">
