@@ -592,6 +592,7 @@ const DualCameraRecorder = () => {
   useEffect(() => {
     if (!audioRef.current) return;
 
+    // console.log('已进入音频分析函数');
     // const audioContext = new (window.AudioContext || window.webkitAudioContext)();
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     const analyser = audioContext.createAnalyser();
@@ -613,6 +614,7 @@ const DualCameraRecorder = () => {
         const end = Math.floor((i + 1) * bufferLength / 20);
         return Math.max(...dataArray.slice(start, end)) / 2.55;
       });
+      // console.log('获得音频播放数据为', reducedData);
       setAudioData(reducedData);
       requestAnimationFrame(updateWaveform);
     };
@@ -1036,172 +1038,179 @@ const DualCameraRecorder = () => {
           
           {/* 第二列 - 面试官和控制区域 */}
           <div className="w-full lg:w-1/4 flex flex-col gap-6">
-            {/* 面试官图片 - 固定高度容器 */}
-            <div className="bg-gray-800 rounded-2xl overflow-hidden flex-1 flex flex-col min-h-[300px] relative"> {/* 添加 relative 定位 */}
-              {/* 标题栏 */}
-              <div className="bg-gradient-to-r from-yellow-600 to-yellow-700 p-4 text-center font-semibold">
-                <span className="text-white">面试官 {selectedInterviewer?.name || ""}</span>
-              </div>
+  {/* 面试官卡片容器 */}
+  <div className="bg-gray-800 rounded-2xl overflow-hidden flex flex-col min-h-[300px]">
+    {/* 标题栏 */}
+    <div className="bg-gradient-to-r from-yellow-600 to-yellow-700 p-4 text-center font-semibold">
+      <span className="text-white">面试官 {selectedInterviewer?.name || ""}</span>
+    </div>
 
-              {/* 内容区域（包含头像和波形图） */}
-              <div className="flex-1 flex items-center justify-center p-4">
-                <div className="relative w-full h-full"> {/* 确保容器可定位 */}
-                  {/* 面试官头像 */}
-                  <div className="flex justify-center">
-                    <img 
-                      src={`/placeholders/${selectedInterviewer?.name || "Alex"}.webp`} 
-                      alt={selectedInterviewer?.name || "Alex"} 
-                      className="w-48 h-48 rounded-full object-cover border-4 border-yellow-500 z-10 relative" /* 添加 z-index */
-                    />
-                    <div className="absolute bottom-5 right-[calc(50%-84px)] w-6 h-6 bg-green-500 rounded-full border-2 border-gray-900 z-20"></div>
-                  </div>
-
-                  {/* 音频波形图容器 */}
-                  {audioStarted && (
-                    <div className="absolute inset-0 top-auto h-1/3 flex items-end justify-center p-4 pb-8"> {/* 调整定位和间距 */}
-                      <div className="w-full max-w-[300px] flex items-end justify-center space-x-1 opacity-80">
-                        {audioData.map((value, i) => (
-                          <div 
-                            key={i}
-                            className="w-1.5 bg-yellow-400 rounded-full"
-                            style={{
-                              height: `${value}%`,
-                              transition: 'height 0.1s ease-in-out',
-                              minHeight: '2px' // 确保最小高度可见
-                            }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+    {/* 内容区域 - 使用flex列布局确保垂直空间分配 */}
+    <div className="flex-1 flex flex-col">
+      {/* 头像区域 - 占据60%高度 */}
+      <div className="flex-[3] flex items-center justify-center p-4 relative">
+        <div className="relative">
+          <img 
+            src={`/placeholders/${selectedInterviewer?.name || "Alex"}.webp`} 
+            alt={selectedInterviewer?.name || "Alex"} 
+            className="w-32 h-32 md:w-40 md:h-40 rounded-full object-cover border-4 border-yellow-500"
+          />
+          {/* 状态指示器 */}
+          <div className="absolute bottom-3 right-3 w-4 h-4 bg-green-500 rounded-full border-2 border-gray-900 z-20"></div>
+          {/* 语音状态提示 */}
+          {audioStarted && (
+            <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-yellow-500 text-black text-xs px-2 py-1 rounded-full animate-pulse">
+              {recording ? "录音中..." : "播放中..."}
             </div>
+          )}
+        </div>
+      </div>
+
+      {/* 波形图专用区域 - 占据40%高度 */}
+      <div className="flex-[2] min-h-[80px] flex items-center justify-center p-4 pt-0">
+        {audioStarted && (
+          <div className="w-full max-w-[300px] h-full flex items-end justify-center space-x-1.5">
+            {audioData.map((value, i) => (
+              <div 
+                key={i}
+                className="w-2 bg-gradient-to-t from-yellow-400 to-yellow-600 rounded-t-full transition-all duration-100 ease-out"
+                style={{
+                  height: `${value}%`,
+                  minHeight: '4px',
+                  opacity: 0.7 + (value / 100) * 0.3
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
             
             {/* 控制面板 - 固定高度容器 */}
             <div className="bg-gray-800 rounded-2xl p-6 flex flex-col gap-6 min-h-[300px]">
-  {/* 状态提示 */}
-  <div className="text-center">
-    {recording ? (
-      <div className="flex items-center justify-center">
-        <div className="w-3 h-3 bg-red-500 rounded-full mr-2 animate-pulse"></div>
-        <span className="font-medium">
-          录制中 - 剩余时间: {countdown}秒
-        </span>
-      </div>
-    ) : isProcessing ? (
-      <div className="flex items-center justify-center">
-        <div className="w-3 h-3 bg-blue-500 rounded-full mr-2 animate-pulse"></div>
-        <span className="font-medium">{status}</span>
-      </div>
-    ) : cameraLoaded ? (
-      camera1Ready && camera2Ready ? (
-        <span className="text-green-400">设备准备就绪</span>
-      ) : (
-        <span className="text-yellow-400">初始化中...</span>
-      )
-    ) : (
-      <span className="text-yellow-400">正在加载设备...</span>
-    )}
-  </div>
-  
-  {/* 麦克风选择 */}
-  <div>
-    <label className="block text-sm text-gray-400 mb-2">麦克风设备</label>
-    <select
-      value={selectedAudioDevice}
-      onChange={(e) => setSelectedAudioDevice(e.target.value)}
-      className="w-full bg-gray-700 text-white px-3 py-2 rounded"
-      disabled={recording}
-    >
-      {audioDevices.map(device => (
-        <option key={device.deviceId} value={device.deviceId}>
-          {device.label || `麦克风 ${audioDevices.indexOf(device) + 1}`}
-        </option>
-      ))}
-    </select>
-  </div>
-  
-  {/* 控制按钮 */}
-  <div className="flex flex-col gap-4">
-    {/* 只在需要时显示播放按钮 */}
-    {showPlayButton && (
-      <button
-        onClick={() => {
-          if (audioRef.current) {
-            audioRef.current.play()
-              .then(() => {
-                console.log("手动播放成功");
-                setShowPlayButton(false);
-              })
-              .catch(error => {
-                console.error("手动播放失败:", error);
-                alert("播放失败: 请点击一次页面任意位置后重试");
-              });
-          }
-        }}
-        className="px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center bg-purple-600 hover:bg-purple-500"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-        </svg>
-        播放问题音频
-      </button>
-    )}
-    
-    <button
-      onClick={startRecording}
-      disabled={recording || !cameraLoaded || !recordingPermission || !camera1Ready || !camera2Ready}
-      className={`px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center ${
-        recording || !cameraLoaded || !recordingPermission || !camera1Ready || !camera2Ready
-          ? "bg-gray-600 cursor-not-allowed"
-          : "bg-green-600 hover:bg-green-500"
-      }`}
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-      </svg>
-      开始录制
-    </button>
-    
-    <button
-      onClick={handleStopRecording}
-      disabled={!recording || isProcessing}
-      className={`px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center ${
-        !recording || isProcessing
-          ? "bg-gray-600 cursor-not-allowed"
-          : "bg-red-600 hover:bg-red-500"
-      }`}
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
-      </svg>
-      停止录制
-    </button>
-    
-    {deviceError && (
-      <div className="mt-4 p-3 bg-red-900 bg-opacity-50 rounded-lg">
-        <p className="text-red-300 text-sm mb-2">{deviceError}</p>
-        <button 
-          onClick={reloadDevices}
-          className="text-white bg-red-600 hover:bg-red-500 px-3 py-1 rounded text-sm w-full"
-        >
-          重新加载设备
-        </button>
-      </div>
-    )}
-  </div>
-  
-  {/* 隐藏的音频元素 */}
-  <audio 
-    ref={audioRef} 
-    src={generatedAudio}
-    onError={(e) => console.error("音频加载错误", e)}
-    className="hidden"
-    onPlay={() => setShowPlayButton(false)}
-    onEnded={() => setShowPlayButton(false)}
-  />
-</div>
+              {/* 状态提示 */}
+              <div className="text-center">
+                {recording ? (
+                  <div className="flex items-center justify-center">
+                    <div className="w-3 h-3 bg-red-500 rounded-full mr-2 animate-pulse"></div>
+                    <span className="font-medium">
+                      录制中 - 剩余时间: {countdown}秒
+                    </span>
+                  </div>
+                ) : isProcessing ? (
+                  <div className="flex items-center justify-center">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full mr-2 animate-pulse"></div>
+                    <span className="font-medium">{status}</span>
+                  </div>
+                ) : cameraLoaded ? (
+                  camera1Ready && camera2Ready ? (
+                    <span className="text-green-400">设备准备就绪</span>
+                  ) : (
+                    <span className="text-yellow-400">初始化中...</span>
+                  )
+                ) : (
+                  <span className="text-yellow-400">正在加载设备...</span>
+                )}
+              </div>
+              
+              {/* 麦克风选择 */}
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">麦克风设备</label>
+                <select
+                  value={selectedAudioDevice}
+                  onChange={(e) => setSelectedAudioDevice(e.target.value)}
+                  className="w-full bg-gray-700 text-white px-3 py-2 rounded"
+                  disabled={recording}
+                >
+                  {audioDevices.map(device => (
+                    <option key={device.deviceId} value={device.deviceId}>
+                      {device.label || `麦克风 ${audioDevices.indexOf(device) + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              {/* 控制按钮 */}
+              <div className="flex flex-col gap-4">
+                {/* 只在需要时显示播放按钮 */}
+                {showPlayButton && (
+                  <button
+                    onClick={() => {
+                      if (audioRef.current) {
+                        audioRef.current.play()
+                          .then(() => {
+                            console.log("手动播放成功");
+                            setShowPlayButton(false);
+                          })
+                          .catch(error => {
+                            console.error("手动播放失败:", error);
+                            alert("播放失败: 请点击一次页面任意位置后重试");
+                          });
+                      }
+                    }}
+                    className="px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center bg-purple-600 hover:bg-purple-500"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                    </svg>
+                    播放问题音频
+                  </button>
+                )}
+                
+                <button
+                  onClick={startRecording}
+                  disabled={recording || !cameraLoaded || !recordingPermission || !camera1Ready || !camera2Ready}
+                  className={`px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center ${
+                    recording || !cameraLoaded || !recordingPermission || !camera1Ready || !camera2Ready
+                      ? "bg-gray-600 cursor-not-allowed"
+                      : "bg-green-600 hover:bg-green-500"
+                  }`}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                  </svg>
+                  开始录制
+                </button>
+                
+                <button
+                  onClick={handleStopRecording}
+                  disabled={!recording || isProcessing}
+                  className={`px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center ${
+                    !recording || isProcessing
+                      ? "bg-gray-600 cursor-not-allowed"
+                      : "bg-red-600 hover:bg-red-500"
+                  }`}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
+                  </svg>
+                  停止录制
+                </button>
+                
+                {deviceError && (
+                  <div className="mt-4 p-3 bg-red-900 bg-opacity-50 rounded-lg">
+                    <p className="text-red-300 text-sm mb-2">{deviceError}</p>
+                    <button 
+                      onClick={reloadDevices}
+                      className="text-white bg-red-600 hover:bg-red-500 px-3 py-1 rounded text-sm w-full"
+                    >
+                      重新加载设备
+                    </button>
+                  </div>
+                )}
+              </div>
+              
+              {/* 隐藏的音频元素 */}
+              <audio 
+                ref={audioRef} 
+                src={generatedAudio}
+                onError={(e) => console.error("音频加载错误", e)}
+                className="hidden"
+                onPlay={() => setShowPlayButton(false)}
+                onEnded={() => setShowPlayButton(false)}
+              />
+            </div>
           </div>
           
           {/* 第三列 - 聊天对话框和状态显示 */}
