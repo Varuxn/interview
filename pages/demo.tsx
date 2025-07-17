@@ -8,6 +8,8 @@ import { useRouter } from 'next/router';
 import { useAuth } from "@clerk/nextjs";
 import { PositionRequest, InterviewerRequest } from './api/databases/types';
 import { fetchUserSettingsAndDetails } from './api/databases/fetchUserSettings';
+import { LLMChatRequest, LLMChatResponse } from '../components/types'; // 假设类型定义
+
 
 interface Device {
   deviceId: string;
@@ -22,41 +24,6 @@ interface Message {
   sender: string;
 }
 
-interface LLMChatRequest {
-  system_prompt: string;
-  user_prompt: string;
-  model?: string;
-  temperature?: number;
-}
-
-interface LLMResponseMessage {
-  role: string;
-  content: string;
-}
-
-interface LLMResponseChoice {
-  index: number;
-  message: LLMResponseMessage;
-  finish_reason: string;
-}
-
-interface LLMResponseUsage {
-  prompt_tokens: number;
-  completion_tokens: number;
-  total_tokens: number;
-}
-
-interface LLMChatResponse {
-  success: boolean;
-  llm_response: {
-    id: string;
-    object: string;
-    created: number;
-    model: string;
-    choices: LLMResponseChoice[];
-    usage: LLMResponseUsage;
-  };
-}
 
 const DualCameraRecorder = () => {
   // Refs

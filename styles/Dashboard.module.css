@@ -35,33 +35,42 @@
   border-radius: 2px;
 }
 
-/* 主网格布局 */
+/* 主网格布局 - 使用重构后的布局 */
 .mainGrid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
   max-width: 1200px;
   margin: 0 auto;
 }
 
-@media (min-width: 1024px) {
-  .mainGrid {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-/* 左侧列样式 */
-.leftColumn {
-  display: flex;
-  flex-direction: column;
+.row1 {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
   gap: 1.5rem;
 }
 
+.row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 1024px) {
+  .row1, .row2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 最终评估卡片优化 */
 .finalScoreCard {
-  padding: 2rem;
+  padding: 1.5rem;
   border-radius: 18px;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .finalScoreCard:hover {
@@ -93,11 +102,18 @@
   color: #6366f1;
 }
 
+.finalScoreContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
 .finalScoreVisualization {
   position: relative;
-  width: 200px;
-  height: 200px;
-  margin: 0 auto 2rem;
+  width: 150px;
+  height: 150px;
+  margin: 0 auto;
 }
 
 .finalScoreText {
@@ -110,44 +126,60 @@
 
 .totalScore {
   display: block;
-  font-size: 3rem;
-  font-weight: 700;
+  font-size: 2.8rem;
+  font-weight: 800;
   color: #1e293b;
   line-height: 1;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .totalLabel {
   display: block;
   font-size: 1rem;
   color: #64748b;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
 .finalSkillsGrid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1rem;
-  margin-bottom: 2rem;
+  gap: 1.8rem;
+  margin: 1rem 0;
 }
 
 .evaluationSummary {
-  background: #f8fafc;
-  border-radius: 14px;
-  padding: 1.5rem;
+  background: linear-gradient(to bottom right, #f8fafc, #f1f5f9);
+  border-radius: 16px;
+  padding: 1.8rem;
   border-left: 4px solid #6366f1;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
 }
 
 .summaryHeader {
-  font-size: 1.1rem;
-  font-weight: 600;
+  font-size: 1.2rem;
+  font-weight: 700;
   color: #1e293b;
-  margin-bottom: 0.75rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+.summaryHeader::before {
+  content: '';
+  display: block;
+  width: 6px;
+  height: 24px;
+  background: #6366f1;
+  border-radius: 3px;
+  margin-right: 10px;
 }
 
 .summaryText {
   color: #475569;
-  line-height: 1.7;
+  line-height: 1.8;
   margin: 0;
+  font-size: 1rem;
 }
 
 .finalNotTested {
@@ -268,7 +300,8 @@
 .stageSkills {
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
+  gap: 1.5rem;
+  padding: 0.5rem 0;
 }
 
 .skillRow {
@@ -443,7 +476,8 @@
   background: #4f46e5;
   box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);
 }
-/* ========== 统一进度条样式 ========== */
+
+/* 统一进度条样式 */
 .progressBarContainer {
   margin-bottom: 1.5rem;
 }
@@ -497,133 +531,7 @@
   border-radius: 8px;
 }
 
-/* ========== 最终评估部分优化 ========== */
-.finalScoreContent {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.finalScoreVisualization {
-  position: relative;
-  width: 200px;
-  height: 200px;
-  margin: 0 auto;
-}
-
-.finalScoreText {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-}
-
-.totalScore {
-  display: block;
-  font-size: 3.5rem;
-  font-weight: 800;
-  color: #1e293b;
-  line-height: 1;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.totalLabel {
-  display: block;
-  font-size: 1.1rem;
-  color: #64748b;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-}
-
-.finalSkillsGrid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.8rem;
-  margin: 1rem 0;
-}
-
-.evaluationSummary {
-  background: linear-gradient(to bottom right, #f8fafc, #f1f5f9);
-  border-radius: 16px;
-  padding: 1.8rem;
-  border-left: 4px solid #6366f1;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-}
-
-.summaryHeader {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 1rem;
-  display: flex;
-  align-items: center;
-}
-
-.summaryHeader::before {
-  content: '';
-  display: block;
-  width: 6px;
-  height: 24px;
-  background: #6366f1;
-  border-radius: 3px;
-  margin-right: 10px;
-}
-
-.summaryText {
-  color: #475569;
-  line-height: 1.8;
-  margin: 0;
-  font-size: 1rem;
-}
-
-/* ========== 阶段卡片优化 ========== */
-.stageSkills {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  padding: 0.5rem 0;
-}
-
-/* ========== 响应式调整 ========== */
-@media (min-width: 768px) {
-  .progressBarBackground {
-    height: 14px;
-  }
-  
-  .progressBarLabel {
-    font-size: 1.05rem;
-  }
-  
-  .progressBarValue {
-    font-size: 1.2rem;
-  }
-  
-  .finalSkillsGrid {
-    gap: 2rem;
-  }
-}
-/* ========== 布局重构 ========== */
-.mainGrid {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.row1 {
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 1.5rem;
-}
-
-.row2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-}
-
+/* 布局重构 */
 .finalScoreSection {
   display: flex;
   flex-direction: column;
@@ -639,49 +547,18 @@
   flex-direction: column;
 }
 
-/* ========== 最终评估卡片优化 ========== */
-.finalScoreCard {
-  padding: 1.5rem;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.finalScoreContent {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.finalScoreVisualization {
-  position: relative;
-  width: 150px;
-  height: 150px;
-}
-
-.totalScore {
-  display: block;
-  font-size: 2.8rem;
-  font-weight: 800;
-  color: #1e293b;
-  line-height: 1;
-}
-
-.totalLabel {
-  display: block;
-  font-size: 1rem;
-  color: #64748b;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-}
-
-/* ========== 阶段卡片区域优化 ========== */
+/* 阶段卡片区域优化 */
 .stageCardsRow {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
   flex: 1;
+}
+
+@media (max-width: 768px) {
+  .stageCardsRow {
+    grid-template-columns: 1fr;
+  }
 }
 
 .compactStageCard {
@@ -711,7 +588,7 @@
   font-size: 0.85rem;
 }
 
-/* ========== 描述卡片优化 ========== */
+/* 描述卡片优化 */
 .descriptionCard {
   padding: 1.5rem;
   height: 100%;
@@ -735,13 +612,6 @@
   flex-direction: column;
 }
 
-.summaryText {
-  color: #475569;
-  line-height: 1.8;
-  margin-bottom: 1.5rem;
-  font-size: 1.05rem;
-}
-
 .finalSkillsCompact {
   display: grid;
   grid-template-columns: 1fr;
@@ -749,7 +619,7 @@
   margin-top: auto;
 }
 
-/* ========== 雷达图卡片优化 ========== */
+/* 雷达图卡片优化 */
 .radarCard {
   padding: 1.5rem;
   height: 100%;
@@ -775,7 +645,13 @@
   min-height: 300px;
 }
 
-/* ========== 进度条紧凑模式 ========== */
+@media (max-width: 1024px) {
+  .radarContainer {
+    min-height: 250px;
+  }
+}
+
+/* 进度条紧凑模式 */
 .compactProgressBar {
   margin-bottom: 1rem;
 }
@@ -796,32 +672,20 @@
   height: 8px;
 }
 
-/* ========== 响应式调整 ========== */
-@media (max-width: 1024px) {
-  .row1, .row2 {
-    grid-template-columns: 1fr;
+@media (min-width: 768px) {
+  .progressBarBackground {
+    height: 14px;
   }
   
-  .stageCardsRow {
-    grid-template-columns: repeat(3, 1fr);
+  .progressBarLabel {
+    font-size: 1.05rem;
   }
   
-  .radarContainer {
-    min-height: 250px;
-  }
-}
-
-@media (max-width: 768px) {
-  .stageCardsRow {
-    grid-template-columns: 1fr;
+  .progressBarValue {
+    font-size: 1.2rem;
   }
   
-  .finalScoreVisualization {
-    width: 120px;
-    height: 120px;
-  }
-  
-  .totalScore {
-    font-size: 2.2rem;
+  .finalSkillsGrid {
+    gap: 2rem;
   }
 }

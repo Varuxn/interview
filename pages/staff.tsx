@@ -335,15 +335,60 @@ const MainDashboard: React.FC = () => {
               </div>
               
               {typeof finalScores !== 'string' ? (
-                <div className={styles.finalScoreContent}>
-                  <div className={styles.finalScoreVisualization}>
+                <div 
+                  className={styles.finalScoreContent}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    height: '100%',
+                    width: '100%'
+                  }}
+                >
+                  <div 
+                    className={styles.finalScoreVisualization}
+                    style={{
+                      position: 'relative',
+                      display: 'inline-flex',  // 保持内容宽度由内部元素决定
+                      justifyContent: 'center',
+                      alignItems: 'center'
+                    }}
+                  >
                     <CircularProgressBarWithGradient
                       value={finalScores.total}
                       gradientColors={getGradientForScore(finalScores.total)}
+                      hideText={true}
                     />
-                    <div className={styles.finalScoreText}>
-                      <span className={styles.totalScore}>{finalScores.total}</span>
-                      <span className={styles.totalLabel}>总分</span>
+                    <div 
+                      className={styles.finalScoreText}
+                      style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        textAlign: 'center'
+                      }}
+                    >
+                      <span 
+                        className={styles.totalScore}
+                        style={{
+                          fontSize: '3rem',
+                          fontWeight: 'bold',
+                          lineHeight: 1,
+                          display: 'block'
+                        }}
+                      >
+                        {finalScores.total}
+                      </span>
+                      <span 
+                        className={styles.totalLabel}
+                        style={{
+                          fontSize: '1rem',
+                          display: 'block'
+                        }}
+                      >
+                        总分
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -443,7 +488,7 @@ const MainDashboard: React.FC = () => {
           <section className={styles.radarSection}>
             <Card className={styles.radarCard}>
               <div className={styles.radarHeader}>
-                <h2>能力维度雷达图</h2>
+                <h2 style={{ textAlign: 'center' }}>能力维度雷达图</h2>
               </div>
               <div className={styles.radarContainer}>
                 <RadarChart data={radarData} />

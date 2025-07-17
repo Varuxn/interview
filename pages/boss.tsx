@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import {fetchLLMResponse} from './llmApi';
 
 // 定义数据接口
 interface User {
@@ -94,6 +95,7 @@ const getEvaluationMetrics = (evaluation: Evaluation) => {
 
 // 辅助函数：根据分数获取颜色
 const getColorForScore = (score: number): string => {
+  if (score === -1) return '#9CA3AF'; // 未测试状态 - 灰色
   if (score >= 80) return '#10B981'; // Green
   if (score >= 60) return '#FBBF24'; // Yellow
   return '#EF4444'; // Red
@@ -101,99 +103,16 @@ const getColorForScore = (score: number): string => {
 
 // 辅助函数：根据分数获取渐变颜色
 const getGradientForScore = (score: number): [string, string] => {
+  if (score === -1) return ['#9CA3AF', '#D1D5DB']; // 未测试状态 - 灰色
   if (score >= 80) return ['#10B981', '#34D399']; // Green shades
   if (score >= 60) return ['#FBBF24', '#FCD34D']; // Yellow shades
   return ['#EF4444', '#F87171']; // Red shades
 };
 
-// 创新组件：能力雷达图
-const SkillRadarChart: React.FC<{ metrics: { [key: string]: number } }> = ({ metrics }) => {
-  const skills = Object.entries(metrics).filter(([key]) => key !== '总分');
-  const maxScore = 100;
-  
-  return (
-    <div className="relative w-full h-64 flex items-center justify-center">
-      <div className="absolute inset-0 flex items-center justify-center">
-        {/* 雷达网格 */}
-        {[0.25, 0.5, 0.75, 1].map((scale, idx) => (
-          <div 
-            key={idx}
-            className="absolute border border-gray-200 rounded-full"
-            style={{ 
-              width: `${scale * 100}%`, 
-              height: `${scale * 100}%`,
-              opacity: 0.5 - (idx * 0.1)
-            }}
-          />
-        ))}
-        
-        {/* 雷达轴线 */}
-        {skills.map((_, i) => {
-          const angle = (i * 2 * Math.PI) / skills.length - Math.PI / 2;
-          return (
-            <div
-              key={`line-${i}`}
-              className="absolute w-0.5 h-full bg-gray-200 transform origin-bottom"
-              style={{ 
-                transform: `rotate(${angle}rad)`,
-                left: '50%',
-                top: '50%',
-                marginLeft: '-0.25px',
-                marginTop: '-50%'
-              }}
-            />
-          );
-        })}
-        
-        {/* 雷达数据点 */}
-        <div className="absolute w-full h-full">
-          {skills.map(([skill, score], i) => {
-            const angle = (i * 2 * Math.PI) / skills.length - Math.PI / 2;
-            const radius = (score / maxScore) * 50;
-            const x = 50 + radius * Math.cos(angle);
-            const y = 50 + radius * Math.sin(angle);
-            
-            return (
-              <div
-                key={skill}
-                className="absolute w-3 h-3 rounded-full transform -translate-x-1/2 -translate-y-1/2"
-                style={{
-                  left: `${x}%`,
-                  top: `${y}%`,
-                  backgroundColor: getColorForScore(score)
-                }}
-              >
-                <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-medium text-gray-700 whitespace-nowrap">
-                  {skill}
-                </div>
-              </div>
-            );
-          })}
-          
-          {/* 雷达多边形 */}
-          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
-            <polygon
-              points={skills.map((_, i) => {
-                const angle = (i * 2 * Math.PI) / skills.length - Math.PI / 2;
-                const radius = (skills[i][1] / maxScore) * 50;
-                const x = 50 + radius * Math.cos(angle);
-                const y = 50 + radius * Math.sin(angle);
-                return `${x},${y}`;
-              }).join(' ')}
-              fill="rgba(79, 70, 229, 0.2)"
-              stroke="#4F46E5"
-              strokeWidth="0.5"
-            />
-          </svg>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 // 创新组件：能力卡片
 const SkillCard: React.FC<{ label: string; score: number; maxScore: number }> = ({ label, score, maxScore }) => {
-  const percentage = (score / maxScore) * 100;
+  const isUntested = score === -1;
+  const percentage = isUntested ? 0 : (score / maxScore) * 100;
   const [color1, color2] = getGradientForScore(score);
   
   return (
@@ -201,16 +120,309 @@ const SkillCard: React.FC<{ label: string; score: number; maxScore: number }> = 
       <div className="text-sm font-medium text-gray-700 mb-2">{label}</div>
       <div className="relative w-24 h-24 flex items-center justify-center">
         <div className="absolute inset-0 rounded-full" style={{ 
-          background: `conic-gradient(${color1} 0%, ${color2} ${percentage}%, #F3F4F6 ${percentage}%, #F3F4F6 100%)` 
+          background: isUntested 
+            ? '#F3F4F6' 
+            : `conic-gradient(${color1} 0%, ${color2} ${percentage}%, #F3F4F6 ${percentage}%, #F3F4F6 100%)` 
         }}></div>
         <div className="absolute inset-2 rounded-full bg-white flex items-center justify-center">
-          <span className="text-xl font-bold" style={{ color: color1 }}>{score}</span>
+          <span className="text-xl font-bold" style={{ color: isUntested ? '#6B7280' : color1 }}>
+            {isUntested ? 'N/A' : score}
+          </span>
         </div>
       </div>
-      <div className="mt-2 text-xs text-gray-500">/ {maxScore}</div>
+      <div className="mt-2 text-xs text-gray-500">
+        {isUntested ? '未测试' : `/ ${maxScore}`}
+      </div>
     </div>
   );
 };
+
+const KeywordCloud: React.FC<{ 
+  keywords?: string[]; // 添加可选的关键词参数
+  description?: string; // 改为可选参数
+}> = ({ keywords: propKeywords, description }) => {
+  const [keywords, setKeywords] = useState<string[]>([]);
+  const [loading, setLoading] = useState<boolean>(true); // 初始为true确保加载动画显示
+  const [error, setError] = useState<string | null>(null);
+  const [minLoadingComplete, setMinLoadingComplete] = useState(false);
+
+  useEffect(() => {
+    // 设置最小加载时间，确保加载动画可见
+    const minLoadingTimer = setTimeout(() => {
+      setMinLoadingComplete(true);
+    }, 800);
+    
+    // 如果有传入的关键词，直接使用
+    if (propKeywords && propKeywords.length > 0) {
+      setKeywords(propKeywords);
+      setLoading(false);
+      return () => clearTimeout(minLoadingTimer);
+    }
+    
+    // 如果没有传入关键词，尝试从localStorage获取
+    const storedKeywords = localStorage.getItem('resumeKeywords');
+    if (storedKeywords) {
+      setKeywords(JSON.parse(storedKeywords));
+      setLoading(false);
+      return () => clearTimeout(minLoadingTimer);
+    }
+    
+    // 如果既没有传入关键词也没有存储的关键词，且有描述内容，则提取关键词
+    if (!description) {
+      setLoading(false);
+      return () => clearTimeout(minLoadingTimer);
+    }
+    
+    setError(null);
+    
+    const extractKeywords = async () => {
+      try {
+        // 构建提示词
+        const systemPrompt = `你是一个专业的简历分析专家，请严格按以下要求提取关键词：
+1. 必须提取10-15个能概括候选人核心能力的关键词
+2. 每个关键词限定为2-4个汉字
+3. 用中文逗号分隔关键词，不要编号
+4. 必须包含技术技能、软技能和工作经历方面的关键词
+5. 示例："机器学习, 数据分析, 团队管理"`;
+        const userPrompt = `请从以下面试评估报告中提取关键词：${description}`;
+        
+        // 调用LLM API
+        const { data, error: apiError } = await fetchLLMResponse(
+          systemPrompt,
+          userPrompt,
+          'gpt-3.5-turbo',
+          0.5
+        );
+        
+        if (apiError) throw new Error(apiError);
+        if (!data?.llm_response?.choices?.[0]?.message?.content) {
+          throw new Error('未获取到有效的关键词数据');
+        }
+        
+        // 处理返回的关键词
+        const rawKeywords = data.llm_response.choices[0].message.content;
+        const processedKeywords = rawKeywords
+          .split(',')
+          .map(k => k.trim().replace(/[^\w\u4e00-\u9fa5]/g, ''))
+          .filter(k => k.length > 0 && k.length <= 4);
+        
+        setKeywords(processedKeywords.slice(0, 8));
+      } catch (err) {
+        console.error('关键词提取失败:', err);
+        setError('关键词提取失败，请重试');
+        setKeywords([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    extractKeywords();
+    
+    return () => clearTimeout(minLoadingTimer);
+  }, [propKeywords, description]);
+
+  // 生成随机颜色 (更柔和的浅色调)
+  const getRandomColor = () => {
+    const colors = [
+      '#5E72EB', // 柔和的蓝色
+      '#FF9190', // 柔和的粉色
+      '#4ECDC4', // 青绿色
+      '#FFBE0B', // 黄色
+      '#9B5DE5', // 紫色
+      '#00BBF9', // 天蓝色
+      '#00F5D4', // 蓝绿色
+      '#F15BB5'  // 玫红色
+    ];
+    return colors[Math.floor(Math.random() * colors.length)];
+  };
+
+  // 生成随机字体大小
+  const getRandomSize = () => {
+    return `${0.9 + Math.random() * 1.3}rem`; // 0.9rem - 2.2rem
+  };
+
+  // 生成随机浮动动画 (更平滑)
+  const getRandomAnimation = () => {
+    const duration = 20 + Math.random() * 20; // 20-40秒
+    const delay = Math.random() * 5; // 0-5秒延迟
+    return {
+      animation: `float ${duration}s infinite ease-in-out`,
+      animationDelay: `${delay}s`
+    };
+  };
+
+  // 科技感加载动画组件
+  const TechLoader = () => (
+    <div className="relative w-full h-64 flex items-center justify-center">
+      <div className="tech-loader">
+        <div className="ring"></div>
+        <div className="ring"></div>
+        <div className="ring"></div>
+        <div className="ring"></div>
+        <div className="center-dot"></div>
+      </div>
+      <style jsx>{`
+        .tech-loader {
+          position: relative;
+          width: 80px;
+          height: 80px;
+        }
+        
+        .ring {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          border: 2px solid transparent;
+          border-radius: 50%;
+          animation: rotate 3s linear infinite;
+        }
+        
+        .ring:nth-child(1) {
+          border-top-color: #5E72EB;
+          animation-duration: 2s;
+        }
+        
+        .ring:nth-child(2) {
+          border-right-color: #FF9190;
+          animation-duration: 3s;
+          animation-direction: reverse;
+        }
+        
+        .ring:nth-child(3) {
+          border-bottom-color: #4ECDC4;
+          animation-duration: 4s;
+        }
+        
+        .ring:nth-child(4) {
+          border-left-color: #FFBE0B;
+          animation-duration: 5s;
+          animation-direction: reverse;
+        }
+        
+        .center-dot {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          width: 12px;
+          height: 12px;
+          background: #9B5DE5;
+          border-radius: 50%;
+          transform: translate(-50%, -50%);
+          box-shadow: 0 0 10px rgba(155, 93, 229, 0.8),
+                      0 0 20px rgba(155, 93, 229, 0.6);
+          animation: pulse 1.5s infinite alternate;
+        }
+        
+        @keyframes rotate {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes pulse {
+          0% { transform: translate(-50%, -50%) scale(1); opacity: 0.7; }
+          100% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
+        }
+      `}</style>
+    </div>
+  );
+
+  // 当加载中或最小加载时间未完成时显示加载动画
+  if (loading || !minLoadingComplete) {
+    return <TechLoader />;
+  }
+
+  if (!keywords || keywords.length === 0) {
+    return (
+      <div className="w-full h-64 flex items-center justify-center text-gray-400">
+        未提取到关键词
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full h-64 overflow-hidden">
+      <style jsx>{`
+        @keyframes float {
+          0% { 
+            transform: translate3d(0, 0, 0) rotate(0deg);
+            text-shadow: 0 0 5px rgba(255,255,255,0.2);
+          }
+          25% { 
+            transform: translate3d(5px, 8px, 5px) rotate(3deg);
+            text-shadow: 0 0 10px rgba(255,255,255,0.4);
+          }
+          50% { 
+            transform: translate3d(8px, 5px, 0) rotate(0deg);
+            text-shadow: 0 0 5px rgba(255,255,255,0.2);
+          }
+          75% { 
+            transform: translate3d(5px, -5px, -5px) rotate(-3deg);
+            text-shadow: 0 0 10px rgba(255,255,255,0.4);
+          }
+          100% { 
+            transform: translate3d(0, 0, 0) rotate(0deg);
+            text-shadow: 0 0 5px rgba(255,255,255,0.2);
+          }
+        }
+        
+        .keyword-item {
+          position: absolute;
+          transition: opacity 0.3s ease;
+          z-index: 1;
+          cursor: default;
+          user-select: none;
+          transform-style: preserve-3d;
+          backface-visibility: hidden;
+        }
+        
+        .keyword-item:hover {
+          opacity: 1 !important;
+          transform: scale(1.15) !important;
+          z-index: 10;
+          transition: transform 0.2s ease;
+        }
+      `}</style>
+      
+      {keywords.map((keyword, index) => {
+        // 随机位置 (确保在容器内)
+        const top = 10 + Math.random() * 80; // 10%-90%
+        const left = 5 + Math.random() * 90; // 5%-95%
+        const opacity = 0.7 + Math.random() * 0.3; // 70%-100%透明度
+        
+        return (
+          <div
+            key={index}
+            className="keyword-item"
+            style={{
+              top: `${top}%`,
+              left: `${left}%`,
+              color: getRandomColor(),
+              fontSize: getRandomSize(),
+              fontWeight: 600,
+              opacity: opacity,
+              ...getRandomAnimation()
+            }}
+          >
+            {keyword}
+          </div>
+        );
+      })}
+      
+      {/* 背景网格效果 */}
+      <div className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: `
+            linear-gradient(rgba(200, 200, 255, 0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(200, 200, 255, 0.05) 1px, transparent 1px)
+          `,
+          backgroundSize: '20px 20px'
+        }}
+      />
+    </div>
+  );
+};
+
+
 
 // 评估详情卡片组件
 const EvaluationDetails: React.FC<{ evaluation?: Evaluation }> = ({ evaluation }) => {
@@ -256,7 +468,7 @@ const EvaluationDetails: React.FC<{ evaluation?: Evaluation }> = ({ evaluation }
     <div className="p-6 bg-gray-50 rounded-2xl border border-gray-200">
       <h3 className="text-xl font-bold text-gray-800 mb-6 pb-2 border-b border-gray-200">评估详情</h3>
 
-      {/* 最终评估和能力雷达图 */}
+      {/* 最终评估和能力维度分布 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
           <h4 className="text-lg font-bold text-indigo-600 mb-5 pb-2 border-b border-indigo-100">综合能力评估</h4>
@@ -295,8 +507,8 @@ const EvaluationDetails: React.FC<{ evaluation?: Evaluation }> = ({ evaluation }
         </div>
         
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-          <h4 className="text-lg font-bold text-indigo-600 mb-5 pb-2 border-b border-indigo-100">能力维度分布</h4>
-          <SkillRadarChart metrics={otherFinalMetrics} />
+          <h4 className="text-lg font-bold text-indigo-600 mb-5 pb-2 border-b border-indigo-100">简历内容分析</h4>
+          <KeywordCloud  />
         </div>
       </div>
 
@@ -307,6 +519,9 @@ const EvaluationDetails: React.FC<{ evaluation?: Evaluation }> = ({ evaluation }
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {Object.entries(otherStages).map(([stageName, metrics]) => {
             if (metrics) {
+              const stageScore = metrics['总分'] || -1;
+              const isStageUntested = stageScore === -1;
+              
               return (
                 <div 
                   key={stageName} 
@@ -315,29 +530,38 @@ const EvaluationDetails: React.FC<{ evaluation?: Evaluation }> = ({ evaluation }
                   <div className="flex items-center mb-4">
                     <div className="w-3 h-7 bg-indigo-500 rounded-full mr-3"></div>
                     <h4 className="text-md font-bold text-gray-800">{stageName}</h4>
-                    <span className="ml-auto text-lg font-bold" style={{ color: getColorForScore(metrics['总分'] || 0) }}>
-                      {metrics['总分'] || 0}
+                    <span className="ml-auto text-lg font-bold" style={{ color: getColorForScore(stageScore) }}>
+                      {isStageUntested ? '未测试' : stageScore}
                     </span>
                   </div>
                   
                   <div className="space-y-3">
-                    {Object.entries(metrics).filter(([key]) => key !== '总分').map(([metricLabel, score]) => (
-                      <div key={metricLabel} className="flex items-center">
-                        <span className="text-sm text-gray-600 w-24 truncate">{metricLabel}</span>
-                        <div className="flex-1 ml-2 h-2 bg-gray-200 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full rounded-full"
-                            style={{ 
-                              width: `${score}%`,
-                              background: `linear-gradient(90deg, ${getGradientForScore(score).join(', ')})`
-                            }}
-                          ></div>
+                    {Object.entries(metrics).filter(([key]) => key !== '总分').map(([metricLabel, score]) => {
+                      const isUntested = score === -1;
+                      return (
+                        <div key={metricLabel} className="flex items-center">
+                          <span className="text-sm text-gray-600 w-24 truncate">{metricLabel}</span>
+                          <div className="flex-1 ml-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            {isUntested ? (
+                              <div className="h-full bg-gray-300 rounded-full flex items-center justify-center">
+                                <div className="text-[8px] text-gray-500">未测试</div>
+                              </div>
+                            ) : (
+                              <div 
+                                className="h-full rounded-full"
+                                style={{ 
+                                  width: `${score}%`,
+                                  background: `linear-gradient(90deg, ${getGradientForScore(score).join(', ')})`
+                                }}
+                              ></div>
+                            )}
+                          </div>
+                          <span className="ml-2 text-sm font-medium w-8" style={{ color: getColorForScore(score) }}>
+                            {isUntested ? 'N/A' : score}
+                          </span>
                         </div>
-                        <span className="ml-2 text-sm font-medium w-8" style={{ color: getColorForScore(score) }}>
-                          {score}
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               );
@@ -369,7 +593,8 @@ const UserCard: React.FC<{
 }> = ({ userData, isExpanded, onToggleExpand }) => {
   const { user, setting, evaluation } = userData;
   const finalScore = evaluation?.final_total;
-  const [color1] = finalScore ? getGradientForScore(finalScore) : ['#4F46E5', '#4F46E5'];
+  const isUntested = finalScore === undefined || finalScore === -1;
+  const [color1] = !isUntested && finalScore ? getGradientForScore(finalScore) : ['#9CA3AF', '#9CA3AF'];
 
   return (
     <div
@@ -384,12 +609,19 @@ const UserCard: React.FC<{
             <div className="bg-white/20 rounded-full w-12 h-12 flex items-center justify-center mr-4">
               <span className="text-xl font-bold">{user.name.charAt(0)}</span>
             </div>
-            {finalScore !== undefined && (
+            {!isUntested && finalScore !== undefined && (
               <div 
                 className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white"
                 style={{ backgroundColor: color1 }}
               >
                 {finalScore}
+              </div>
+            )}
+            {isUntested && (
+              <div 
+                className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white bg-gray-400"
+              >
+                ?
               </div>
             )}
           </div>
@@ -441,107 +673,41 @@ const HomePage: React.FC = () => {
   }, []);
 
   // 异步获取数据
-  useEffect(() => {
+  
+   useEffect(() => {
     const fetchAllData = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // 模拟API调用
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // 模拟数据
-        const mockUsersData: UserData[] = [
-          {
-            user: { id: '1', name: '张三' },
-            setting: { id: '1', interviewer: '李经理', position: '前端工程师' },
-            evaluation: {
-              user_id: '1',
-              description: '候选人技术基础扎实，沟通能力良好，但在复杂场景分析上需要加强。',
-              introduction_language: 85,
-              introduction_profession: 78,
-              introduction_logic: 75,
-              introduction_expressiveness: 82,
-              introduction_total: 80,
-              technology_language: 88,
-              technology_profession: 92,
-              technology_logic: 85,
-              technology_expressiveness: 80,
-              technology_total: 86,
-              analysis_language: 75,
-              analysis_profession: 70,
-              analysis_logic: 65,
-              analysis_expressiveness: 72,
-              analysis_total: 70,
-              final_language: 83,
-              final_profession: 80,
-              final_logic: 75,
-              final_expressiveness: 78,
-              final_total: 79
-            }
-          },
-          {
-            user: { id: '2', name: '李四' },
-            setting: { id: '2', interviewer: '王总监', position: '产品经理' },
-            evaluation: {
-              user_id: '2',
-              description: '候选人产品思维优秀，用户需求理解深刻，技术理解稍显不足。',
-              introduction_language: 90,
-              introduction_profession: 85,
-              introduction_logic: 88,
-              introduction_expressiveness: 92,
-              introduction_total: 89,
-              technology_language: 78,
-              technology_profession: 75,
-              technology_logic: 80,
-              technology_expressiveness: 85,
-              technology_total: 80,
-              analysis_language: 92,
-              analysis_profession: 88,
-              analysis_logic: 90,
-              analysis_expressiveness: 85,
-              analysis_total: 89,
-              final_language: 87,
-              final_profession: 83,
-              final_logic: 86,
-              final_expressiveness: 87,
-              final_total: 86
-            }
-          },
-          {
-            user: { id: '3', name: '王五' },
-            setting: { id: '3', interviewer: '赵主管', position: '后端开发' },
-            evaluation: {
-              user_id: '3',
-              description: '候选人算法能力突出，系统设计经验丰富，沟通表达需要提升。',
-              introduction_language: 70,
-              introduction_profession: 85,
-              introduction_logic: 88,
-              introduction_expressiveness: 68,
-              introduction_total: 78,
-              technology_language: 75,
-              technology_profession: 92,
-              technology_logic: 90,
-              technology_expressiveness: 72,
-              technology_total: 82,
-              analysis_language: 78,
-              analysis_profession: 90,
-              analysis_logic: 88,
-              analysis_expressiveness: 75,
-              analysis_total: 83,
-              final_language: 74,
-              final_profession: 89,
-              final_logic: 89,
-              final_expressiveness: 72,
-              final_total: 81
-            }
-          }
-        ];
+        // 1. 获取所有用户
+        const usersResponse = await fetch('/api/databases/query?table=users');
+        const usersResult = await usersResponse.json();
+        if (!usersResult.success || !Array.isArray(usersResult.data)) {
+          throw new Error(usersResult.message || 'Failed to fetch users');
+        }
+        const users: User[] = usersResult.data;
 
-        setUsersData(mockUsersData);
+        // 2. 为每个用户获取设置和评估，并组合数据
+        const combinedDataPromises = users.map(async (user) => {
+          const settingPromise = fetch(`/api/databases/query?table=settings&id=${user.id}`).then(res => res.json());
+          const evaluationPromise = fetch(`/api/databases/query?table=evaluations&id=${user.id}`).then(res => res.json());
+
+          const [settingResult, evaluationResult] = await Promise.all([settingPromise, evaluationPromise]);
+
+          const setting: Setting | undefined = settingResult.success ? settingResult.data : undefined;
+          const evaluation: Evaluation | undefined = evaluationResult.success ? evaluationResult.data : undefined;
+
+          const position = setting?.position === '1' ? '人工智能' : setting?.position === '2' ? '大数据' : setting?.position === '3' ? '物联网' : setting?.position === '4' ? '智能系统' : setting?.position;
+          if(setting !== undefined ) setting.position = position || '未知岗位';
+          return { user, setting, evaluation };
+        });
+
+        const combinedData = await Promise.all(combinedDataPromises);
+        setUsersData(combinedData);
       } catch (err) {
         console.error('数据获取失败:', err);
-        setError('数据加载失败，请稍后重试');
+        setError(err instanceof Error ? err.message : '未知错误');
       } finally {
         setLoading(false);
       }

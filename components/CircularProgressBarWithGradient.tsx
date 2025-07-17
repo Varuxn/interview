@@ -1,33 +1,84 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { CircularProgressbarWithChildren, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
-import styles from '../styles/Dashboard.module.css'; // 引入新的样式文件
+import styles from '../styles/Dashboard.module.css';
 
 interface CircularProgressBarWithGradientProps {
-  value: number; // 0-100
-  gradientColors: string[]; // 例如: ['#10B981', '#6EE7B7']
+  value: number;
+  gradientColors: string[];
+  hideText?: boolean;
+  animationDuration?: number; // 新增动画时长参数
 }
 
-const CircularProgressBarWithGradient: React.FC<CircularProgressBarWithGradientProps> = ({ value, gradientColors }) => {
-  // 渐变ID，确保唯一性。使用一个固定的ID即可，因为每个组件实例都有自己的SVG定义域。
+const CircularProgressBarWithGradient: React.FC<CircularProgressBarWithGradientProps> = ({ 
+  value, 
+  gradientColors, 
+  hideText = false,
+  animationDuration = 1000 // 默认1秒动画时长
+}) => {
   const gradientId = `circular-progress-gradient`;
+  const [animatedValue, setAnimatedValue] = useState(0);
+  const animationRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number | null>(null);
+  const startValueRef = useRef(0);
+
+  // 动画逻辑
+  useEffect(() => {
+    // 清除已有动画
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+    }
+    
+    startValueRef.current = animatedValue; // 记录当前值作为动画起点
+    startTimeRef.current = performance.now();
+
+    const animate = (timestamp: number) => {
+      if (!startTimeRef.current) return;
+      
+      const elapsed = timestamp - startTimeRef.current;
+      const progress = Math.min(elapsed / animationDuration, 1);
+      
+      // 使用缓动函数使动画更平滑
+      const easedProgress = easeOutCubic(progress);
+      const newValue = startValueRef.current + (value - startValueRef.current) * easedProgress;
+      
+      setAnimatedValue(Math.round(newValue * 10) / 10); // 保留一位小数
+      
+      if (progress < 1) {
+        animationRef.current = requestAnimationFrame(animate);
+      } else {
+        animationRef.current = null;
+      }
+    };
+
+    animationRef.current = requestAnimationFrame(animate);
+    
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [value, animationDuration]);
+
+  // 缓动函数（三次方缓出）
+  const easeOutCubic = (t: number) => {
+    return 1 - Math.pow(1 - t, 3);
+  };
 
   return (
-    // 移除固定的 width 和 height，让它填充父容器
-    <div style={{ width: '100%', height: '100%' }}> 
+    <div style={{ width: '100%', height: '100%' }}>
       <CircularProgressbarWithChildren
-        value={value}
+        value={animatedValue} // 使用动画值替代原始值
         styles={buildStyles({
           rotation: 0.25,
           strokeLinecap: 'round',
-          // 使用与新设计一致的颜色
+          pathTransition: 'stroke-dashoffset 0.1s linear', // 添加路径过渡效果
           pathColor: `url(#${gradientId})`,
-          textColor: '#111827', // 对应 --text-primary
-          trailColor: '#E5E7EB', // 对应 --border-color
-          backgroundColor: '#3e98c7', // 这个颜色通常不可见
+          textColor: '#111827',
+          trailColor: '#E5E7EB',
+          backgroundColor: '#3e98c7',
         })}
       >
-        {/* SVG Defs for gradient (功能保留) */}
         <svg style={{ height: 0, width: 0 }}>
           <defs>
             <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
@@ -38,11 +89,11 @@ const CircularProgressBarWithGradient: React.FC<CircularProgressBarWithGradientP
           </defs>
         </svg>
 
-        {/* 使用 CSS Modules 替换 Tailwind 类名 */}
-        <div className={styles.circularProgressContent}>
-          <strong className={styles.circularProgressValue}>{value}</strong>
-          {/* 根据新设计，label 已被移到外部，此处不再需要 */}
-        </div>
+        {!hideText && (
+          <div className={styles.circularProgressContent}>
+            <strong className={styles.circularProgressValue}>{animatedValue}</strong>
+          </div>
+        )}
       </CircularProgressbarWithChildren>
     </div>
   );
