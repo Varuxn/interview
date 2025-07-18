@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback,useMemo } from 'react';
 import {fetchLLMResponse} from './llmApi';
+import { FiFileText } from 'react-icons/fi'
 
 // 定义数据接口
 interface User {
@@ -137,291 +138,286 @@ const SkillCard: React.FC<{ label: string; score: number; maxScore: number }> = 
   );
 };
 
-const KeywordCloud: React.FC<{ 
-  keywords?: string[]; // 添加可选的关键词参数
-  description?: string; // 改为可选参数
+
+
+const KeywordCloud: React.FC<{
+  keywords?: string[]; 
+  description?: string;
 }> = ({ keywords: propKeywords, description }) => {
   const [keywords, setKeywords] = useState<string[]>([]);
-  const [loading, setLoading] = useState<boolean>(true); // 初始为true确保加载动画显示
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [minLoadingComplete, setMinLoadingComplete] = useState(false);
 
   useEffect(() => {
-    // 设置最小加载时间，确保加载动画可见
-    const minLoadingTimer = setTimeout(() => {
-      setMinLoadingComplete(true);
-    }, 800);
-    
-    // 如果有传入的关键词，直接使用
-    if (propKeywords && propKeywords.length > 0) {
-      setKeywords(propKeywords);
-      setLoading(false);
-      return () => clearTimeout(minLoadingTimer);
-    }
-    
-    // 如果没有传入关键词，尝试从localStorage获取
-    const storedKeywords = localStorage.getItem('resumeKeywords');
-    if (storedKeywords) {
-      setKeywords(JSON.parse(storedKeywords));
-      setLoading(false);
-      return () => clearTimeout(minLoadingTimer);
-    }
-    
-    // 如果既没有传入关键词也没有存储的关键词，且有描述内容，则提取关键词
-    if (!description) {
-      setLoading(false);
-      return () => clearTimeout(minLoadingTimer);
-    }
-    
-    setError(null);
-    
-    const extractKeywords = async () => {
+    const processData = async () => {
+      setLoading(true);
+      if (propKeywords && propKeywords.length > 0) {
+        const count = Math.min(propKeywords.length, 9);
+        setKeywords(propKeywords.slice(0, count));
+        setLoading(false);
+        return;
+      }
+      const storedKeywords = localStorage.getItem('resumeKeywords');
+      if (storedKeywords) {
+        const parsed = JSON.parse(storedKeywords);
+        const count = Math.min(parsed.length, 9);
+        setKeywords(parsed.slice(0, count));
+        setLoading(false);
+        return;
+      }
+      if (!description) {
+        setLoading(false);
+        return;
+      }
+
+      setError(null);
       try {
-        // 构建提示词
-        const systemPrompt = `你是一个专业的简历分析专家，请严格按以下要求提取关键词：
-1. 必须提取10-15个能概括候选人核心能力的关键词
-2. 每个关键词限定为2-4个汉字
-3. 用中文逗号分隔关键词，不要编号
-4. 必须包含技术技能、软技能和工作经历方面的关键词
-5. 示例："机器学习, 数据分析, 团队管理"`;
-        const userPrompt = `请从以下面试评估报告中提取关键词：${description}`;
+        const systemPrompt = `你是一个专业的简历和文本分析专家，请严格按以下要求提取关键词：
+1. 必须提取8-9个能概括核心能力的关键词。
+2. 每个关键词应为2-5个汉字或一个英文单词。
+3. 必须使用英文逗号 (,) 分隔所有关键词。
+4. 示例输出: "React,数据分析,团队管理,性能优化"`;
+        const userPrompt = `请从以下内容中提取关键词：\n\n"${description}"`;
         
-        // 调用LLM API
         const { data, error: apiError } = await fetchLLMResponse(
-          systemPrompt,
-          userPrompt,
-          'gpt-3.5-turbo',
-          0.5
+          systemPrompt, userPrompt, 'gpt-3.5-turbo', 0.5
         );
         
         if (apiError) throw new Error(apiError);
-        if (!data?.llm_response?.choices?.[0]?.message?.content) {
-          throw new Error('未获取到有效的关键词数据');
-        }
+        const content = data?.llm_response?.choices?.[0]?.message?.content;
+        if (!content) throw new Error('未获取到有效的关键词数据');
         
-        // 处理返回的关键词
-        const rawKeywords = data.llm_response.choices[0].message.content;
-        const processedKeywords = rawKeywords
-          .split(',')
-          .map(k => k.trim().replace(/[^\w\u4e00-\u9fa5]/g, ''))
-          .filter(k => k.length > 0 && k.length <= 4);
+        const processedKeywords = content.split(',').map(k => k.trim()).filter(k => k.length > 0);
+        if (processedKeywords.length === 0) throw new Error("未能提取出任何关键词");
         
-        setKeywords(processedKeywords.slice(0, 8));
+        const count = Math.min(processedKeywords.length, 9);
+        setKeywords(processedKeywords.slice(0, count));
+        localStorage.setItem('resumeKeywords', JSON.stringify(processedKeywords));
       } catch (err) {
-        console.error('关键词提取失败:', err);
-        setError('关键词提取失败，请重试');
+        console.error('关键词提取流程失败:', err);
+        const errorMessage = err instanceof Error ? err.message : '未知错误';
+        setError(`关键词提取失败: ${errorMessage}`);
         setKeywords([]);
       } finally {
         setLoading(false);
       }
     };
 
-    extractKeywords();
-    
-    return () => clearTimeout(minLoadingTimer);
+    processData();
   }, [propKeywords, description]);
+  
+  const positionedKeywords = useMemo(() => {
+    const numKeywords = keywords.length;
+    if (numKeywords === 0) return [];
+    
+    const radius = 160;
+    const angleStep = (2 * Math.PI) / numKeywords;
+    
+    return keywords.map((keyword, index) => {
+      const angle = index * angleStep;
+      const x = radius * Math.cos(angle);
+      const y = radius * Math.sin(angle);
+      
+      return {
+        keyword,
+        style: {
+          '--x': `${x}px`,
+          '--y': `${y}px`,
+          '--delay': `${index * 0.15}s`,
+          '--float-delay': `${Math.random() * 4}s`,
+          '--float-duration': `${3 + Math.random() * 3}s`,
+        } as React.CSSProperties,
+      };
+    });
+  }, [keywords]);
 
-  // 生成随机颜色 (更柔和的浅色调)
-  const getRandomColor = () => {
-    const colors = [
-      '#5E72EB', // 柔和的蓝色
-      '#FF9190', // 柔和的粉色
-      '#4ECDC4', // 青绿色
-      '#FFBE0B', // 黄色
-      '#9B5DE5', // 紫色
-      '#00BBF9', // 天蓝色
-      '#00F5D4', // 蓝绿色
-      '#F15BB5'  // 玫红色
-    ];
-    return colors[Math.floor(Math.random() * colors.length)];
-  };
-
-  // 生成随机字体大小
-  const getRandomSize = () => {
-    return `${0.9 + Math.random() * 1.3}rem`; // 0.9rem - 2.2rem
-  };
-
-  // 生成随机浮动动画 (更平滑)
-  const getRandomAnimation = () => {
-    const duration = 20 + Math.random() * 20; // 20-40秒
-    const delay = Math.random() * 5; // 0-5秒延迟
-    return {
-      animation: `float ${duration}s infinite ease-in-out`,
-      animationDelay: `${delay}s`
-    };
-  };
-
-  // 科技感加载动画组件
-  const TechLoader = () => (
-    <div className="relative w-full h-64 flex items-center justify-center">
-      <div className="tech-loader">
-        <div className="ring"></div>
-        <div className="ring"></div>
-        <div className="ring"></div>
-        <div className="ring"></div>
-        <div className="center-dot"></div>
+  return (
+    <div className="keyword-container">
+      {/* 中央圆形UI元素 */}
+      <div className="center-circle">
+        <div className="circle-inner">
+          <svg className="cloud-icon" viewBox="0 0 24 24">
+            <path d="M6.5 20C3.46 20 1 17.54 1 14.5C1 11.72 3.06 9.5 5.75 9.5C6.38 9.5 6.98 9.62 7.53 9.84C8.68 6.96 11.5 5 14.75 5C18.48 5 21.5 8.02 21.5 11.75C21.5 12.74 21.3 13.69 20.94 14.56C22.27 15.31 23 16.76 23 18.5C23 20.98 20.98 23 18.5 23H6.5Z" />
+          </svg>
+          <div className="circle-text">关键能力</div>
+        </div>
       </div>
+      
+      {/* 关键词云 */}
+      {!error && keywords.length > 0 && positionedKeywords.map(({ keyword, style }, index) => (
+        <div 
+          key={index} 
+          className="keyword-item"
+          style={{
+            ...style,
+            opacity: loading ? 0 : 1,
+            animation: loading 
+              ? 'none' 
+              : `appear 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards var(--delay),
+                 float-opacity var(--float-duration, 4s) ease-in-out infinite var(--float-delay)`
+          }}
+        >
+          <span className="keyword-text">
+            {keyword}
+          </span>
+        </div>
+      ))}
+      
+      {/* 错误信息 */}
+      {error && <div className="message-display error-message">{error}</div>}
+      {!error && keywords.length === 0 && !loading && (
+        <div className="message-display">未能提取到关键词或无分析内容。</div>
+      )}
+
       <style jsx>{`
-        .tech-loader {
+        .keyword-container {
           position: relative;
-          width: 80px;
-          height: 80px;
-        }
-        
-        .ring {
-          position: absolute;
           width: 100%;
-          height: 100%;
-          border: 2px solid transparent;
-          border-radius: 50%;
-          animation: rotate 3s linear infinite;
+          min-height: 450px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          background: radial-gradient(
+            circle at center,
+            rgba(255, 255, 255, 0.8) 0%,
+            rgba(245, 248, 255, 0.9) 100%
+          );
+          border-radius: 20px;
+          box-shadow: 
+            0 15px 35px rgba(94, 114, 235, 0.15),
+            inset 0 0 20px rgba(255, 255, 255, 0.6);
         }
         
-        .ring:nth-child(1) {
-          border-top-color: #5E72EB;
-          animation-duration: 2s;
-        }
-        
-        .ring:nth-child(2) {
-          border-right-color: #FF9190;
-          animation-duration: 3s;
-          animation-direction: reverse;
-        }
-        
-        .ring:nth-child(3) {
-          border-bottom-color: #4ECDC4;
-          animation-duration: 4s;
-        }
-        
-        .ring:nth-child(4) {
-          border-left-color: #FFBE0B;
-          animation-duration: 5s;
-          animation-direction: reverse;
-        }
-        
-        .center-dot {
+        /* 中央圆形UI设计 */
+        .center-circle {
           position: absolute;
           top: 50%;
           left: 50%;
-          width: 12px;
-          height: 12px;
-          background: #9B5DE5;
-          border-radius: 50%;
           transform: translate(-50%, -50%);
-          box-shadow: 0 0 10px rgba(155, 93, 229, 0.8),
-                      0 0 20px rgba(155, 93, 229, 0.6);
-          animation: pulse 1.5s infinite alternate;
+          width: 180px;
+          height: 180px;
+          border-radius: 50%;
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.95) 0%,
+            rgba(240, 249, 255, 0.95) 100%
+          );
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 
+            0 10px 30px rgba(94, 114, 235, 0.2),
+            inset 0 0 20px rgba(255, 255, 255, 0.8),
+            inset 0 0 10px rgba(155, 93, 229, 0.1);
+          z-index: 2;
+          backdrop-filter: blur(8px);
+          border: 1px solid rgba(219, 234, 254, 0.7);
         }
         
-        @keyframes rotate {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
+        .circle-inner {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
         }
         
-        @keyframes pulse {
-          0% { transform: translate(-50%, -50%) scale(1); opacity: 0.7; }
-          100% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
-        }
-      `}</style>
-    </div>
-  );
-
-  // 当加载中或最小加载时间未完成时显示加载动画
-  if (loading || !minLoadingComplete) {
-    return <TechLoader />;
-  }
-
-  if (!keywords || keywords.length === 0) {
-    return (
-      <div className="w-full h-64 flex items-center justify-center text-gray-400">
-        未提取到关键词
-      </div>
-    );
-  }
-
-  return (
-    <div className="relative w-full h-64 overflow-hidden">
-      <style jsx>{`
-        @keyframes float {
-          0% { 
-            transform: translate3d(0, 0, 0) rotate(0deg);
-            text-shadow: 0 0 5px rgba(255,255,255,0.2);
-          }
-          25% { 
-            transform: translate3d(5px, 8px, 5px) rotate(3deg);
-            text-shadow: 0 0 10px rgba(255,255,255,0.4);
-          }
-          50% { 
-            transform: translate3d(8px, 5px, 0) rotate(0deg);
-            text-shadow: 0 0 5px rgba(255,255,255,0.2);
-          }
-          75% { 
-            transform: translate3d(5px, -5px, -5px) rotate(-3deg);
-            text-shadow: 0 0 10px rgba(255,255,255,0.4);
-          }
-          100% { 
-            transform: translate3d(0, 0, 0) rotate(0deg);
-            text-shadow: 0 0 5px rgba(255,255,255,0.2);
-          }
+        .cloud-icon {
+          width: 60px;
+          height: 60px;
+          fill: #5E72EB;
+          filter: drop-shadow(0 2px 5px rgba(94, 114, 235, 0.3));
         }
         
+        .circle-text {
+          color: #5E72EB;
+          font-size: 1.3rem;
+          font-weight: 600;
+          letter-spacing: 1px;
+          text-shadow: 0 1px 2px rgba(94, 114, 235, 0.2);
+        }
+        
+        /* 关键词样式 */
         .keyword-item {
-          position: absolute;
-          transition: opacity 0.3s ease;
-          z-index: 1;
-          cursor: default;
-          user-select: none;
-          transform-style: preserve-3d;
-          backface-visibility: hidden;
+          position: absolute; 
+          top: 50%; 
+          left: 50%;
+          transform: translate(-50%, -50%) translate(var(--x, 0), var(--y, 0));
+          will-change: transform, opacity;
+          z-index: 3;
+          transition: transform 0.3s ease;
+        }
+
+        @keyframes appear {
+          from {
+            opacity: 0;
+            transform: translate(-50%, -50%) translate(0, 0) scale(0.5);
+          }
+          to {
+            opacity: 1;
+            transform: translate(-50%, -50%) translate(var(--x, 0), var(--y, 0)) scale(1);
+          }
         }
         
-        .keyword-item:hover {
-          opacity: 1 !important;
-          transform: scale(1.15) !important;
+        @keyframes float-opacity {
+          0%, 100% {
+            opacity: 1;
+            transform: translate(-50%, -50%) translate(var(--x, 0), var(--y, 0)) scale(1);
+          }
+          50% {
+            opacity: 0.85;
+            transform: translate(-50%, -50%) translate(calc(var(--x, 0) + 2px), calc(var(--y, 0) + 2px)) scale(1.02);
+          }
+        }
+        
+        .keyword-text {
+          color: #1e3a8a;
+          font-size: 1.1rem;
+          font-weight: 500;
+          padding: 10px 18px;
+          background: linear-gradient(145deg, rgba(240, 249, 255, 0.95), rgba(224, 242, 254, 0.95));
+          backdrop-filter: blur(4px);
+          border: 1px solid #dbeafe;
+          border-radius: 50px;
+          box-shadow: 
+            0 4px 12px rgba(59, 130, 246, 0.15),
+            0 2px 4px rgba(255, 255, 255, 0.5) inset;
+          cursor: default;
+          transition: all 0.3s ease;
+          display: block;
+          min-width: 80px;
+          text-align: center;
+        }
+
+        .keyword-text:hover {
+          transform: scale(1.12);
+          background: linear-gradient(145deg, rgba(224, 242, 254, 0.98), rgba(186, 230, 253, 0.98));
+          box-shadow: 
+            0 6px 20px rgba(59, 130, 246, 0.25),
+            0 2px 4px rgba(255, 255, 255, 0.5) inset;
           z-index: 10;
-          transition: transform 0.2s ease;
+        }
+
+        .message-display {
+          text-align: center;
+          padding: 20px;
+          color: #374151;
+          font-size: 1.1rem;
+          max-width: 80%;
+          margin: 0 auto;
+          z-index: 10;
+          position: relative;
+        }
+
+        .error-message { 
+          color: #ef4444; 
+          font-weight: 500; 
         }
       `}</style>
-      
-      {keywords.map((keyword, index) => {
-        // 随机位置 (确保在容器内)
-        const top = 10 + Math.random() * 80; // 10%-90%
-        const left = 5 + Math.random() * 90; // 5%-95%
-        const opacity = 0.7 + Math.random() * 0.3; // 70%-100%透明度
-        
-        return (
-          <div
-            key={index}
-            className="keyword-item"
-            style={{
-              top: `${top}%`,
-              left: `${left}%`,
-              color: getRandomColor(),
-              fontSize: getRandomSize(),
-              fontWeight: 600,
-              opacity: opacity,
-              ...getRandomAnimation()
-            }}
-          >
-            {keyword}
-          </div>
-        );
-      })}
-      
-      {/* 背景网格效果 */}
-      <div className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage: `
-            linear-gradient(rgba(200, 200, 255, 0.05) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(200, 200, 255, 0.05) 1px, transparent 1px)
-          `,
-          backgroundSize: '20px 20px'
-        }}
-      />
     </div>
   );
 };
-
 
 
 // 评估详情卡片组件
@@ -470,34 +466,39 @@ const EvaluationDetails: React.FC<{ evaluation?: Evaluation }> = ({ evaluation }
 
       {/* 最终评估和能力维度分布 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
           <h4 className="text-lg font-bold text-indigo-600 mb-5 pb-2 border-b border-indigo-100">综合能力评估</h4>
           
           {finalStage && (
-            <div className="flex flex-col items-center">
-              {finalTotalScore !== undefined && (
-                <div className="mb-8">
-                  <div className="text-center mb-4">
-                    <span className="text-lg font-bold text-gray-800">最终得分</span>
-                    <div className="text-4xl font-bold mt-2" style={{ color: getColorForScore(finalTotalScore) }}>
-                      {finalTotalScore}<span className="text-gray-500 text-xl">/100</span>
+            <div className="flex flex-col items-center justify-center flex-grow"> {/* 添加了flex布局属性 */}
+              <div className="mb-8 -mt-6"> {/* 添加了负上边距 */}
+                {finalTotalScore !== undefined && (
+                  <div className="flex flex-col items-center"> {/* 添加垂直居中的flex容器 */}
+                    <div className="text-center mb-4">
+                      <span className="text-lg font-bold text-gray-800">最终得分</span>
+                      <div 
+                        className="text-4xl font-bold mt-2" 
+                        style={{ color: getColorForScore(finalTotalScore) }}
+                      >
+                        {finalTotalScore}<span className="text-gray-500 text-xl">/100</span>
+                      </div>
+                    </div>
+                    
+                    <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full rounded-full transition-all duration-1000 ease-out"
+                        style={{ 
+                          width: `${finalTotalScore}%`,
+                          background: `linear-gradient(90deg, ${getGradientForScore(finalTotalScore).join(', ')})`
+                        }}
+                      ></div>
                     </div>
                   </div>
-                  
-                  <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full rounded-full transition-all duration-1000 ease-out"
-                      style={{ 
-                        width: `${finalTotalScore}%`,
-                        background: `linear-gradient(90deg, ${getGradientForScore(finalTotalScore).join(', ')})`
-                      }}
-                    ></div>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
               
-              {/* 能力卡片网格 */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+              {/* 能力卡片网格 - 添加了上边距 */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full mt-8">
                 {skillScores.map(({ skill, score }) => (
                   <SkillCard key={skill} label={skill} score={score} maxScore={100} />
                 ))}
