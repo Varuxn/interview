@@ -758,11 +758,23 @@ const HomePage: React.FC = () => {
   }, []);
 
   // 过滤用户数据
-  const filteredUsers = usersData.filter(userData => 
-    userData.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (userData.setting?.position.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (userData.setting?.interviewer.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredUsers = usersData.filter(userData => {
+    // 获取关键信息用于搜索
+    const fullName = userData.resumeSetupData?.fullName || '';
+    const positionName = userData.resumeSetupData?.position?.name || userData.setting?.position || '';
+    const interviewerName = userData.resumeSetupData?.interviewer?.name || userData.setting?.interviewer || '';
+    const userName = userData.user.name || '';
+    
+    // 将所有搜索字段转换为小写
+    const searchLower = searchTerm.toLowerCase();
+    
+    return (
+      positionName.toLowerCase().includes(searchLower) ||
+      interviewerName.toLowerCase().includes(searchLower) ||
+      userName.toLowerCase().includes(searchLower) ||
+      fullName.toLowerCase().includes(searchLower)
+    );
+  });
 
   if (loading) {
     return (
