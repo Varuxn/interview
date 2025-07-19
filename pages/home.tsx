@@ -4,6 +4,8 @@
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { fetchLLMResponse } from "./llmApi";
+import { useAuth } from "@clerk/nextjs";
+import { AllUserData } from "../components/types";
 
 // 岗位数据
 const positions = [
@@ -70,6 +72,8 @@ export default function ResumeUploadPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const { userId, isLoaded } = useAuth();
+  const user_id = userId || "default_user";
   
   // 关键词状态
   const [keywords, setKeywords] = useState<string[]>([]);
@@ -90,34 +94,26 @@ export default function ResumeUploadPage() {
   const fileInputRefs = useRef<{[key: string]: HTMLInputElement | null}>({});
   
   // 初始化时从localStorage加载数据
-  useEffect(() => {
-    const savedData = localStorage.getItem('resumeSetupData');
-    if (savedData) {
-      const parsedData = JSON.parse(savedData);
-      setFormData(parsedData);
-    }
+ useEffect(() => {
+    const userDataKey = "userdata";
+    const allUserDataJSON = localStorage.getItem(userDataKey);
+    const allUserData: AllUserData = allUserDataJSON ? JSON.parse(allUserDataJSON) : {};
     
-    const savedKeywords = localStorage.getItem('resumeKeywords');
-    if (savedKeywords) {
-      setKeywords(JSON.parse(savedKeywords));
-    }
+    const currentUserData = allUserData[user_id];
     
-    const savedAvatars = localStorage.getItem('interviewerAvatars');
-    if (savedAvatars) {
-      setAvatarUploads(JSON.parse(savedAvatars));
-    }
-    
-    // 加载简历预览内容
-    const savedResumeContent = localStorage.getItem('resumeContent');
-    if (savedResumeContent) {
-        setDocumentContext(savedResumeContent);
+    if (currentUserData) {
+      setFormData(currentUserData.resumeSetupData);
+      setKeywords(currentUserData.resumeKeywords || []);
+      setDocumentContext(currentUserData.resumeContent || "");
+      setAvatarUploads(currentUserData.interviewerAvatars || {});
+      
+      if (currentUserData.resumeContent) {
         setIsUploaded(true);
-    } else {
-        setDocumentContext(""); // 确保没有内容时清空
+      } else {
         setIsUploaded(false);
+      }
     }
-    
-  }, []);
+  }, [user_id]);
 // 关键词提取函数
   const extractKeywords = async (text: string) => {
   setIsExtracting(true);
@@ -285,28 +281,26 @@ export default function ResumeUploadPage() {
   // 保存数据
   const handleSave = () => {
     setIsSaving(true);
-    // 保存所有数据到localStorage
-    localStorage.setItem('resumeSetupData', JSON.stringify(formData));
-    localStorage.setItem('resumeKeywords', JSON.stringify(keywords));
     
-    // 添加简历内容存储
-    localStorage.setItem('resumeContent', documentContext);
-    setTimeout(() => {
-        setIsSaving(false);
-        toast.success("所有设置已保存！");
-        window.location.reload();
-    }, 1000);
+    const userDataKey = "userdata";
+    const allUserDataJSON = localStorage.getItem(userDataKey);
+    const allUserData: AllUserData = allUserDataJSON ? JSON.parse(allUserDataJSON) : {};
     
-    // 添加控制台日志以便调试
-    console.log("保存的数据:", {
-        ...formData,
-        keywords,
-        resumeContent: documentContext
-  });
-  
-  // 添加页面刷新以显示保存效果
-  window.location.reload();
-};
+    // 更新当前用户数据
+    allUserData[user_id] = {
+      resumeSetupData: formData,
+      resumeKeywords: keywords,
+      resumeContent: documentContext,
+      interviewerAvatars: avatarUploads
+    };
+    
+    // 保存回localStorage
+    localStorage.setItem(userDataKey, JSON.stringify(allUserData));
+    
+    setIsSaving(false);
+    toast.success("所有设置已保存！");
+    window.location.reload();
+  };
 
   // 取消操作
   const handleCancel = () => {

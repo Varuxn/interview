@@ -1,8 +1,6 @@
-import React, { useState, useEffect, useCallback,useMemo } from 'react';
-import {fetchLLMResponse} from './llmApi';
-import {FullEvaluationData} from '../components/types';
-// import { FiFileText } from 'react-icons/fi'
-
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { fetchLLMResponse } from './llmApi';
+import { FullEvaluationData } from '../components/types';
 
 // 定义数据接口
 interface User {
@@ -21,8 +19,19 @@ interface UserData {
   user: User;
   setting?: Setting;
   evaluation?: FullEvaluationData;
+  resumeSetupData?: {
+    fullName?: string; // 添加 fullName
+    email?: string;
+    phone?: string;
+    selectedSkills?: string[];
+    position?: {
+      name?: string;
+    };
+    interviewer?: {
+      name?: string;
+    };
+  };
 }
-
 // 评估指标的类型定义
 type MetricKey = 'expertise' | 'proficiency' | 'articulation' | 'reasoning' | 'innovation' | 'resilience' | 'total';
 type StageKey = 'introduction' | 'technology' | 'analysis' | 'final';
@@ -117,73 +126,47 @@ const SkillCard: React.FC<{ label: string; score: number; maxScore: number }> = 
   );
 };
 
-
-
+// 关键词云组件
 const KeywordCloud: React.FC<{
-  keywords?: string[]; 
-  description?: string;
-}> = ({ keywords: propKeywords, description }) => {
+  userId?: string;
+}> = ({ userId }) => {
   const [keywords, setKeywords] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const processData = async () => {
-      setLoading(true);
-      if (propKeywords && propKeywords.length > 0) {
-        const count = Math.min(propKeywords.length, 9);
-        setKeywords(propKeywords.slice(0, count));
-        setLoading(false);
-        return;
-      }
-      const storedKeywords = localStorage.getItem('resumeKeywords');
-      if (storedKeywords) {
-        const parsed = JSON.parse(storedKeywords);
-        const count = Math.min(parsed.length, 9);
-        setKeywords(parsed.slice(0, count));
-        setLoading(false);
-        return;
-      }
-      if (!description) {
-        setLoading(false);
-        return;
-      }
-
-      setError(null);
+    const fetchKeywords = () => {
       try {
-        const systemPrompt = `你是一个专业的简历和文本分析专家，请严格按以下要求提取关键词：
-1. 必须提取8-9个能概括核心能力的关键词。
-2. 每个关键词应为2-5个汉字或一个英文单词。
-3. 必须使用英文逗号 (,) 分隔所有关键词。
-4. 示例输出: "React,数据分析,团队管理,性能优化"`;
-        const userPrompt = `请从以下内容中提取关键词：\n\n"${description}"`;
+        setLoading(true);
         
-        const { data, error: apiError } = await fetchLLMResponse(
-          systemPrompt, userPrompt, 'gpt-3.5-turbo', 0.5
-        );
+        // 1. 尝试从localStorage获取用户数据
+        const userDataKey = "userdata";
+        const allUserDataJSON = localStorage.getItem(userDataKey);
         
-        if (apiError) throw new Error(apiError);
-        const content = data?.llm_response?.choices?.[0]?.message?.content;
-        if (!content) throw new Error('未获取到有效的关键词数据');
+        if (!allUserDataJSON) {
+          throw new Error('未找到用户数据');
+        }
         
-        const processedKeywords = content.split(',').map(k => k.trim()).filter(k => k.length > 0);
-        if (processedKeywords.length === 0) throw new Error("未能提取出任何关键词");
+        const allUserData = JSON.parse(allUserDataJSON);
         
-        const count = Math.min(processedKeywords.length, 9);
-        setKeywords(processedKeywords.slice(0, count));
-        localStorage.setItem('resumeKeywords', JSON.stringify(processedKeywords));
+        // 2. 获取特定用户的关键词
+        if (userId && allUserData[userId]) {
+          const userKeywords = allUserData[userId].resumeKeywords || [];
+          const count = Math.min(userKeywords.length, 9);
+          setKeywords(userKeywords.slice(0, count));
+        } else {
+          throw new Error('未找到该用户的关键词数据');
+        }
       } catch (err) {
-        console.error('关键词提取流程失败:', err);
-        const errorMessage = err instanceof Error ? err.message : '未知错误';
-        setError(`关键词提取失败: ${errorMessage}`);
-        setKeywords([]);
+        console.error('关键词获取失败:', err);
+        setError(err instanceof Error ? err.message : '未知错误');
       } finally {
         setLoading(false);
       }
     };
 
-    processData();
-  }, [propKeywords, description]);
+    fetchKeywords();
+  }, [userId]);
   
   const positionedKeywords = useMemo(() => {
     const numKeywords = keywords.length;
@@ -400,7 +383,10 @@ const KeywordCloud: React.FC<{
 
 
 // 评估详情卡片组件
-const EvaluationDetails: React.FC<{ evaluation?: FullEvaluationData }> = ({ evaluation }) => {
+const EvaluationDetails: React.FC<{ 
+  evaluation?: FullEvaluationData;
+  userId?: string;
+}> = ({ evaluation, userId }) => {
   if (!evaluation) {
     return (
       <div className="p-6 text-center bg-gray-50 rounded-2xl border border-gray-100">
@@ -443,61 +429,62 @@ const EvaluationDetails: React.FC<{ evaluation?: FullEvaluationData }> = ({ eval
     <div className="p-6 bg-gray-50 rounded-2xl border border-gray-200">
       <h3 className="text-xl font-bold text-gray-800 mb-6 pb-2 border-b border-gray-200">评估详情</h3>
 
-     {/* 最终评估和能力维度分布 */}
-<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-    <h4 className="text-base font-semibold text-indigo-600 mb-3 pb-1 border-b border-indigo-100">综合能力评估</h4>
-    
-    {finalStage && (
-      <div className="flex flex-col items-center justify-center flex-grow"> 
-        {/* Final score section with original progress bar height */}
-        <div className="mt-2 mb-4">
-          {finalTotalScore !== undefined && (
-            <div className="flex flex-col items-center">
-              <div className="text-center">
-                <span className="text-lg font-bold text-gray-800">最终得分</span>
-                <div 
-                  className="text-3xl font-bold mt-1"
-                  style={{ color: getColorForScore(finalTotalScore) }}
-                >
-                  {finalTotalScore}<span className="text-gray-500 text-lg">/100</span>
-                </div>
+      {/* 最终评估和能力维度分布 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+          <h4 className="text-base font-semibold text-indigo-600 mb-3 pb-1 border-b border-indigo-100">综合能力评估</h4>
+          
+          {finalStage && (
+            <div className="flex flex-col items-center justify-center flex-grow"> 
+              {/* Final score section with original progress bar height */}
+              <div className="mt-2 mb-4">
+                {finalTotalScore !== undefined && (
+                  <div className="flex flex-col items-center">
+                    <div className="text-center">
+                      <span className="text-lg font-bold text-gray-800">最终得分</span>
+                      <div 
+                        className="text-3xl font-bold mt-1"
+                        style={{ color: getColorForScore(finalTotalScore) }}
+                      >
+                        {finalTotalScore}<span className="text-gray-500 text-lg">/100</span>
+                      </div>
+                    </div>
+                    
+                    {/* Progress bar with original h-4 height */}
+                    <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden mt-2">
+                      <div 
+                        className="h-full rounded-full transition-all duration-1000 ease-out"
+                        style={{ 
+                          width: `${finalTotalScore}%`,
+                          background: `linear-gradient(90deg, ${getGradientForScore(finalTotalScore).join(', ')})`
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                )}
               </div>
               
-              {/* Progress bar with original h-4 height */}
-              <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden mt-2">
-                <div 
-                  className="h-full rounded-full transition-all duration-1000 ease-out"
-                  style={{ 
-                    width: `${finalTotalScore}%`,
-                    background: `linear-gradient(90deg, ${getGradientForScore(finalTotalScore).join(', ')})`
-                  }}
-                ></div>
+              {/* Compact skill cards grid */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {skillScores.map(({ skill, score }) => (
+                  <SkillCard 
+                    key={skill} 
+                    label={skill} 
+                    score={score} 
+                    maxScore={100}
+                  />
+                ))}
               </div>
             </div>
           )}
         </div>
         
-        {/* Compact skill cards grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {skillScores.map(({ skill, score }) => (
-            <SkillCard 
-              key={skill} 
-              label={skill} 
-              score={score} 
-              maxScore={100}
-            />
-          ))}
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+          <h4 className="text-base font-semibold text-indigo-600 mb-3 pb-1 border-b border-indigo-100">简历内容分析</h4>
+          <KeywordCloud userId={userId} />
         </div>
       </div>
-    )}
-  </div>
-  
-  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-    <h4 className="text-base font-semibold text-indigo-600 mb-3 pb-1 border-b border-indigo-100">简历内容分析</h4>
-    <KeywordCloud />
-  </div>
-</div>
+      
       {/* 各环节评估 */}
       <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-6">
         <h4 className="text-lg font-bold text-indigo-600 mb-5 pb-2 border-b border-indigo-100">环节表现分析</h4>
@@ -577,23 +564,32 @@ const UserCard: React.FC<{
   isExpanded: boolean;
   onToggleExpand: (userId: string) => void;
 }> = ({ userData, isExpanded, onToggleExpand }) => {
-  const { user, setting, evaluation } = userData;
+  const { user, setting, evaluation, resumeSetupData } = userData;
   const finalScore = evaluation?.final_total;
   const isUntested = finalScore === undefined || finalScore === -1;
   const [color1] = !isUntested && finalScore ? getGradientForScore(finalScore) : ['#9CA3AF', '#9CA3AF'];
+  const fullName = resumeSetupData?.fullName || user.name;
+
+  // 获取关键信息用于标签展示
+  const positionName = resumeSetupData?.position?.name || setting?.position || '未知岗位';
+  const interviewerName = resumeSetupData?.interviewer?.name || setting?.interviewer || '未知面试官';
+  const email = resumeSetupData?.email || '未提供';
+  const phone = resumeSetupData?.phone || '未提供';
+  const skills = resumeSetupData?.selectedSkills?.slice(0, 3) || []; // 最多展示3个技能4
+  
 
   return (
     <div
       className={`bg-white rounded-2xl overflow-hidden transition-all duration-500 ease-in-out ${
-        isExpanded ? 'max-h-[2500px] shadow-xl' : 'max-h-28 shadow-md'
+        isExpanded ? 'max-h-[2500px] shadow-xl' : 'max-h-40 shadow-md'
       } mb-6 cursor-pointer hover:shadow-lg`}
       onClick={() => onToggleExpand(user.id)}
     >
-      <div className="p-5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white flex justify-between items-center">
-        <div className="flex items-center">
+      <div className="p-5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white flex justify-between items-start">
+        <div className="flex items-start">
           <div className="relative">
             <div className="bg-white/20 rounded-full w-12 h-12 flex items-center justify-center mr-4">
-              <span className="text-xl font-bold">{user.name.charAt(0)}</span>
+              <span className="text-xl font-bold">{fullName.charAt(0)}</span>
             </div>
             {!isUntested && finalScore !== undefined && (
               <div 
@@ -612,10 +608,56 @@ const UserCard: React.FC<{
             )}
           </div>
           <div>
-            <h2 className="text-xl font-bold mb-1">{user.name}</h2>
-            <p className="text-sm opacity-90">
-              面试官: {setting?.interviewer || 'N/A'} | 岗位: {setting?.position || 'N/A'}
-            </p>
+            {/* 这里展示用户名字而不是ID */}
+            <h2 className="text-xl font-bold mb-1">{fullName}</h2>
+            
+            {/* 折叠状态下展示的标签信息 */}
+            <div className="flex flex-wrap gap-2 mt-2 max-w-lg">
+              {/* 用户ID标签 - 新添加 */}
+              <div className="bg-white/20 rounded-full px-3 py-1 text-xs flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                </svg>
+                ID: {user.id.substring(0,6)}...
+              </div>
+              
+              <div className="bg-white/20 rounded-full px-3 py-1 text-xs flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                {positionName}
+              </div>
+              
+              <div className="bg-white/20 rounded-full px-3 py-1 text-xs flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                {interviewerName}
+              </div>
+              
+              <div className="bg-white/20 rounded-full px-3 py-1 text-xs flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                {email}
+              </div>
+              
+              <div className="bg-white/20 rounded-full px-3 py-1 text-xs flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+                {phone}
+              </div>
+              
+              {skills.map((skill, index) => (
+                <div key={index} className="bg-white/20 rounded-full px-3 py-1 text-xs flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                  {skill}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
         
@@ -639,7 +681,7 @@ const UserCard: React.FC<{
           isExpanded ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'
         }`}
       >
-        {isExpanded && <EvaluationDetails evaluation={evaluation} />}
+        {isExpanded && <EvaluationDetails evaluation={evaluation} userId={user.id} />}
       </div>
     </div>
   );
@@ -659,8 +701,7 @@ const HomePage: React.FC = () => {
   }, []);
 
   // 异步获取数据
-  
-   useEffect(() => {
+  useEffect(() => {
     const fetchAllData = async () => {
       try {
         setLoading(true);
@@ -686,7 +727,21 @@ const HomePage: React.FC = () => {
 
           const position = setting?.position === '1' ? '人工智能' : setting?.position === '2' ? '大数据' : setting?.position === '3' ? '物联网' : setting?.position === '4' ? '智能系统' : setting?.position;
           if(setting !== undefined ) setting.position = position || '未知岗位';
-          return { user, setting, evaluation };
+
+          // 3. 从localStorage获取用户简历设置数据
+          let resumeSetupData = null;
+          try {
+            const userDataKey = "userdata";
+            const allUserDataJSON = localStorage.getItem(userDataKey);
+            if (allUserDataJSON) {
+              const allUserData = JSON.parse(allUserDataJSON);
+              resumeSetupData = allUserData[user.id]?.resumeSetupData;
+            }
+          } catch (err) {
+            console.error('从localStorage获取用户数据失败:', err);
+          }
+
+          return { user, setting, evaluation, resumeSetupData };
         });
 
         const combinedData = await Promise.all(combinedDataPromises);

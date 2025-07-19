@@ -84,3 +84,35 @@ export interface LLMChatResponse {
   final_resilience: number;
   final_total: number;
 }
+export interface Position {
+  id: number;
+  name: string;
+  description: string;
+}
+
+export interface Interviewer {
+  id: string;
+  name: string;
+  description: string;
+  level: string;
+  avatar: string;
+}
+
+
+export interface local_UserData {
+  resumeSetupData: {
+    fullName: string;
+    email: string;
+    phone: string;
+    expertise: string;
+    position: Position; // 实际应该是 Position 类型
+    interviewer: Interviewer; // 实际应该是 Interviewer 类型
+    selectedSkills: string[];
+  };
+  resumeKeywords: string[];
+  resumeContent: string;
+  interviewerAvatars: { [key: string]: string };
+}
+export interface AllUserData {
+  [userId: string]: local_UserData;
+}
