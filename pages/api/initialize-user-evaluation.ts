@@ -47,57 +47,68 @@ export default async function handler(
 
     // 2. Initialize evaluation record in 'evaluations' table with new structure
     const initializeEvaluationQuery = `
-      INSERT INTO evaluations (
-        user_id, 
-        description,
-        introduction_language, introduction_profession, introduction_logic, introduction_expressiveness, introduction_total,
-        technology_language, technology_profession, technology_logic, technology_expressiveness, technology_total,
-        analysis_language, analysis_profession, analysis_logic, analysis_expressiveness, analysis_total,
-        final_language, final_profession, final_logic, final_expressiveness, final_total
-      ) VALUES (
-        ?, 
-        ?,
-        ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?
-      )
-      ON DUPLICATE KEY UPDATE
-        description = VALUES(description),
-        introduction_language = VALUES(introduction_language),
-        introduction_profession = VALUES(introduction_profession),
-        introduction_logic = VALUES(introduction_logic),
-        introduction_expressiveness = VALUES(introduction_expressiveness),
-        introduction_total = VALUES(introduction_total),
-        technology_language = VALUES(technology_language),
-        technology_profession = VALUES(technology_profession),
-        technology_logic = VALUES(technology_logic),
-        technology_expressiveness = VALUES(technology_expressiveness),
-        technology_total = VALUES(technology_total),
-        analysis_language = VALUES(analysis_language),
-        analysis_profession = VALUES(analysis_profession),
-        analysis_logic = VALUES(analysis_logic),
-        analysis_expressiveness = VALUES(analysis_expressiveness),
-        analysis_total = VALUES(analysis_total),
-        final_language = VALUES(final_language),
-        final_profession = VALUES(final_profession),
-        final_logic = VALUES(final_logic),
-        final_expressiveness = VALUES(final_expressiveness),
-        final_total = VALUES(final_total)
-    `;
-
+  INSERT INTO evaluations (
+    user_id, 
+    description,
+    introduction_expertise, introduction_proficiency, introduction_articulation, 
+    introduction_reasoning, introduction_innovation, introduction_resilience, introduction_total,
+    technology_expertise, technology_proficiency, technology_articulation,
+    technology_reasoning, technology_innovation, technology_resilience, technology_total,
+    analysis_expertise, analysis_proficiency, analysis_articulation,
+    analysis_reasoning, analysis_innovation, analysis_resilience, analysis_total,
+    final_expertise, final_proficiency, final_articulation,
+    final_reasoning, final_innovation, final_resilience, final_total
+  ) VALUES (
+    ?, 
+    ?,
+    ?, ?, ?, ?, ?, ?, ?,
+    ?, ?, ?, ?, ?, ?, ?,
+    ?, ?, ?, ?, ?, ?, ?,
+    ?, ?, ?, ?, ?, ?, ?
+  )
+  ON DUPLICATE KEY UPDATE
+    description = VALUES(description),
+    introduction_expertise = VALUES(introduction_expertise),
+    introduction_proficiency = VALUES(introduction_proficiency),
+    introduction_articulation = VALUES(introduction_articulation),
+    introduction_reasoning = VALUES(introduction_reasoning),
+    introduction_innovation = VALUES(introduction_innovation),
+    introduction_resilience = VALUES(introduction_resilience),
+    introduction_total = VALUES(introduction_total),
+    technology_expertise = VALUES(technology_expertise),
+    technology_proficiency = VALUES(technology_proficiency),
+    technology_articulation = VALUES(technology_articulation),
+    technology_reasoning = VALUES(technology_reasoning),
+    technology_innovation = VALUES(technology_innovation),
+    technology_resilience = VALUES(technology_resilience),
+    technology_total = VALUES(technology_total),
+    analysis_expertise = VALUES(analysis_expertise),
+    analysis_proficiency = VALUES(analysis_proficiency),
+    analysis_articulation = VALUES(analysis_articulation),
+    analysis_reasoning = VALUES(analysis_reasoning),
+    analysis_innovation = VALUES(analysis_innovation),
+    analysis_resilience = VALUES(analysis_resilience),
+    analysis_total = VALUES(analysis_total),
+    final_expertise = VALUES(final_expertise),
+    final_proficiency = VALUES(final_proficiency),
+    final_articulation = VALUES(final_articulation),
+    final_reasoning = VALUES(final_reasoning),
+    final_innovation = VALUES(final_innovation),
+    final_resilience = VALUES(final_resilience),
+    final_total = VALUES(final_total)
+`;
     // All scores initialize to -1 and description to '未测试'
     const initializationValues = [
       userId,
       '未测试',
       // introduction metrics
-      -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -1, -1,
       // technology metrics
-      -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -1, -1,
       // analysis metrics
-      -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -1, -1,
       // final metrics
-      -1, -1, -1, -1, -1
+      -1, -1, -1, -1, -1, -1, -1
     ];
 
     const [insertEvalResult]: [ResultSetHeader, any] = await pool.execute(

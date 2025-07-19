@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback,useMemo } from 'react';
 import {fetchLLMResponse} from './llmApi';
-import { FiFileText } from 'react-icons/fi'
+import {FullEvaluationData} from '../components/types';
+// import { FiFileText } from 'react-icons/fi'
+
 
 // 定义数据接口
 interface User {
@@ -14,50 +16,27 @@ interface Setting {
   position: string;
 }
 
-interface Evaluation {
-  user_id: string;
-  description: string;
-  introduction_language: number;
-  introduction_profession: number;
-  introduction_logic: number;
-  introduction_expressiveness: number;
-  introduction_total: number;
-  technology_language: number;
-  technology_profession: number;
-  technology_logic: number;
-  technology_expressiveness: number;
-  technology_total: number;
-  analysis_language: number;
-  analysis_profession: number;
-  analysis_logic: number;
-  analysis_expressiveness: number;
-  analysis_total: number;
-  final_language: number;
-  final_profession: number;
-  final_logic: number;
-  final_expressiveness: number;
-  final_total: number;
-}
-
 // 组合后的用户数据接口
 interface UserData {
   user: User;
   setting?: Setting;
-  evaluation?: Evaluation;
+  evaluation?: FullEvaluationData;
 }
 
 // 评估指标的类型定义
-type MetricKey = 'language' | 'profession' | 'logic' | 'expressiveness' | 'total';
+type MetricKey = 'expertise' | 'proficiency' | 'articulation' | 'reasoning' | 'innovation' | 'resilience' | 'total';
 type StageKey = 'introduction' | 'technology' | 'analysis' | 'final';
 
 // 辅助函数：将评估数据按阶段和指标分组
-const getEvaluationMetrics = (evaluation: Evaluation) => {
+const getEvaluationMetrics = (evaluation: FullEvaluationData) => {
   const stages: { [key: string]: { [key: string]: number } } = {};
   const metricNames: { [key: string]: string } = {
-    language: '语言表达',
-    profession: '专业知识',
-    logic: '逻辑思维',
-    expressiveness: '表达能力',
+    expertise: '专业知识',
+    proficiency: '技能匹配度',
+    articulation: '语言表达能力',
+    reasoning: '逻辑思维能力',
+    innovation: '创新能力',
+    resilience: '应变抗压能力',
     total: '总分',
   };
 
@@ -73,15 +52,15 @@ const getEvaluationMetrics = (evaluation: Evaluation) => {
   stageKeys.forEach(stage => {
     const stageMetrics: { [key: string]: number } = {};
     // 遍历每个阶段的指标
-    (['language', 'profession', 'logic', 'expressiveness'] as MetricKey[]).forEach(metric => {
-      const key = `${stage}_${metric}` as keyof Evaluation;
+    (['expertise', 'proficiency', 'articulation', 'reasoning', 'innovation', 'resilience'] as MetricKey[]).forEach(metric => {
+      const key = `${stage}_${metric}` as keyof FullEvaluationData;
       if (evaluation[key] !== undefined) {
         stageMetrics[metricNames[metric]] = evaluation[key] as number;
       }
     });
 
     // Add the total score for the stage if it exists
-    const totalKey = `${stage}_total` as keyof Evaluation;
+    const totalKey = `${stage}_total` as keyof FullEvaluationData;
     if (evaluation[totalKey] !== undefined) {
       stageMetrics[metricNames['total']] = evaluation[totalKey] as number;
     }
@@ -421,7 +400,7 @@ const KeywordCloud: React.FC<{
 
 
 // 评估详情卡片组件
-const EvaluationDetails: React.FC<{ evaluation?: Evaluation }> = ({ evaluation }) => {
+const EvaluationDetails: React.FC<{ evaluation?: FullEvaluationData }> = ({ evaluation }) => {
   if (!evaluation) {
     return (
       <div className="p-6 text-center bg-gray-50 rounded-2xl border border-gray-100">
@@ -464,55 +443,61 @@ const EvaluationDetails: React.FC<{ evaluation?: Evaluation }> = ({ evaluation }
     <div className="p-6 bg-gray-50 rounded-2xl border border-gray-200">
       <h3 className="text-xl font-bold text-gray-800 mb-6 pb-2 border-b border-gray-200">评估详情</h3>
 
-      {/* 最终评估和能力维度分布 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
-          <h4 className="text-lg font-bold text-indigo-600 mb-5 pb-2 border-b border-indigo-100">综合能力评估</h4>
-          
-          {finalStage && (
-            <div className="flex flex-col items-center justify-center flex-grow"> {/* 添加了flex布局属性 */}
-              <div className="mb-8 -mt-6"> {/* 添加了负上边距 */}
-                {finalTotalScore !== undefined && (
-                  <div className="flex flex-col items-center"> {/* 添加垂直居中的flex容器 */}
-                    <div className="text-center mb-4">
-                      <span className="text-lg font-bold text-gray-800">最终得分</span>
-                      <div 
-                        className="text-4xl font-bold mt-2" 
-                        style={{ color: getColorForScore(finalTotalScore) }}
-                      >
-                        {finalTotalScore}<span className="text-gray-500 text-xl">/100</span>
-                      </div>
-                    </div>
-                    
-                    <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full rounded-full transition-all duration-1000 ease-out"
-                        style={{ 
-                          width: `${finalTotalScore}%`,
-                          background: `linear-gradient(90deg, ${getGradientForScore(finalTotalScore).join(', ')})`
-                        }}
-                      ></div>
-                    </div>
-                  </div>
-                )}
+     {/* 最终评估和能力维度分布 */}
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+    <h4 className="text-base font-semibold text-indigo-600 mb-3 pb-1 border-b border-indigo-100">综合能力评估</h4>
+    
+    {finalStage && (
+      <div className="flex flex-col items-center justify-center flex-grow"> 
+        {/* Final score section with original progress bar height */}
+        <div className="mt-2 mb-4">
+          {finalTotalScore !== undefined && (
+            <div className="flex flex-col items-center">
+              <div className="text-center">
+                <span className="text-lg font-bold text-gray-800">最终得分</span>
+                <div 
+                  className="text-3xl font-bold mt-1"
+                  style={{ color: getColorForScore(finalTotalScore) }}
+                >
+                  {finalTotalScore}<span className="text-gray-500 text-lg">/100</span>
+                </div>
               </div>
               
-              {/* 能力卡片网格 - 添加了上边距 */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full mt-8">
-                {skillScores.map(({ skill, score }) => (
-                  <SkillCard key={skill} label={skill} score={score} maxScore={100} />
-                ))}
+              {/* Progress bar with original h-4 height */}
+              <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden mt-2">
+                <div 
+                  className="h-full rounded-full transition-all duration-1000 ease-out"
+                  style={{ 
+                    width: `${finalTotalScore}%`,
+                    background: `linear-gradient(90deg, ${getGradientForScore(finalTotalScore).join(', ')})`
+                  }}
+                ></div>
               </div>
             </div>
           )}
         </div>
         
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-          <h4 className="text-lg font-bold text-indigo-600 mb-5 pb-2 border-b border-indigo-100">简历内容分析</h4>
-          <KeywordCloud  />
+        {/* Compact skill cards grid */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {skillScores.map(({ skill, score }) => (
+            <SkillCard 
+              key={skill} 
+              label={skill} 
+              score={score} 
+              maxScore={100}
+            />
+          ))}
         </div>
       </div>
-
+    )}
+  </div>
+  
+  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+    <h4 className="text-base font-semibold text-indigo-600 mb-3 pb-1 border-b border-indigo-100">简历内容分析</h4>
+    <KeywordCloud />
+  </div>
+</div>
       {/* 各环节评估 */}
       <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-6">
         <h4 className="text-lg font-bold text-indigo-600 mb-5 pb-2 border-b border-indigo-100">环节表现分析</h4>
@@ -697,7 +682,7 @@ const HomePage: React.FC = () => {
           const [settingResult, evaluationResult] = await Promise.all([settingPromise, evaluationPromise]);
 
           const setting: Setting | undefined = settingResult.success ? settingResult.data : undefined;
-          const evaluation: Evaluation | undefined = evaluationResult.success ? evaluationResult.data : undefined;
+          const evaluation: FullEvaluationData | undefined = evaluationResult.success ? evaluationResult.data : undefined;
 
           const position = setting?.position === '1' ? '人工智能' : setting?.position === '2' ? '大数据' : setting?.position === '3' ? '物联网' : setting?.position === '4' ? '智能系统' : setting?.position;
           if(setting !== undefined ) setting.position = position || '未知岗位';

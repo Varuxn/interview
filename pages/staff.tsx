@@ -6,39 +6,17 @@ import CircularProgressBarWithGradient from '../components/CircularProgressBarWi
 import Card from '../components/Card';
 import RadarChart from '../components/RadarChart';
 import styles from '../styles/Dashboard.module.css';
+import { FullEvaluationData } from '../components/types'; // 假设你有一个 types.ts 文件来定义这些接口
 
 // --- Interfaces ---
 interface EvaluationScores {
-  language: number;
-  profession: number;
-  logic: number;
-  expressiveness: number;
+  expertise: number,       // 专业知识水平 (Expertise)  
+  proficiency: number,     // 技能匹配度 (Proficiency)  
+  articulation: number,   // 语言表达能力 (Articulation)  
+  reasoning: number,        // 逻辑思维能力 (Reasoning)  
+  innovation: number,        // 创新能力 (Innovation)  
+  resilience: number,       // 应变抗压能力 (Resilience)  
   total: number;
-}
-
-interface FullEvaluationData {
-  user_id: string;
-  description?: string;
-  introduction_language?: number;
-  introduction_profession?: number;
-  introduction_logic?: number;
-  introduction_expressiveness?: number;
-  introduction_total?: number;
-  technology_language?: number;
-  technology_profession?: number;
-  technology_logic?: number;
-  technology_expressiveness?: number;
-  technology_total?: number;
-  analysis_language?: number;
-  analysis_profession?: number;
-  analysis_logic?: number;
-  analysis_expressiveness?: number;
-  analysis_total?: number;
-  final_language?: number;
-  final_profession?: number;
-  final_logic?: number;
-  final_expressiveness?: number;
-  final_total?: number;
 }
 
 interface QueryResponse<T> {
@@ -101,11 +79,13 @@ const ProgressBar: React.FC<{
 const StageCard: React.FC<StageCardProps> = ({ title, stageKey, scores, onNavigate, compact = false }) => {
   const isTested = typeof scores !== 'string';
   const scoreColors = {
-    language: '#3b82f6',
-    profession: '#8b5cf6',
-    logic: '#f97316',
-    expressiveness: '#14b8a6'
-  };
+  expertise: '#8b5cf6',      // 专业知识水平 (purple)
+  proficiency: '#3b82f6',    // 技能匹配度 (blue)
+  articulation: '#14b8a6',   // 语言表达能力 (teal)
+  reasoning: '#f97316',      // 逻辑思维能力 (orange)
+  innovation: '#10b981',     // 创新能力 (green)
+  resilience: '#ef4444'      // 应变抗压能力 (red)
+};
 
   return (
     <Card className={`${styles.stageCard} ${isTested ? styles.testedCard : styles.untestedCard} ${compact ? styles.compactStageCard : ''}`}>
@@ -124,30 +104,44 @@ const StageCard: React.FC<StageCardProps> = ({ title, stageKey, scores, onNaviga
         {isTested ? (
           <div className={styles.stageSkills}>
             <ProgressBar 
-              label="语言" 
-              value={scores.language} 
-              color={scoreColors.language} 
+              label="专业" 
+              value={scores.expertise} 
+              color={scoreColors.expertise} 
               showValue={true}
               compact={compact}
             />
             <ProgressBar 
-              label="专业" 
-              value={scores.profession} 
-              color={scoreColors.profession} 
+              label="技能" 
+              value={scores.proficiency} 
+              color={scoreColors.proficiency} 
+              showValue={true}
+              compact={compact}
+            />
+            <ProgressBar 
+              label="表达" 
+              value={scores.articulation} 
+              color={scoreColors.articulation} 
               showValue={true}
               compact={compact}
             />
             <ProgressBar 
               label="逻辑" 
-              value={scores.logic} 
-              color={scoreColors.logic} 
+              value={scores.reasoning} 
+              color={scoreColors.reasoning} 
               showValue={true}
               compact={compact}
             />
             <ProgressBar 
-              label="表现" 
-              value={scores.expressiveness} 
-              color={scoreColors.expressiveness} 
+              label="创新" 
+              value={scores.innovation} 
+              color={scoreColors.innovation} 
+              showValue={true}
+              compact={compact}
+            />
+            <ProgressBar 
+              label="抗压" 
+              value={scores.resilience} 
+              color={scoreColors.resilience} 
               showValue={true}
               compact={compact}
             />
@@ -218,10 +212,12 @@ const MainDashboard: React.FC = () => {
     if (!evaluationData) return '未测试';
     
     const scores: EvaluationScores = {
-      language: (evaluationData as any)[`${stagePrefix}_language`] ?? 0,
-      profession: (evaluationData as any)[`${stagePrefix}_profession`] ?? 0,
-      logic: (evaluationData as any)[`${stagePrefix}_logic`] ?? 0,
-      expressiveness: (evaluationData as any)[`${stagePrefix}_expressiveness`] ?? 0,
+      expertise: (evaluationData as any)[`${stagePrefix}_expertise`] ?? 0,
+      proficiency: (evaluationData as any)[`${stagePrefix}_proficiency`] ?? 0,
+      articulation: (evaluationData as any)[`${stagePrefix}_articulation`] ?? 0,
+      reasoning: (evaluationData as any)[`${stagePrefix}_reasoning`] ?? 0,
+      innovation: (evaluationData as any)[`${stagePrefix}_innovation`] ?? 0,
+      resilience: (evaluationData as any)[`${stagePrefix}_resilience`] ?? 0,
       total: (evaluationData as any)[`${stagePrefix}_total`] ?? 0,
     };
     
@@ -268,50 +264,42 @@ const MainDashboard: React.FC = () => {
 
   // 雷达图数据 (放在分数获取之后)
   const radarData = [
-    { 
-      subject: '自我介绍', 
-      A: introductionScores !== '未测试' ? introductionScores.total : 0,
-      fullMark: 100 
-    },
-    { 
-      subject: '技术问答', 
-      A: technologyScores !== '未测试' ? technologyScores.total : 0,
-      fullMark: 100 
-    },
-    { 
-      subject: '情景分析', 
-      A: analysisScores !== '未测试' ? analysisScores.total : 0,
-      fullMark: 100 
-    },
-    { 
-      subject: '语言表达', 
-      A: finalScores !== '未测试' ? finalScores.language : 0,
-      fullMark: 100 
-    },
-    { 
-      subject: '专业能力', 
-      A: finalScores !== '未测试' ? finalScores.profession : 0,
-      fullMark: 100 
-    },
-    { 
-      subject: '逻辑思维', 
-      A: finalScores !== '未测试' ? finalScores.logic : 0,
-      fullMark: 100 
-    },
-    { 
-      subject: '表现力', 
-      A: finalScores !== '未测试' ? finalScores.expressiveness : 0,
-      fullMark: 100 
-    },
-  ];
-
-  // 最终评估部分的技能颜色
-  const skillColors = {
-    language: '#3B82F6',
-    profession: '#8B5CF6',
-    logic: '#F97316',
-    expressiveness: '#14B8A6'
-  };
+      { 
+        subject: '总分',
+        A: finalScores !== '未测试' ? finalScores.total : 0,
+        fullMark: 100 
+      },
+      { 
+        subject: '专业知识',  // Expertise
+        A: finalScores !== '未测试' ? finalScores.expertise : 0,
+        fullMark: 100 
+      },
+      { 
+        subject: '技能匹配',  // Proficiency
+        A: finalScores !== '未测试' ? finalScores.proficiency : 0,
+        fullMark: 100 
+      },
+      { 
+        subject: '语言表达',  // Articulation
+        A: finalScores !== '未测试' ? finalScores.articulation : 0,
+        fullMark: 100 
+      },
+      { 
+        subject: '逻辑思维',  // Reasoning
+        A: finalScores !== '未测试' ? finalScores.reasoning : 0,
+        fullMark: 100 
+      },
+      { 
+        subject: '创新能力',  // Innovation
+        A: finalScores !== '未测试' ? finalScores.innovation : 0,
+        fullMark: 100 
+      },
+      { 
+        subject: '应变抗压',  // Resilience
+        A: finalScores !== '未测试' ? finalScores.resilience : 0,
+        fullMark: 100 
+      },
+    ];
 
   return (
     <div className={styles.dashboardContainer}>
@@ -451,30 +439,44 @@ const MainDashboard: React.FC = () => {
                 {typeof finalScores !== 'string' && (
                   <div className={styles.finalSkillsCompact}>
                     <ProgressBar 
-                      label="语言表达" 
-                      value={finalScores.language} 
-                      color="#3B82F6" 
+                      label="专业知识"  // Expertise
+                      value={finalScores.expertise} 
+                      color="#8B5CF6"  // Purple
                       showValue={true}
                       compact={true}
                     />
                     <ProgressBar 
-                      label="专业能力" 
-                      value={finalScores.profession} 
-                      color="#8B5CF6" 
+                      label="技能匹配"  // Proficiency
+                      value={finalScores.proficiency} 
+                      color="#3B82F6"  // Blue
                       showValue={true}
                       compact={true}
                     />
                     <ProgressBar 
-                      label="逻辑思维" 
-                      value={finalScores.logic} 
-                      color="#F97316" 
+                      label="语言表达"  // Articulation
+                      value={finalScores.articulation} 
+                      color="#14B8A6"  // Teal
                       showValue={true}
                       compact={true}
                     />
                     <ProgressBar 
-                      label="表现力" 
-                      value={finalScores.expressiveness} 
-                      color="#14B8A6" 
+                      label="逻辑思维"  // Reasoning
+                      value={finalScores.reasoning} 
+                      color="#F97316"  // Orange
+                      showValue={true}
+                      compact={true}
+                    />
+                    <ProgressBar 
+                      label="创新能力"  // Innovation
+                      value={finalScores.innovation} 
+                      color="#10B981"  // Green
+                      showValue={true}
+                      compact={true}
+                    />
+                    <ProgressBar 
+                      label="应变抗压"  // Resilience
+                      value={finalScores.resilience} 
+                      color="#EF4444"  // Red
                       showValue={true}
                       compact={true}
                     />

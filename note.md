@@ -130,33 +130,41 @@ CREATE TABLE evaluations (
     user_id VARCHAR(50) NOT NULL,
     description TEXT,
     
-    -- 自我介绍环节(introduction)的5个指标
-    introduction_language INT,
-    introduction_profession INT,
-    introduction_logic INT,
-    introduction_expressiveness INT,
-    introduction_total INT,
+    -- 自我介绍环节(introduction)的7个指标
+    introduction_expertise INT COMMENT '专业知识水平',
+    introduction_proficiency INT COMMENT '技能匹配度',
+    introduction_articulation INT COMMENT '语言表达能力',
+    introduction_reasoning INT COMMENT '逻辑思维能力',
+    introduction_innovation INT COMMENT '创新能力', 
+    introduction_resilience INT COMMENT '应变抗压能力',
+    introduction_total INT COMMENT '自我介绍总分',
     
-    -- 技术问答环节(technology)的5个指标
-    technology_language INT,
-    technology_profession INT,
-    technology_logic INT,
-    technology_expressiveness INT,
-    technology_total INT,
+    -- 技术问答环节(technology)的7个指标
+    technology_expertise INT COMMENT '专业知识水平',
+    technology_proficiency INT COMMENT '技能匹配度',
+    technology_articulation INT COMMENT '语言表达能力',
+    technology_reasoning INT COMMENT '逻辑思维能力',
+    technology_innovation INT COMMENT '创新能力',
+    technology_resilience INT COMMENT '应变抗压能力',
+    technology_total INT COMMENT '技术问答总分',
     
-    -- 情景案例分析环节(analysis)的5个指标
-    analysis_language INT,
-    analysis_profession INT,
-    analysis_logic INT,
-    analysis_expressiveness INT,
-    analysis_total INT,
+    -- 情景案例分析环节(analysis)的7个指标
+    analysis_expertise INT COMMENT '专业知识水平',
+    analysis_proficiency INT COMMENT '技能匹配度',
+    analysis_articulation INT COMMENT '语言表达能力',
+    analysis_reasoning INT COMMENT '逻辑思维能力',
+    analysis_innovation INT COMMENT '创新能力',
+    analysis_resilience INT COMMENT '应变抗压能力',
+    analysis_total INT COMMENT '情景分析总分',
     
-    -- 最终评估的5个指标
-    final_language INT,
-    final_profession INT,
-    final_logic INT,
-    final_expressiveness INT,
-    final_total INT,
+    -- 最终评估的7个指标
+    final_expertise INT COMMENT '专业知识水平',
+    final_proficiency INT COMMENT '技能匹配度',
+    final_articulation INT COMMENT '语言表达能力',
+    final_reasoning INT COMMENT '逻辑思维能力',
+    final_innovation INT COMMENT '创新能力',
+    final_resilience INT COMMENT '应变抗压能力',
+    final_total INT COMMENT '最终总分',
     
     -- 主键
     PRIMARY KEY (user_id)
