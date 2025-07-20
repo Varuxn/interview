@@ -1,4 +1,4 @@
-import { LLMChatRequest, LLMChatResponse } from '../components/types'; // 假设类型定义
+import { LLMChatRequest, LLMChatResponse } from '../../components/types'; // 假设类型定义
 
 /**
  * 调用 LLM API 获取响应
@@ -59,3 +59,4 @@ export const fetchLLMResponse = async (
 
   return { data, isLoading, error };
 };
+export default fetchLLMResponse;

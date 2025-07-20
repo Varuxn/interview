@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { fetchLLMResponse } from "./llmApi";
+import { fetchLLMResponse } from "./api/llmApi";
 import { useAuth } from "@clerk/nextjs";
 import { AllUserData } from "../components/types";
 

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { fetchLLMResponse } from './llmApi';
 import { FullEvaluationData } from '../components/types';
 
 // 定义数据接口
