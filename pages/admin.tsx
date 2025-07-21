@@ -1,13 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/router';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import styled from 'styled-components';
+import React, { useState, useEffect } from 'react';
+import { Upload, Download, Save, X, Plus, Trash2, Users, Briefcase } from 'lucide-react';
 
-// 类型定义
 interface Position {
   id: number;
   name: string;
+  description: string;
   difficulty: 'easy' | 'medium' | 'hard';
 }
 
@@ -19,63 +16,32 @@ interface User {
 
 interface Question {
   id?: number;
-  content: string;
+  position_id: number;
+  question: string;
+  answer: string;
   difficulty: 'easy' | 'medium' | 'hard';
-  tags?: string[];
+  tags: string[];
 }
 
-const AdminDashboard = () => {
+export default function AdminPage() {
   const [positions, setPositions] = useState<Position[]>([]);
-  const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
-  const [newPositionName, setNewPositionName] = useState('');
-  const [newPositionDifficulty, setNewPositionDifficulty] = useState<Position['difficulty']>('medium');
-  
   const [users, setUsers] = useState<User[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [newQuestion, setNewQuestion] = useState<Omit<Question, 'id'>>({ 
-    content: '', 
-    difficulty: 'medium' 
+  const [selectedPosition, setSelectedPosition] = useState<number | null>(null);
+  const [newPositionName, setNewPositionName] = useState('');
+  const [newPositionDesc, setNewPositionDesc] = useState('');
+  const [newPositionDifficulty, setNewPositionDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [showAddPosition, setShowAddPosition] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // 新问题状态
+  const [newQuestion, setNewQuestion] = useState<Omit<Question, 'id' | 'position_id'>>({
+    question: '',
+    answer: '',
+    difficulty: 'medium',
+    tags: []
   });
-  
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const router = useRouter();
-
-  // 获取岗位数据
-  const fetchPositions = async () => {
-    try {
-      const res = await fetch('/api/databases/admin/positions');
-      const data = await res.json();
-      setPositions(data);
-      if (data.length > 0 && !selectedPosition) {
-        setSelectedPosition(data[0]);
-      }
-    } catch (error) {
-      toast.error('获取岗位数据失败');
-    }
-  };
-
-  // 获取用户数据
-  const fetchUsers = async () => {
-    try {
-      const res = await fetch('/api/databases/admin/roles');
-      const data = await res.json();
-      setUsers(data);
-    } catch (error) {
-      toast.error('获取用户数据失败');
-    }
-  };
-
-  // 获取问题数据
-  const fetchQuestions = async () => {
-    if (!selectedPosition) return;
-    try {
-      const res = await fetch(`/api/databases/admin/questions?position_id=${selectedPosition.id}`);
-      const data = await res.json();
-      setQuestions(data);
-    } catch (error) {
-      toast.error('获取问题数据失败');
-    }
-  };
+  const [showAddQuestion, setShowAddQuestion] = useState(false);
 
   useEffect(() => {
     fetchPositions();
@@ -84,145 +50,206 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     if (selectedPosition) {
-      fetchQuestions();
+      fetchQuestions(selectedPosition);
     }
   }, [selectedPosition]);
 
-  // 添加新岗位
-  const handleAddPosition = async () => {
-    if (!newPositionName.trim()) {
-      toast.warning('请输入岗位名称');
-      return;
-    }
-    
+  const fetchPositions = async () => {
     try {
-      const res = await fetch('/api/databases/admin/positions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          name: newPositionName, 
-          difficulty: newPositionDifficulty 
-        })
-      });
-      
-      if (res.ok) {
-        toast.success('岗位添加成功');
-        setNewPositionName('');
-        fetchPositions();
-      } else {
-        toast.error('添加岗位失败');
+      const response = await fetch('/api/databases/admin/positions');
+      const data = await response.json();
+      if (data.success) {
+        setPositions(data.positions);
       }
     } catch (error) {
-      toast.error('添加岗位失败');
+      console.error('Failed to fetch positions:', error);
     }
   };
 
-  // 更新用户角色
-  const handleUpdateRole = async (userId: string, newRole: 'interviewer' | 'candidate') => {
+  const fetchUsers = async () => {
     try {
-      const res = await fetch('/api/databases/admin/roles', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, role: newRole })
-      });
-      
-      if (res.ok) {
-        toast.success('用户角色更新成功');
-        fetchUsers();
-      } else {
-        toast.error('更新角色失败');
+      const response = await fetch('/api/databases/admin/users');
+      const data = await response.json();
+      if (data.success) {
+        setUsers(data.users);
       }
     } catch (error) {
-      toast.error('更新角色失败');
+      console.error('Failed to fetch users:', error);
     }
   };
 
-  // 添加新问题
-  const handleAddQuestion = () => {
-    if (!newQuestion.content.trim()) {
-      toast.warning('请输入问题内容');
-      return;
-    }
-    setQuestions([...questions, { ...newQuestion, id: Date.now() }]);
-    setNewQuestion({ content: '', difficulty: 'medium' });
-  };
-
-  // 删除问题
-  const handleDeleteQuestion = (index: number) => {
-    const newQuestions = [...questions];
-    newQuestions.splice(index, 1);
-    setQuestions(newQuestions);
-  };
-
-  // 保存问题
-  const handleSaveQuestions = async () => {
-    if (!selectedPosition) {
-      toast.warning('请先选择岗位');
-      return;
-    }
-    
+  const fetchQuestions = async (positionId: number) => {
     try {
-      const res = await fetch('/api/databases/admin/bulk', {
+      const response = await fetch(`/api/databases/admin/questions?position_id=${positionId}`);
+      const data = await response.json();
+      if (data.success) {
+        setQuestions(data.questions);
+      }
+    } catch (error) {
+      console.error('Failed to fetch questions:', error);
+    }
+  };
+
+  const addPosition = async () => {
+    if (!newPositionName.trim()) return;
+    
+    setLoading(true);
+    try {
+      const response = await fetch('/api/databases/admin/positions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          positionId: selectedPosition.id,
-          questions
+          name: newPositionName,
+          description: newPositionDesc,
+          difficulty: newPositionDifficulty
         })
       });
       
-      if (res.ok) {
-        toast.success('问题保存成功');
-        fetchQuestions();
-      } else {
-        toast.error('保存问题失败');
+      const data = await response.json();
+      if (data.success) {
+        await fetchPositions();
+        setNewPositionName('');
+        setNewPositionDesc('');
+        setShowAddPosition(false);
       }
     } catch (error) {
-      toast.error('保存问题失败');
+      console.error('Failed to add position:', error);
+    }
+    setLoading(false);
+  };
+
+  const updateUserRole = async (userId: string, role: 'interviewer' | 'candidate') => {
+    try {
+      const response = await fetch('/api/databases/admin/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, role })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        await fetchUsers();
+      }
+    } catch (error) {
+      console.error('Failed to update user role:', error);
     }
   };
 
-  // 取消编辑
-  const handleCancel = () => {
-    if (selectedPosition) {
-      fetchQuestions();
+  const addQuestion = async () => {
+    if (!selectedPosition || !newQuestion.question.trim() || !newQuestion.answer.trim()) return;
+    
+    setLoading(true);
+    try {
+      const response = await fetch('/api/databases/admin/questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...newQuestion,
+          position_id: selectedPosition
+        })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        await fetchQuestions(selectedPosition);
+        setNewQuestion({
+          question: '',
+          answer: '',
+          difficulty: 'medium',
+          tags: []
+        });
+        setShowAddQuestion(false);
+      }
+    } catch (error) {
+      console.error('Failed to add question:', error);
+    }
+    setLoading(false);
+  };
+
+  const deleteQuestion = async (questionId: number) => {
+    try {
+      const response = await fetch(`/api/databases/admin/questions?id=${questionId}`, {
+        method: 'DELETE'
+      });
+      
+      const data = await response.json();
+      if (data.success && selectedPosition) {
+        await fetchQuestions(selectedPosition);
+      }
+    } catch (error) {
+      console.error('Failed to delete question:', error);
     }
   };
 
-  // 处理文件上传
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const saveQuestions = async () => {
+    if (!selectedPosition) return;
+    
+    setLoading(true);
+    try {
+      const response = await fetch('/api/databases/admin/questions/batch', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          position_id: selectedPosition,
+          questions: questions
+        })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        alert('保存成功！');
+      }
+    } catch (error) {
+      console.error('Failed to save questions:', error);
+    }
+    setLoading(false);
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !selectedPosition) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (e) => {
       try {
-        const parsedData = JSON.parse(event.target?.result as string);
-        if (Array.isArray(parsedData)) {
-          setQuestions(parsedData);
-          toast.success('文件上传成功');
-        } else {
-          toast.error('文件格式不正确');
+        const content = e.target?.result as string;
+        const parsedQuestions = JSON.parse(content) as Question[];
+        
+        const response = await fetch('/api/databases/admin/questions/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            position_id: selectedPosition,
+            questions: parsedQuestions
+          })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          await fetchQuestions(selectedPosition);
+          alert('文件上传成功！');
         }
       } catch (error) {
-        toast.error('解析JSON文件失败');
+        console.error('Failed to parse or upload file:', error);
+        alert('文件格式错误，请检查JSON格式');
       }
     };
     reader.readAsText(file);
   };
 
-  // 下载示例文件
-  const downloadSampleFile = () => {
+  const downloadSample = () => {
     const sampleData = [
       {
-        "content": "请解释React中的虚拟DOM",
-        "difficulty": "medium",
-        "tags": ["React", "前端"]
+        question: "请介绍一下你自己",
+        answer: "这是一个开放性问题，面试者可以简要介绍自己的背景、经验和优势。",
+        difficulty: "easy",
+        tags: ["自我介绍", "基础问题"]
       },
       {
-        "content": "什么是闭包？请举例说明",
-        "difficulty": "easy",
-        "tags": ["JavaScript", "基础"]
+        question: "你对这个岗位的理解是什么？",
+        answer: "面试者应该展示对岗位职责的理解和相关技能的匹配度。",
+        difficulty: "medium",
+        tags: ["岗位理解", "职业规划"]
       }
     ];
     
@@ -231,382 +258,304 @@ const AdminDashboard = () => {
     const a = document.createElement('a');
     a.href = url;
     a.download = 'questions_sample.json';
-    document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty) {
+      case 'easy': return 'text-green-600 bg-green-50';
+      case 'medium': return 'text-yellow-600 bg-yellow-50';
+      case 'hard': return 'text-red-600 bg-red-50';
+      default: return 'text-gray-600 bg-gray-50';
+    }
+  };
+
   return (
-    <DashboardContainer>
-      <ToastContainer position="top-right" autoClose={3000} />
-      <MainContent>
-        <QuestionSection>
-          <SectionHeader>
-            <h2>{selectedPosition ? `${selectedPosition.name} 问题库` : '请选择岗位'}</h2>
-            <PositionSelector>
-              <select 
-                value={selectedPosition?.id || ''}
-                onChange={(e) => {
-                  const position = positions.find(p => p.id === parseInt(e.target.value));
-                  setSelectedPosition(position || null);
-                }}
+  <div className="min-h-screen bg-gray-50 p-6">
+    <div className="max-w-7xl mx-auto">
+      <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">管理员控制台</h1>
+
+      {/* 第一行：问题管理 + 岗位管理 */}
+      <div className="flex gap-6 mb-6">
+        {/* 问题管理 */}
+        <div className="flex-1 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+              <Briefcase className="w-5 h-5" />
+              问题管理
+              {selectedPosition && (
+                <span className="text-sm text-gray-500 ml-2">
+                  - {positions.find(p => p.id === selectedPosition)?.name}
+                </span>
+              )}
+            </h2>
+
+            <div className="flex gap-2">
+              <button
+                onClick={downloadSample}
+                className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
               >
-                {positions.map(position => (
-                  <option key={position.id} value={position.id}>
-                    {position.name} ({position.difficulty})
-                  </option>
+                <Download className="w-4 h-4" />
+                下载示例
+              </button>
+
+              <label className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors cursor-pointer">
+                <Upload className="w-4 h-4" />
+                上传文件
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  disabled={!selectedPosition}
+                />
+              </label>
+
+              <button
+                onClick={saveQuestions}
+                disabled={!selectedPosition || loading}
+                className="flex items-center gap-2 px-3 py-2 text-sm bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors disabled:opacity-50"
+              >
+                <Save className="w-4 h-4" />
+                保存
+              </button>
+            </div>
+          </div>
+
+          {!selectedPosition ? (
+            <div className="flex items-center justify-center h-64 text-gray-500">
+              <div className="text-center">
+                <Briefcase className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                <p>请先选择一个岗位来管理对应的问题库</p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <button
+                onClick={() => setShowAddQuestion(true)}
+                className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors text-gray-600 hover:text-blue-600"
+              >
+                <Plus className="w-5 h-5 mx-auto mb-2" />
+                添加新问题
+              </button>
+
+              {showAddQuestion && (
+                <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                  <h3 className="font-medium mb-3">添加新问题</h3>
+                  <div className="space-y-3">
+                    <textarea
+                      placeholder="问题内容"
+                      value={newQuestion.question}
+                      onChange={(e) => setNewQuestion({ ...newQuestion, question: e.target.value })}
+                      className="w-full p-3 border border-gray-300 rounded-md resize-none h-20"
+                    />
+                    <textarea
+                      placeholder="参考答案"
+                      value={newQuestion.answer}
+                      onChange={(e) => setNewQuestion({ ...newQuestion, answer: e.target.value })}
+                      className="w-full p-3 border border-gray-300 rounded-md resize-none h-24"
+                    />
+                    <div className="flex gap-3">
+                      <select
+                        value={newQuestion.difficulty}
+                        onChange={(e) =>
+                          setNewQuestion({ ...newQuestion, difficulty: e.target.value as 'easy' | 'medium' | 'hard' })
+                        }
+                        className="px-3 py-2 border border-gray-300 rounded-md"
+                      >
+                        <option value="easy">简单</option>
+                        <option value="medium">中等</option>
+                        <option value="hard">困难</option>
+                      </select>
+                      <input
+                        placeholder="标签 (用逗号分隔)"
+                        value={newQuestion.tags.join(', ')}
+                        onChange={(e) =>
+                          setNewQuestion({
+                            ...newQuestion,
+                            tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag),
+                          })
+                        }
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={addQuestion}
+                        disabled={loading}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        添加
+                      </button>
+                      <button
+                        onClick={() => setShowAddQuestion(false)}
+                        className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+                      >
+                        取消
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {questions.map((question, index) => (
+                  <div key={question.id || index} className="border border-gray-200 rounded-lg p-4 bg-white">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(
+                            question.difficulty
+                          )}`}
+                        >
+                          {question.difficulty === 'easy'
+                            ? '简单'
+                            : question.difficulty === 'medium'
+                            ? '中等'
+                            : '困难'}
+                        </span>
+                        {question.tags.length > 0 && (
+                          <div className="flex gap-1">
+                            {question.tags.map((tag, tagIndex) => (
+                              <span key={tagIndex} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => question.id && deleteQuestion(question.id)}
+                        className="text-red-500 hover:text-red-700 p-1"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <p className="font-medium text-gray-900 mb-2">{question.question}</p>
+                    <p className="text-sm text-gray-600">{question.answer}</p>
+                  </div>
                 ))}
-              </select>
-            </PositionSelector>
-          </SectionHeader>
-          
-          <QuestionList>
-            {questions.map((q, index) => (
-              <QuestionItem key={q.id || index}>
-                <QuestionContent>{q.content}</QuestionContent>
-                <DifficultyTag difficulty={q.difficulty}>
-                  {q.difficulty === 'easy' ? '简单' : q.difficulty === 'medium' ? '中等' : '困难'}
-                </DifficultyTag>
-                <DeleteButton onClick={() => handleDeleteQuestion(index)}>删除</DeleteButton>
-              </QuestionItem>
-            ))}
-            
-            <NewQuestionForm>
-              <QuestionInput
-                value={newQuestion.content}
-                onChange={(e) => setNewQuestion({...newQuestion, content: e.target.value})}
-                placeholder="输入新问题..."
-              />
-              <DifficultySelect
-                value={newQuestion.difficulty}
-                onChange={(e) => setNewQuestion({...newQuestion, difficulty: e.target.value as any})}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 岗位管理 */}
+        <div className="w-80 space-y-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <Briefcase className="w-5 h-5" />
+              岗位管理
+            </h3>
+
+            <div className="space-y-3">
+              {positions.map((position) => (
+                <div
+                  key={position.id}
+                  onClick={() => setSelectedPosition(position.id)}
+                  className={`p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                    selectedPosition === position.id
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="font-medium text-gray-900">{position.name}</div>
+                  <div className="text-sm text-gray-600 mt-1">{position.description}</div>
+                  <span
+                    className={`inline-block mt-2 px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(
+                      position.difficulty
+                    )}`}
+                  >
+                    {position.difficulty === 'easy'
+                      ? '简单'
+                      : position.difficulty === 'medium'
+                      ? '中等'
+                      : '困难'}
+                  </span>
+                </div>
+              ))}
+
+              {showAddPosition ? (
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-3">
+                  <input
+                    placeholder="岗位名称"
+                    value={newPositionName}
+                    onChange={(e) => setNewPositionName(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-md mb-2"
+                  />
+                  <textarea
+                    placeholder="岗位描述"
+                    value={newPositionDesc}
+                    onChange={(e) => setNewPositionDesc(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-md mb-2 resize-none h-16"
+                  />
+                  <select
+                    value={newPositionDifficulty}
+                    onChange={(e) => setNewPositionDifficulty(e.target.value as 'easy' | 'medium' | 'hard')}
+                    className="w-full p-2 border border-gray-300 rounded-md mb-3"
+                  >
+                    <option value="easy">简单</option>
+                    <option value="medium">中等</option>
+                    <option value="hard">困难</option>
+                  </select>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={addPosition}
+                      disabled={loading}
+                      className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      添加
+                    </button>
+                    <button
+                      onClick={() => setShowAddPosition(false)}
+                      className="flex-1 px-3 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+                    >
+                      取消
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowAddPosition(true)}
+                  className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors text-gray-600 hover:text-blue-600"
+                >
+                  <Plus className="w-4 h-4 mx-auto mb-1" />
+                  <div className="text-sm">添加岗位</div>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 第二行：人员管理 */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+          <Users className="w-5 h-5" />
+          人员管理
+        </h3>
+
+        <div className="space-y-3 max-h-80 overflow-y-auto">
+          {users.map((user) => (
+            <div key={user.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+              <div>
+                <div className="font-medium text-gray-900">{user.name}</div>
+                <div className="text-sm text-gray-500">{user.id}</div>
+              </div>
+              <select
+                value={user.role}
+                onChange={(e) => updateUserRole(user.id, e.target.value as 'interviewer' | 'candidate')}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm"
               >
-                <option value="easy">简单</option>
-                <option value="medium">中等</option>
-                <option value="hard">困难</option>
-              </DifficultySelect>
-              <AddButton onClick={handleAddQuestion}>添加</AddButton>
-            </NewQuestionForm>
-          </QuestionList>
-          
-          <ActionButtons>
-            <Button primary onClick={handleSaveQuestions}>保存</Button>
-            <Button onClick={handleCancel}>取消</Button>
-            <Button onClick={() => fileInputRef.current?.click()}>
-              上传文件
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                style={{ display: 'none' }} 
-                accept=".json" 
-                onChange={handleFileUpload} 
-              />
-            </Button>
-            <Button onClick={downloadSampleFile}>下载示例</Button>
-          </ActionButtons>
-        </QuestionSection>
-      </MainContent>
-      
-      <Sidebar>
-        <PositionManagement>
-          <SectionHeader>
-            <h3>岗位管理</h3>
-          </SectionHeader>
-          <PositionForm>
-            <Input 
-              type="text" 
-              value={newPositionName} 
-              onChange={(e) => setNewPositionName(e.target.value)} 
-              placeholder="新岗位名称" 
-            />
-            <DifficultySelect
-              value={newPositionDifficulty}
-              onChange={(e) => setNewPositionDifficulty(e.target.value as any)}
-            >
-              <option value="easy">简单</option>
-              <option value="medium">中等</option>
-              <option value="hard">困难</option>
-            </DifficultySelect>
-            <AddButton onClick={handleAddPosition}>添加岗位</AddButton>
-          </PositionForm>
-        </PositionManagement>
-        
-        <UserManagement>
-          <SectionHeader>
-            <h3>用户角色管理</h3>
-          </SectionHeader>
-          <UserList>
-            {users.map(user => (
-              <UserItem key={user.id}>
-                <UserName>{user.name}</UserName>
-                <RoleToggle>
-                  <RoleButton 
-                    active={user.role === 'candidate'} 
-                    onClick={() => handleUpdateRole(user.id, 'candidate')}
-                  >
-                    面试者
-                  </RoleButton>
-                  <RoleButton 
-                    active={user.role === 'interviewer'} 
-                    onClick={() => handleUpdateRole(user.id, 'interviewer')}
-                  >
-                    面试官
-                  </RoleButton>
-                </RoleToggle>
-              </UserItem>
-            ))}
-          </UserList>
-        </UserManagement>
-      </Sidebar>
-    </DashboardContainer>
-  );
-};
-
-// 样式组件
-const DashboardContainer = styled.div`
-  display: flex;
-  min-height: 100vh;
-  background-color: #f8f9fa;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-`;
-
-const MainContent = styled.div`
-  flex: 2;
-  padding: 2rem;
-  background-color: white;
-  border-right: 1px solid #eaeaea;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-`;
-
-const Sidebar = styled.div`
-  flex: 1;
-  padding: 2rem;
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-  background-color: white;
-`;
-
-const SectionHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid #eaeaea;
-  
-  h2, h3 {
-    margin: 0;
-    color: #2c3e50;
-    font-weight: 600;
-  }
-`;
-
-const QuestionSection = styled.div`
-  background-color: white;
-  border-radius: 8px;
-  padding: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-`;
-
-const PositionSelector = styled.div`
-  select {
-    padding: 8px 12px;
-    border-radius: 4px;
-    border: 1px solid #ddd;
-    background-color: white;
-    font-size: 14px;
-  }
-`;
-
-const QuestionList = styled.div`
-  max-height: 60vh;
-  overflow-y: auto;
-  margin-bottom: 1.5rem;
-  border: 1px solid #eee;
-  border-radius: 6px;
-  padding: 1rem;
-`;
-
-const QuestionItem = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 15px;
-  margin-bottom: 10px;
-  background-color: #f9f9f9;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-  
-  &:hover {
-    background-color: #f1f1f1;
-  }
-`;
-
-const QuestionContent = styled.div`
-  flex: 1;
-  margin-right: 15px;
-  font-size: 15px;
-  color: #333;
-`;
-
-const DifficultyTag = styled.span<{ difficulty: string }>`
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-  color: white;
-  background-color: ${props => 
-    props.difficulty === 'easy' ? '#4caf50' : 
-    props.difficulty === 'medium' ? '#ff9800' : '#f44336'};
-`;
-
-const DeleteButton = styled.button`
-  background: none;
-  border: none;
-  color: #f44336;
-  cursor: pointer;
-  font-size: 14px;
-  padding: 5px 10px;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-  
-  &:hover {
-    background-color: rgba(244, 67, 54, 0.1);
-  }
-`;
-
-const NewQuestionForm = styled.div`
-  display: flex;
-  gap: 10px;
-  margin-top: 15px;
-  padding: 10px;
-  background-color: #f5f7ff;
-  border-radius: 6px;
-`;
-
-const QuestionInput = styled.textarea`
-  flex: 1;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  resize: vertical;
-  min-height: 60px;
-  font-size: 14px;
-`;
-
-const Input = styled.input`
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  margin-bottom: 10px;
-  font-size: 14px;
-`;
-
-const DifficultySelect = styled.select`
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: white;
-  font-size: 14px;
-  min-width: 100px;
-`;
-
-const AddButton = styled.button`
-  background-color: #4caf50;
-  color: white;
-  border: none;
-  padding: 10px 15px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.2s;
-  
-  &:hover {
-    background-color: #388e3c;
-  }
-`;
-
-const ActionButtons = styled.div`
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-  margin-top: 20px;
-`;
-
-const Button = styled.button<{ primary?: boolean }>`
-  padding: 10px 20px;
-  border-radius: 4px;
-  border: none;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  background-color: ${props => props.primary ? '#2196f3' : '#f5f5f5'};
-  color: ${props => props.primary ? 'white' : '#333'};
-  transition: all 0.2s;
-  
-  &:hover {
-    background-color: ${props => props.primary ? '#0b7dda' : '#e0e0e0'};
-  }
-`;
-
-const PositionManagement = styled.div`
-  background-color: white;
-  border-radius: 8px;
-  padding: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-`;
-
-const PositionForm = styled.div`
-  display: flex;
-  flex-direction: column;
-`;
-
-const UserManagement = styled.div`
-  background-color: white;
-  border-radius: 8px;
-  padding: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-`;
-
-const UserList = styled.div`
-  max-height: 40vh;
-  overflow-y: auto;
-`;
-
-const UserItem = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid #eee;
-`;
-
-const UserName = styled.div`
-  font-size: 14px;
-  color: #333;
-`;
-
-const RoleToggle = styled.div`
-  display: flex;
-  gap: 5px;
-`;
-
-const RoleButton = styled.button<{ active?: boolean }>`
-  padding: 6px 12px;
-  border-radius: 4px;
-  border: 1px solid #ddd;
-  background-color: ${props => props.active ? '#2196f3' : 'white'};
-  color: ${props => props.active ? 'white' : '#333'};
-  cursor: pointer;
-  font-size: 13px;
-  transition: all 0.2s;
-  
-  &:hover {
-    background-color: ${props => props.active ? '#0b7dda' : '#f5f5f5'};
-  }
-`;
-
-export default AdminDashboard;
+                <option value="candidate">面试者</option>
+                <option value="interviewer">面试官</option>
+              </select>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+);
+}
