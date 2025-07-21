@@ -189,6 +189,27 @@ CREATE TABLE interviewers (
     INDEX idx_country (country),
     INDEX idx_level (level)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='面试官信息表';
+
+--创建身份表
+CREATE TABLE role (
+    id VARCHAR(50) PRIMARY KEY,  -- 参照clerk提供的id信息
+    name VARCHAR(50) DEFAULT 'user'  -- 默认为user
+);
+-- 创建角色表
+CREATE TABLE roles (
+  user_id VARCHAR(50) PRIMARY KEY,
+  role ENUM('interviewer', 'candidate') NOT NULL DEFAULT 'candidate'
+);
+
+-- 创建问题表
+CREATE TABLE questions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  position_id INT NOT NULL,
+  content TEXT NOT NULL,
+  difficulty ENUM('easy', 'medium', 'hard') NOT NULL DEFAULT 'medium',
+  tags JSON,
+  FOREIGN KEY (position_id) REFERENCES positions(id) ON DELETE CASCADE
+);
 ```
 
 ## llm_chat 后端请求与响应格式
