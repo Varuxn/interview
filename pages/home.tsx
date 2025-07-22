@@ -278,8 +278,35 @@ export default function ResumeUploadPage() {
     });
   };
 
+  const saveSettingsToDB = async () => {
+    try {
+      const response = await fetch('/api/databases/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          id: user_id,
+          interviewer: formData.interviewer.id,
+          position: formData.position.id
+        })
+      });
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to save settings to database');
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('数据库保存失败:', error);
+      toast.error("设置保存到数据库失败");
+      return false;
+    }
+  };
   // 保存数据
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaving(true);
     
     const userDataKey = "userdata";
@@ -297,8 +324,17 @@ export default function ResumeUploadPage() {
     // 保存回localStorage
     localStorage.setItem(userDataKey, JSON.stringify(allUserData));
     
+    // 尝试保存到数据库
+    const dbSaveSuccess = await saveSettingsToDB();
+    
     setIsSaving(false);
-    toast.success("所有设置已保存！");
+    
+    if (dbSaveSuccess) {
+      toast.success("所有设置已保存到数据库！");
+    } else {
+      toast.warning("设置已保存到本地，但数据库保存失败");
+    }
+    
     window.location.reload();
   };
 
