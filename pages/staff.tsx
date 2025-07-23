@@ -178,19 +178,33 @@ const MainDashboard: React.FC = () => {
     if (!isLoaded || !userId) {
         return;
     }
+    console.log('Fetching evaluation data for user:', userId);
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/databases/query?table=evaluations&user_id=${userId}`);
-      if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
-      const result: QueryResponse<FullEvaluationData> = await response.json();
-      if (result.success && result.data) {
-        setEvaluationData(Array.isArray(result.data) ? result.data[0] || null : result.data);
-      } else {
-        setError(result.message || 'Failed to fetch evaluation data.');
-        setEvaluationData(null);
-      }
-    } catch (err) {
+  const response = await fetch(`/api/databases/query?table=evaluations&user_id=${userId}`);
+  if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
+  
+  const result: QueryResponse<FullEvaluationData> = await response.json();
+  console.log('Evaluation data fetched:', result);
+  
+  if (result.success && result.data) {
+    // 查找与当前userId匹配的评价数据
+    const userEvaluation = Array.isArray(result.data)
+      ? result.data.find(item => item.user_id === userId) || null
+      : result.data;
+    
+    setEvaluationData(userEvaluation);
+    
+    // 如果找不到匹配项，设置错误信息
+    if (!userEvaluation) {
+      setError(`No evaluation data found for user: ${userId}`);
+    }
+  } else {
+    setError(result.message || 'Failed to fetch evaluation data.');
+    }
+  }
+ catch (err) {
       console.error('Error fetching evaluation data:', err);
       setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
     } finally {
