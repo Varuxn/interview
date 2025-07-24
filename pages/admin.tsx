@@ -548,8 +548,8 @@ export default function AdminPage() {
                 onChange={(e) => updateUserRole(user.id, e.target.value as 'interviewer' | 'candidate')}
                 className="px-3 py-1 border border-gray-300 rounded-md text-sm"
               >
-                <option value="candidate">面试者</option>
-                <option value="interviewer">面试官</option>
+                <option value="candidate">面试官</option>
+                <option value="interviewer">面试者</option>
               </select>
             </div>
           ))}
