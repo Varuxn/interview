@@ -61,13 +61,13 @@ const DualCameraRecorder = () => {
   const stagename= currentStage === 'introduction' ? '自我介绍环节' : currentStage === 'technology' ? '技术问答环节' : currentStage === 'analysis' ? '情景分析环节' :'最终环节';
 
   const [questionIndex, setQuestionIndex] = useState(0);
-  const question_total = 3; // 每个环节的问题数目/对话轮数
+  // const question_total = 3; // 每个环节的问题数目/对话轮数
+  const question_total = 11;
   const [generatedQuestion, setGeneratedQuestion] = useState<string>();
   const [generatedAudio, setGeneratedAudio] = useState<string | undefined>(); // 存储生成的语音
   const audioRef = useRef<HTMLAudioElement>(null);
   const [audioStarted, setAudioStarted] = useState(false);
   const [audioData, setAudioData] = useState(new Array(20).fill(0));
-
 
 
   const [loading, setLoading] = useState(true);
@@ -102,11 +102,39 @@ const DualCameraRecorder = () => {
   const dataArrayRef = useRef<Uint8Array | null>(null);
   const [autoRecordAfterAudio, setAutoRecordAfterAudio] = useState(false);
   const [silenceCountdown, setSilenceCountdown] = useState<number | null>(null);
+  const countdowntime = 3; // 静音倒计时（秒）
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const volumeRef = useRef(0); // 存储当前音量值用于调试
   const silenceThreshold = 1; // 静音阈值（百分比），可根据需要调整
   const [preRecordingCountdown, setPreRecordingCountdown] = useState<number | null>(null);
   
+  const test = useState<boolean>(true)[0];
+
+  const Question =[
+    "问题1",
+    "问题2",
+    "问题3",
+    "问题4",
+    "问题5",
+    "问题6",
+    "问题7",
+    "问题8",
+    "问题9",
+    "问题10",
+  ];
+
+  const Answer = [
+    "答案1",
+    "答案2",
+    "答案3",
+    "答案4",
+    "答案5",
+    "答案6",
+    "答案7",
+    "答案8",
+    "答案9",
+    "答案10",
+  ]
 
   // 初始化FFmpeg
   useEffect(() => {
@@ -182,276 +210,356 @@ const DualCameraRecorder = () => {
   
   // 获取设备列表
   const getDevices = useCallback(async () => {
-  try {
-    setDeviceError(null);
-    setCamera2Error(false);
-    
-    // 首先请求摄像头和麦克风权限
-    const stream = await navigator.mediaDevices.getUserMedia({ 
-      video: true, 
-      audio: true 
-    });
-    
-    // 关闭临时流
-    stream.getTracks().forEach(track => track.stop());
-    
-    setRecordingPermission(true);
-    
-    // 然后枚举设备
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    
-    const videoDevices = devices.filter(device => device.kind === "videoinput");
-    const audioDevices = devices.filter(device => device.kind === "audioinput");
-    
-    setVideoDevices(videoDevices);
-    setAudioDevices(audioDevices);
-    
-    if (videoDevices.length > 0) {
-
+    try {
+      setDeviceError(null);
+      setCamera2Error(false);
       
-      // 设置摄像头2 - 优先使用后置摄像头
-      const backCamera = videoDevices.find(d => 
-        d.label.toLowerCase().includes("back") || 
-        d.label.toLowerCase().includes("rear") ||
-        d.label.toLowerCase().includes("environment")
-      );
-
-      if (backCamera) {
-        setSelectedVideoDevice1(backCamera.deviceId);
-      } else if (videoDevices.length > 1) {
-        setSelectedVideoDevice1(videoDevices[1].deviceId);
-      } else {
-        setSelectedVideoDevice1(videoDevices[0].deviceId);
-      }
-
-      // 设置摄像头1 - 优先使用前置摄像头
-      const frontCamera = videoDevices.find(d => 
-        d.label.toLowerCase().includes("front") || 
-        d.label.toLowerCase().includes("user") ||
-        d.label.toLowerCase().includes("facetime")
-      );
+      // 首先请求摄像头和麦克风权限
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: true, 
+        audio: true 
+      });
       
-      if (frontCamera) {
-        setSelectedVideoDevice2(frontCamera.deviceId);
-      } else {
-        setSelectedVideoDevice2(videoDevices[0].deviceId);
-      }
+      // 关闭临时流
+      stream.getTracks().forEach(track => track.stop());
+      
+      setRecordingPermission(true);
+      
+      // 然后枚举设备
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      
+      const videoDevices = devices.filter(device => device.kind === "videoinput");
+      const audioDevices = devices.filter(device => device.kind === "audioinput");
+      
+      setVideoDevices(videoDevices);
+      setAudioDevices(audioDevices);
+      
+      if (videoDevices.length > 0) {
+        // 设置摄像头2 - 优先使用后置摄像头
+        const backCamera = videoDevices.find(d => 
+          d.label.toLowerCase().includes("back") || 
+          d.label.toLowerCase().includes("rear") ||
+          d.label.toLowerCase().includes("environment")
+        );
 
+        if (backCamera) {
+          setSelectedVideoDevice1(backCamera.deviceId);
+        } else if (videoDevices.length > 1) {
+          setSelectedVideoDevice1(videoDevices[1].deviceId);
+        } else {
+          setSelectedVideoDevice1(videoDevices[0].deviceId);
+        }
+
+        // 设置摄像头1 - 优先使用前置摄像头
+        const frontCamera = videoDevices.find(d => 
+          d.label.toLowerCase().includes("front") || 
+          d.label.toLowerCase().includes("user") ||
+          d.label.toLowerCase().includes("facetime")
+        );
+        
+        if (frontCamera) {
+          setSelectedVideoDevice2(frontCamera.deviceId);
+        } else {
+          setSelectedVideoDevice2(videoDevices[0].deviceId);
+        }
+      }
+      
+      if (audioDevices.length > 0) {
+        setSelectedAudioDevice(audioDevices[0].deviceId);
+      }
+      
+      setCameraLoaded(true);
+    } catch (error) {
+      console.error("获取设备列表失败:", error);
+      setDeviceError("无法访问摄像头和麦克风，请检查权限设置");
     }
-    
-    if (audioDevices.length > 0) {
-      setSelectedAudioDevice(audioDevices[0].deviceId);
-    }
-    
-    setCameraLoaded(true);
-    // addMessage("设备已加载完成", "system");
-  } catch (error) {
-    console.error("获取设备列表失败:", error);
-    setDeviceError("无法访问摄像头和麦克风，请检查权限设置");
-    // addMessage("获取设备权限失败，请允许访问摄像头和麦克风", "system");
-  }
-}, []);
-  
+  }, []);
+  // 添加动画帧ID引用来控制音量检测循环
+  const volumeDetectionRef = useRef(null);
   // 重新加载设备
-  const reloadDevices = async () => {
-    setCameraLoaded(false);
-    setCamera2Error(false);
-    setCamera2Ready(false);
-    await getDevices();
+useEffect(() => {
+  return () => {
+    // 组件卸载时清理所有资源
+    if (volumeDetectionRef.current) {
+      cancelAnimationFrame(volumeDetectionRef.current);
+      volumeDetectionRef.current = null;
+    }
+    
+    if (silenceTimerRef.current) {
+      clearInterval(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+    
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch (error) {
+        console.error("清理时停止录制失败:", error);
+      }
+    }
+    
+    if (analyserRef.current) {
+      try {
+        analyserRef.current.disconnect();
+      } catch (error) {
+        console.error("清理时断开分析器失败:", error);
+      }
+    }
+    
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      audioContextRef.current.close().catch(console.error);
+    }
   };
+}, []);
+
+// 重新加载设备 - 添加完整的清理逻辑
+const reloadDevices = async () => {
+  // 先清理现有资源
+  if (recording) {
+    handleStopRecording();
+  }
+  
+  // 等待停止完成
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  setCameraLoaded(false);
+  setCamera2Error(false);
+  setCamera2Ready(false);
+  setCamera1Ready(false);
+  
+  await getDevices();
+};
 
   // 处理数据可用事件
   const handleDataAvailable = useCallback(({ data }: BlobEvent) => {
-  if (data.size > 0) {
-    recordedChunks.current.push(data);
-  }
-}, []);
+      if (data.size > 0) {
+        recordedChunks.current.push(data);
+      }
+    }, []);
+    // 停止录制
+  const handleStopRecording = useCallback(() => {
+    console.log("正在请求停止录制...");
+
+    // 停止音量检测循环
+    if (volumeDetectionRef.current) {
+      cancelAnimationFrame(volumeDetectionRef.current);
+      volumeDetectionRef.current = null;
+    }
+
+    // 停止媒体录制器
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch (error) {
+        console.error("停止MediaRecorder失败:", error);
+      }
+    }
+
+    // 清理静音计时器
+    if (silenceTimerRef.current) {
+      clearInterval(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+    setSilenceCountdown(null);
+
+    // 清理音频分析器和上下文
+    if (analyserRef.current) {
+      try {
+        analyserRef.current.disconnect();
+      } catch (error) {
+        console.error("断开分析器连接失败:", error);
+      }
+      analyserRef.current = null;
+    }
+    
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      audioContextRef.current.close()
+        .then(() => console.log("AudioContext已关闭"))
+        .catch(e => console.error("关闭AudioContext失败:", e));
+      audioContextRef.current = null;
+    }
+    
+    dataArrayRef.current = null;
+    setRecording(false);
+    addMessage("录制已停止", "system");
+
+  }, [recordedChunks, handleDataAvailable]);
+
 // 开始音量检测循环
-      const detectVolume = () => {
-        if (!analyserRef.current || !dataArrayRef.current) return;
-        
-        analyserRef.current.getByteTimeDomainData(dataArrayRef.current);
-        
-        // 计算音量（均方根）
-        let sum = 0;
-        for (let i = 0; i < dataArrayRef.current.length; i++) {
-          const value = (dataArrayRef.current[i] - 128) / 128;
-          sum += value * value;
-        }
-        
-        const rms = Math.sqrt(sum / dataArrayRef.current.length);
-        const volumeLevel = Math.min(1, rms) * 100; // 转换为百分比
-        setVolume(volumeLevel);
-        volumeRef.current = volumeLevel; // 存储当前音量用于调试
-        
-        // 静音检测逻辑
-        if (volumeLevel < silenceThreshold) {
-          // 检测到静音
-          if (silenceTimerRef.current === null) {
-            // 开始静音倒计时
-            let countdown = 5; // 5秒倒计时
+  const detectVolume = useCallback(() => {
+    if (!analyserRef.current || !dataArrayRef.current || !volumeDetectionRef.current) {
+      return;
+    }
+    
+    try {
+      analyserRef.current.getByteTimeDomainData(dataArrayRef.current);
+      
+      // 计算音量（均方根）
+      let sum = 0;
+      for (let i = 0; i < dataArrayRef.current.length; i++) {
+        const value = (dataArrayRef.current[i] - 128) / 128;
+        sum += value * value;
+      }
+      
+      const rms = Math.sqrt(sum / dataArrayRef.current.length);
+      const volumeLevel = Math.min(1, rms) * 100;
+      setVolume(volumeLevel);
+      volumeRef.current = volumeLevel;
+      
+      // 静音检测逻辑
+      if (volumeLevel < silenceThreshold) {
+        if (silenceTimerRef.current === null) {
+          let countdown = countdowntime;
+          setSilenceCountdown(countdown);
+          
+          silenceTimerRef.current = setInterval(() => {
+            countdown--;
             setSilenceCountdown(countdown);
             
-            silenceTimerRef.current = setInterval(() => {
-              countdown--;
-              setSilenceCountdown(countdown);
-              
-              if (countdown <= 0) {
-                // 静音超时，停止录制
-                if (silenceTimerRef.current) {
-                  clearInterval(silenceTimerRef.current);
-                  silenceTimerRef.current = null;
-                }
-                handleStopRecording();
+            if (countdown <= 0) {
+              if (silenceTimerRef.current) {
+                clearInterval(silenceTimerRef.current);
+                silenceTimerRef.current = null;
               }
-              
-              // 如果在倒计时期间检测到声音，重置倒计时
-              if (volumeRef.current >= silenceThreshold) {
-                if (silenceTimerRef.current) {
-                  clearInterval(silenceTimerRef.current);
-                  silenceTimerRef.current = null;
-                }
-                setSilenceCountdown(null);
+              handleStopRecording();
+            }
+            
+            if (volumeRef.current >= silenceThreshold) {
+              if (silenceTimerRef.current) {
+                clearInterval(silenceTimerRef.current);
+                silenceTimerRef.current = null;
               }
-            }, 1000);
-          }
-        } else {
-          // 检测到声音，重置静音倒计时
-          if (silenceTimerRef.current) {
-            clearInterval(silenceTimerRef.current);
-            silenceTimerRef.current = null;
-          }
-          setSilenceCountdown(null);
+              setSilenceCountdown(null);
+            }
+          }, 1000);
         }
-        
-        // 继续循环检测
-        requestAnimationFrame(detectVolume);
-      };
-  // 开始录制
+      } else {
+        if (silenceTimerRef.current) {
+          clearInterval(silenceTimerRef.current);
+          silenceTimerRef.current = null;
+        }
+        setSilenceCountdown(null);
+      }
+      
+      // 只有在检测标志存在时才继续循环
+      if (volumeDetectionRef.current ) {
+        volumeDetectionRef.current = requestAnimationFrame(detectVolume);
+      }
+    } catch (error) {
+      console.error("音量检测出错:", error);
+      // 出错时停止检测循环
+      volumeDetectionRef.current = null;
+    }
+  }, [silenceThreshold, countdowntime, handleStopRecording]);
+
   const startRecording = useCallback(() => {
     if (!webcamRef1.current?.stream || !cameraLoaded || !camera1Ready || !camera2Ready) {
       console.warn("录制条件不满足，已中止。");
       return;
     }
     setPreRecordingCountdown(5);
-  }, [cameraLoaded, camera1Ready, camera2Ready, handleDataAvailable]); // 请根据实际情况调整依赖项
+  }, [cameraLoaded, camera1Ready, camera2Ready]);
 
   useEffect(() => {
     if (!webcamRef1.current?.stream || !cameraLoaded || !camera1Ready || !camera2Ready) {
-      console.warn("录制条件不满足，已中止。");
       return;
     }
     if (preRecordingCountdown === null) return;
 
     if (preRecordingCountdown === 0) {
-      // 倒计时结束，开始实际录制
       setPreRecordingCountdown(null);
-    try {
-      const originalStream = webcamRef1.current.stream;
+      
+      try {
+        const originalStream = webcamRef1.current.stream;
 
-      // --- 设置 Web Audio API (用于音量检测) ---
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      audioContextRef.current = audioContext;
-      const source = audioContext.createMediaStreamSource(originalStream);
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 256;
-      analyserRef.current = analyser;
-      const destination = audioContext.createMediaStreamDestination();
-      source.connect(analyser);
-      analyser.connect(destination);
-
-      // --- 组合最终的媒体流 ---
-      const finalStream = new MediaStream([
-        ...originalStream.getVideoTracks(),
-        ...destination.stream.getAudioTracks()
-      ]);
-
-      // --- 设置 MediaRecorder ---
-      mediaRecorderRef.current = new MediaRecorder(finalStream, { mimeType: 'video/webm' });
-
-      // 绑定 dataavailable 事件
-      mediaRecorderRef.current.addEventListener("dataavailable", handleDataAvailable);
-
-      // 关键改动：在这里定义 onstop 事件处理器
-      mediaRecorderRef.current.onstop = () => {
-        console.log("--- MediaRecorder 'stop' 事件触发 ---");
-        console.log(`所有数据块接收完毕。最终录制内容为: ${recordedChunks.current.length} 个数据块。`);
-
-        // 在这里安全地处理和保存视频
-        if (recordedChunks.current.length > 0) {
-          // 创建一个新的 Blob 对象来保存
-          const videoBlob = new Blob(recordedChunks.current, { type: 'video/webm' });
-          
-          // 调用你的保存函数，并传入 Blob
-          handleSaveRecording(videoBlob); 
+        // 检查流是否有效
+        if (!originalStream || originalStream.getTracks().length === 0) {
+          throw new Error("无效的媒体流");
         }
 
-        // 清空数组以便下次录制
-        recordedChunks.current = [];
-      };
+        // 设置 Web Audio API
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        audioContextRef.current = audioContext;
+        
+        const source = audioContext.createMediaStreamSource(originalStream);
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        analyserRef.current = analyser;
+        
+        const destination = audioContext.createMediaStreamDestination();
+        source.connect(analyser);
+        analyser.connect(destination);
 
-      // --- 启动录制和音量检测 ---
-      mediaRecorderRef.current.start(1000); // 每1秒触发一次 dataavailable
-      
-      if (audioContext.state === 'suspended') {
-        audioContext.resume();
+        // 组合最终的媒体流
+        const finalStream = new MediaStream([
+          ...originalStream.getVideoTracks(),
+          ...destination.stream.getAudioTracks()
+        ]);
+
+        // 检查最终流是否有效
+        if (finalStream.getTracks().length === 0) {
+          throw new Error("无法创建有效的录制流");
+        }
+
+        // 设置 MediaRecorder
+        mediaRecorderRef.current = new MediaRecorder(finalStream, { mimeType: 'video/webm' });
+        mediaRecorderRef.current.addEventListener("dataavailable", handleDataAvailable);
+
+        mediaRecorderRef.current.onstop = () => {
+          console.log("MediaRecorder 'stop' 事件触发");
+          
+          // 停止音量检测循环
+          if (volumeDetectionRef.current) {
+            cancelAnimationFrame(volumeDetectionRef.current);
+            volumeDetectionRef.current = null;
+          }
+          
+          if (recordedChunks.current.length > 0) {
+            const videoBlob = new Blob(recordedChunks.current, { type: 'video/webm' });
+            handleSaveRecording(videoBlob);
+          }
+          recordedChunks.current = [];
+        };
+
+        // 启动录制
+        mediaRecorderRef.current.start(1000);
+        
+        if (audioContext.state === 'suspended') {
+          audioContext.resume();
+        }
+        
+        dataArrayRef.current = new Uint8Array(analyser.frequencyBinCount);
+        
+        // 启动音量检测循环
+        volumeDetectionRef.current = true;
+        detectVolume();
+
+        setRecording(true);
+        addMessage("录制已开始", "system");
+
+      } catch (error) {
+        console.error("启动录制失败:", error);
+        addMessage("开始录制失败，请检查设备权限", "system");
+        setDeviceError("录制启动失败，请重试");
+        
+        // 清理资源
+        if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+          audioContextRef.current.close().catch(console.error);
+          audioContextRef.current = null;
+        }
       }
-      dataArrayRef.current = new Uint8Array(analyser.frequencyBinCount);
-      detectVolume(); // 启动你的静音检测逻辑
-
-      setRecording(true);
-      addMessage("录制已开始", "system");
-      console.log("录制已开始，状态:", mediaRecorderRef.current.state);
-
-    } catch (error) {
-      console.error("在 startRecording 过程中捕获到致命错误:", error);
-      addMessage("开始录制失败，请检查设备权限和控制台日志", "system");
-      setDeviceError("录制启动失败，请重试");
-    }
       return;
     }
 
-    // 每秒减少倒计时
     const timer = setTimeout(() => {
       setPreRecordingCountdown(preRecordingCountdown - 1);
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [preRecordingCountdown]);
+  }, [preRecordingCountdown, detectVolume, handleDataAvailable]);
 
   
-  // 停止录制
-  const handleStopRecording = useCallback(() => {
-  console.log("正在请求停止录制...");
-
-  // 停止媒体录制器 (这将异步触发 onstop 事件)
-  if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-    mediaRecorderRef.current.stop();
-  }
-
-  // 清理静音计时器
-  if (silenceTimerRef.current) {
-    clearInterval(silenceTimerRef.current);
-    silenceTimerRef.current = null;
-  }
-  setSilenceCountdown(null);
-
-  // 清理音频分析器和上下文
-  if (analyserRef.current) {
-    analyserRef.current.disconnect();
-    analyserRef.current = null;
-  }
-  if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-    audioContextRef.current.close().catch(e => console.error("关闭AudioContext失败:", e));
-    audioContextRef.current = null;
-  }
-  dataArrayRef.current = null;
-
-  setRecording(false);
-  addMessage("录制已停止", "system");
-
-}, []); // 依赖项大大减少，甚至可以为空
-
+  
   // 处理倒计时结束
   useEffect(() => {
     if (countdown === 0 && recording) {
@@ -519,30 +627,37 @@ const DualCameraRecorder = () => {
 
       // 2. 转录音频
       setStatus("转写音频中...");
-      const transcribeForm = new FormData();
-      transcribeForm.append("file", audioFile, `${unique_id}.mp3`);
+      if (test === false)
+      {
+        const transcribeForm = new FormData();
+        transcribeForm.append("file", audioFile, `${unique_id}.mp3`);
 
-      const transcribeRes = await fetch(
-        `/api/transcribe`,
-        {
-          method: "POST",
-          body: transcribeForm,
+        const transcribeRes = await fetch(
+          `/api/transcribe`,
+          {
+            method: "POST",
+            body: transcribeForm,
+          }
+        );
+        
+        if (!transcribeRes.ok) {
+          const errorText = await transcribeRes.text();
+          throw new Error(`转录失败: ${errorText}`);
         }
-      );
-      
-      if (!transcribeRes.ok) {
-        const errorText = await transcribeRes.text();
-        throw new Error(`转录失败: ${errorText}`);
-      }
-      
-      const transcribeResult = await transcribeRes.json();
+        
+        const transcribeResult = await transcribeRes.json();
 
-      let transcript = "";
-      if (transcribeResult.transcript) {
-        transcript = transcribeResult.transcript;
-        setTranscript(transcript);
-      } else {
-        throw new Error(transcribeResult.error || "转写失败");
+        let transcript = "";
+        if (transcribeResult.transcript) {
+          transcript = transcribeResult.transcript;
+          setTranscript(transcript);
+        } else {
+          throw new Error(transcribeResult.error || "转写失败");
+        }
+      }
+      else
+      {
+        setTranscript(Answer[questionIndex-1]);
       }
 
       // 3. 准备保存文件
@@ -788,6 +903,41 @@ const DualCameraRecorder = () => {
     }
   };
 
+  useEffect(() => {
+    return () => {
+      // 组件卸载时清理所有资源
+      if (volumeDetectionRef.current) {
+        cancelAnimationFrame(volumeDetectionRef.current);
+        volumeDetectionRef.current = null;
+      }
+      
+      if (silenceTimerRef.current) {
+        clearInterval(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
+      
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+        try {
+          mediaRecorderRef.current.stop();
+        } catch (error) {
+          console.error("清理时停止录制失败:", error);
+        }
+      }
+      
+      if (analyserRef.current) {
+        try {
+          analyserRef.current.disconnect();
+        } catch (error) {
+          console.error("清理时断开分析器失败:", error);
+        }
+      }
+      
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close().catch(console.error);
+      }
+    };
+  }, []);
+
   const [userInteracted, setUserInteracted] = useState(false);// 添加状态标记用户是否已交互
   const [showPlayButton, setShowPlayButton] = useState(false);// 添加状态控制播放按钮显示
 
@@ -842,7 +992,7 @@ const DualCameraRecorder = () => {
         body: JSON.stringify({
           text: generatedQuestion,
           voice: person, // Now safe
-          debug: true
+          debug: false
         }),
       });
 
@@ -898,18 +1048,34 @@ const DualCameraRecorder = () => {
   }, [generatedAudio]);
 
   const getnextquestion = async () => {
-    try {
-      await fetchLLMResponse(
-        systeminitprompt,
-        `请根据以下对话内容和候选人的回答生成下一个问题，如果下面没有任何记录那么你需要发出一个疑问来开启这个面试流程\n面试官与候选人的对话:\n${chatrecord}`,
-        setGeneratedQuestion
-      );
-    } catch (err) {
-      console.error('调用失败:', err);
+    if (test === true) {
+      try {
+        // 检查是否还有问题
+        if (questionIndex < Question.length) {
+          const nextQuestion = Question[questionIndex];
+          console.log("获取到的问题:", nextQuestion);
+          setGeneratedQuestion(nextQuestion);  // 设置当前问题
+        } else {
+          console.log("所有问题已完成");
+          setGeneratedQuestion("面试问题已全部完成，感谢参与！");
+        }
+      } catch (err) {
+        console.error('获取问题失败:', err);
+      }
+    }
+    else
+    {
+      try {
+        await fetchLLMResponse(
+          systeminitprompt,
+          `请根据以下对话内容和候选人的回答生成下一个问题，如果下面没有任何记录那么你需要发出一个疑问来开启这个面试流程\n面试官与候选人的对话:\n${chatrecord}`,
+          setGeneratedQuestion
+        );
+      } catch (err) {
+        console.error('调用失败:', err);
+      }
     }
   };
-
-  const [questionGenerating, setQuestionGenerating] = useState(false);  
 
   useEffect(() => {
     if (transcript)
