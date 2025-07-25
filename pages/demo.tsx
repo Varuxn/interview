@@ -88,14 +88,26 @@ const DualCameraRecorder = () => {
 );
 
   // 录制和保存状态
-  const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
+  const recordedChunks = useRef<Blob[]>([]); 
   const [isProcessing, setIsProcessing] = useState(false);
   const [status, setStatus] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
   const [transcript, setTranscript] = useState("");
   // FFmpeg实例
   const ffmpegRef = useRef<any>(null);
+
+  const [volume, setVolume] = useState(0);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const dataArrayRef = useRef<Uint8Array | null>(null);
+  const [autoRecordAfterAudio, setAutoRecordAfterAudio] = useState(false);
+  const [silenceCountdown, setSilenceCountdown] = useState<number | null>(null);
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const volumeRef = useRef(0); // 存储当前音量值用于调试
+  const silenceThreshold = 1; // 静音阈值（百分比），可根据需要调整
+  const [preRecordingCountdown, setPreRecordingCountdown] = useState<number | null>(null);
   
+
   // 初始化FFmpeg
   useEffect(() => {
     const initFFmpeg = async () => {
@@ -155,7 +167,7 @@ const DualCameraRecorder = () => {
 
   // 初始化录制设置
   const initializeRecording = () => {
-    setRecordedChunks([]);
+    // setRecordedChunks([]);
     setRecording(false);
     setCountdown(150);
   };
@@ -170,72 +182,75 @@ const DualCameraRecorder = () => {
   
   // 获取设备列表
   const getDevices = useCallback(async () => {
-    try {
-      setDeviceError(null);
-      setCamera2Error(false);
-      
-      // 首先请求摄像头和麦克风权限
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: true, 
-        audio: true 
-      });
-      
-      // 关闭临时流
-      stream.getTracks().forEach(track => track.stop());
-      
-      setRecordingPermission(true);
-      
-      // 然后枚举设备
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      
-      const videoDevices = devices.filter(device => device.kind === "videoinput");
-      const audioDevices = devices.filter(device => device.kind === "audioinput");
-      
-      setVideoDevices(videoDevices);
-      setAudioDevices(audioDevices);
-      
-      if (videoDevices.length > 0) {
-        // 设置摄像头1 - 优先使用前置摄像头
-        const frontCamera = videoDevices.find(d => 
-          d.label.toLowerCase().includes("front") || 
-          d.label.toLowerCase().includes("user") ||
-          d.label.toLowerCase().includes("facetime")
-        );
-        
-        if (frontCamera) {
-          setSelectedVideoDevice1(frontCamera.deviceId);
-        } else {
-          setSelectedVideoDevice1(videoDevices[0].deviceId);
-        }
+  try {
+    setDeviceError(null);
+    setCamera2Error(false);
+    
+    // 首先请求摄像头和麦克风权限
+    const stream = await navigator.mediaDevices.getUserMedia({ 
+      video: true, 
+      audio: true 
+    });
+    
+    // 关闭临时流
+    stream.getTracks().forEach(track => track.stop());
+    
+    setRecordingPermission(true);
+    
+    // 然后枚举设备
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    
+    const videoDevices = devices.filter(device => device.kind === "videoinput");
+    const audioDevices = devices.filter(device => device.kind === "audioinput");
+    
+    setVideoDevices(videoDevices);
+    setAudioDevices(audioDevices);
+    
+    if (videoDevices.length > 0) {
 
-        // 设置摄像头2 - 优先使用后置摄像头
-        const backCamera = videoDevices.find(d => 
-          d.label.toLowerCase().includes("back") || 
-          d.label.toLowerCase().includes("rear") ||
-          d.label.toLowerCase().includes("environment")
-        );
+      
+      // 设置摄像头2 - 优先使用后置摄像头
+      const backCamera = videoDevices.find(d => 
+        d.label.toLowerCase().includes("back") || 
+        d.label.toLowerCase().includes("rear") ||
+        d.label.toLowerCase().includes("environment")
+      );
 
-        if (backCamera) {
-          setSelectedVideoDevice2(backCamera.deviceId);
-        } else if (videoDevices.length > 1) {
-          setSelectedVideoDevice2(videoDevices[1].deviceId);
-        } else {
-          setSelectedVideoDevice2(videoDevices[0].deviceId);
-        }
+      if (backCamera) {
+        setSelectedVideoDevice1(backCamera.deviceId);
+      } else if (videoDevices.length > 1) {
+        setSelectedVideoDevice1(videoDevices[1].deviceId);
+      } else {
+        setSelectedVideoDevice1(videoDevices[0].deviceId);
       }
+
+      // 设置摄像头1 - 优先使用前置摄像头
+      const frontCamera = videoDevices.find(d => 
+        d.label.toLowerCase().includes("front") || 
+        d.label.toLowerCase().includes("user") ||
+        d.label.toLowerCase().includes("facetime")
+      );
       
-      if (audioDevices.length > 0) {
-        setSelectedAudioDevice(audioDevices[0].deviceId);
+      if (frontCamera) {
+        setSelectedVideoDevice2(frontCamera.deviceId);
+      } else {
+        setSelectedVideoDevice2(videoDevices[0].deviceId);
       }
-      
-      setCameraLoaded(true);
-      // addMessage("设备已加载完成", "system");
-    } catch (error) {
-      console.error("获取设备列表失败:", error);
-      setDeviceError("无法访问摄像头和麦克风，请检查权限设置");
-      // addMessage("获取设备权限失败，请允许访问摄像头和麦克风", "system");
+
     }
-  }, []);
+    
+    if (audioDevices.length > 0) {
+      setSelectedAudioDevice(audioDevices[0].deviceId);
+    }
+    
+    setCameraLoaded(true);
+    // addMessage("设备已加载完成", "system");
+  } catch (error) {
+    console.error("获取设备列表失败:", error);
+    setDeviceError("无法访问摄像头和麦克风，请检查权限设置");
+    // addMessage("获取设备权限失败，请允许访问摄像头和麦克风", "system");
+  }
+}, []);
   
   // 重新加载设备
   const reloadDevices = async () => {
@@ -246,75 +261,196 @@ const DualCameraRecorder = () => {
   };
 
   // 处理数据可用事件
-  const handleDataAvailable = useCallback(
-    ({ data }: BlobEvent) => {
-      if (data.size > 0) {
-        setRecordedChunks(prev => prev.concat(data));
-      }
-    },
-    [setRecordedChunks]
-  );
-
+  const handleDataAvailable = useCallback(({ data }: BlobEvent) => {
+  if (data.size > 0) {
+    recordedChunks.current.push(data);
+  }
+}, []);
+// 开始音量检测循环
+      const detectVolume = () => {
+        if (!analyserRef.current || !dataArrayRef.current) return;
+        
+        analyserRef.current.getByteTimeDomainData(dataArrayRef.current);
+        
+        // 计算音量（均方根）
+        let sum = 0;
+        for (let i = 0; i < dataArrayRef.current.length; i++) {
+          const value = (dataArrayRef.current[i] - 128) / 128;
+          sum += value * value;
+        }
+        
+        const rms = Math.sqrt(sum / dataArrayRef.current.length);
+        const volumeLevel = Math.min(1, rms) * 100; // 转换为百分比
+        setVolume(volumeLevel);
+        volumeRef.current = volumeLevel; // 存储当前音量用于调试
+        
+        // 静音检测逻辑
+        if (volumeLevel < silenceThreshold) {
+          // 检测到静音
+          if (silenceTimerRef.current === null) {
+            // 开始静音倒计时
+            let countdown = 5; // 5秒倒计时
+            setSilenceCountdown(countdown);
+            
+            silenceTimerRef.current = setInterval(() => {
+              countdown--;
+              setSilenceCountdown(countdown);
+              
+              if (countdown <= 0) {
+                // 静音超时，停止录制
+                if (silenceTimerRef.current) {
+                  clearInterval(silenceTimerRef.current);
+                  silenceTimerRef.current = null;
+                }
+                handleStopRecording();
+              }
+              
+              // 如果在倒计时期间检测到声音，重置倒计时
+              if (volumeRef.current >= silenceThreshold) {
+                if (silenceTimerRef.current) {
+                  clearInterval(silenceTimerRef.current);
+                  silenceTimerRef.current = null;
+                }
+                setSilenceCountdown(null);
+              }
+            }, 1000);
+          }
+        } else {
+          // 检测到声音，重置静音倒计时
+          if (silenceTimerRef.current) {
+            clearInterval(silenceTimerRef.current);
+            silenceTimerRef.current = null;
+          }
+          setSilenceCountdown(null);
+        }
+        
+        // 继续循环检测
+        requestAnimationFrame(detectVolume);
+      };
   // 开始录制
   const startRecording = useCallback(() => {
-    if (!webcamRef1.current || !cameraLoaded || !camera1Ready || !camera2Ready) return;
-    
+    if (!webcamRef1.current?.stream || !cameraLoaded || !camera1Ready || !camera2Ready) {
+      console.warn("录制条件不满足，已中止。");
+      return;
+    }
+    setPreRecordingCountdown(5);
+  }, [cameraLoaded, camera1Ready, camera2Ready, handleDataAvailable]); // 请根据实际情况调整依赖项
+
+  useEffect(() => {
+    if (!webcamRef1.current?.stream || !cameraLoaded || !camera1Ready || !camera2Ready) {
+      console.warn("录制条件不满足，已中止。");
+      return;
+    }
+    if (preRecordingCountdown === null) return;
+
+    if (preRecordingCountdown === 0) {
+      // 倒计时结束，开始实际录制
+      setPreRecordingCountdown(null);
     try {
-      // 获取视频流
-      const stream1 = webcamRef1.current.stream;
-      if (!stream1) {
-        throw new Error("无法获取摄像头1的视频流");
+      const originalStream = webcamRef1.current.stream;
+
+      // --- 设置 Web Audio API (用于音量检测) ---
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      audioContextRef.current = audioContext;
+      const source = audioContext.createMediaStreamSource(originalStream);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      analyserRef.current = analyser;
+      const destination = audioContext.createMediaStreamDestination();
+      source.connect(analyser);
+      analyser.connect(destination);
+
+      // --- 组合最终的媒体流 ---
+      const finalStream = new MediaStream([
+        ...originalStream.getVideoTracks(),
+        ...destination.stream.getAudioTracks()
+      ]);
+
+      // --- 设置 MediaRecorder ---
+      mediaRecorderRef.current = new MediaRecorder(finalStream, { mimeType: 'video/webm' });
+
+      // 绑定 dataavailable 事件
+      mediaRecorderRef.current.addEventListener("dataavailable", handleDataAvailable);
+
+      // 关键改动：在这里定义 onstop 事件处理器
+      mediaRecorderRef.current.onstop = () => {
+        console.log("--- MediaRecorder 'stop' 事件触发 ---");
+        console.log(`所有数据块接收完毕。最终录制内容为: ${recordedChunks.current.length} 个数据块。`);
+
+        // 在这里安全地处理和保存视频
+        if (recordedChunks.current.length > 0) {
+          // 创建一个新的 Blob 对象来保存
+          const videoBlob = new Blob(recordedChunks.current, { type: 'video/webm' });
+          
+          // 调用你的保存函数，并传入 Blob
+          handleSaveRecording(videoBlob); 
+        }
+
+        // 清空数组以便下次录制
+        recordedChunks.current = [];
+      };
+
+      // --- 启动录制和音量检测 ---
+      mediaRecorderRef.current.start(1000); // 每1秒触发一次 dataavailable
+      
+      if (audioContext.state === 'suspended') {
+        audioContext.resume();
       }
-      
-      // 创建媒体录制器
-      mediaRecorderRef.current = new MediaRecorder(stream1);
-      
-      // 设置事件监听器
-      mediaRecorderRef.current.addEventListener(
-        "dataavailable",
-        handleDataAvailable
-      );
-      
-      // 开始录制
-      mediaRecorderRef.current.start(1000); // 每1秒收集一次数据
-      
+      dataArrayRef.current = new Uint8Array(analyser.frequencyBinCount);
+      detectVolume(); // 启动你的静音检测逻辑
+
       setRecording(true);
       addMessage("录制已开始", "system");
-      console.log("录制已开始");
+      console.log("录制已开始，状态:", mediaRecorderRef.current.state);
+
     } catch (error) {
-      console.error("开始录制失败:", error);
-      addMessage("开始录制失败，请检查设备权限", "system");
+      console.error("在 startRecording 过程中捕获到致命错误:", error);
+      addMessage("开始录制失败，请检查设备权限和控制台日志", "system");
       setDeviceError("录制启动失败，请重试");
     }
-  }, [cameraLoaded, camera1Ready, camera2Ready, handleDataAvailable]);
+      return;
+    }
+
+    // 每秒减少倒计时
+    const timer = setTimeout(() => {
+      setPreRecordingCountdown(preRecordingCountdown - 1);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [preRecordingCountdown]);
+
   
   // 停止录制
   const handleStopRecording = useCallback(() => {
-    if (mediaRecorderRef.current?.stream) {
-    const audioTracks = mediaRecorderRef.current.stream.getAudioTracks();
-    console.log("音频轨道数量:", audioTracks.length);
-    audioTracks.forEach(track => {
-      console.log("音频轨道状态:", track.readyState, "限制:", track.getConstraints());
-    });
+  console.log("正在请求停止录制...");
+
+  // 停止媒体录制器 (这将异步触发 onstop 事件)
+  if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+    mediaRecorderRef.current.stop();
   }
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.removeEventListener(
-        "dataavailable",
-        handleDataAvailable
-      );
-    }
-    
-    setRecording(false);
-    addMessage("录制已停止", "system");
-    console.log("录制已停止");
-    console.log("录制内容为：", recordedChunks.length, "个数据块");
-    
-    // 处理录制的视频数据
-    if (recordedChunks.length > 0) {
-      handleSaveRecording();
-    }
-  }, [recordedChunks, handleDataAvailable]);
+
+  // 清理静音计时器
+  if (silenceTimerRef.current) {
+    clearInterval(silenceTimerRef.current);
+    silenceTimerRef.current = null;
+  }
+  setSilenceCountdown(null);
+
+  // 清理音频分析器和上下文
+  if (analyserRef.current) {
+    analyserRef.current.disconnect();
+    analyserRef.current = null;
+  }
+  if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+    audioContextRef.current.close().catch(e => console.error("关闭AudioContext失败:", e));
+    audioContextRef.current = null;
+  }
+  dataArrayRef.current = null;
+
+  setRecording(false);
+  addMessage("录制已停止", "system");
+
+}, []); // 依赖项大大减少，甚至可以为空
 
   // 处理倒计时结束
   useEffect(() => {
@@ -324,17 +460,21 @@ const DualCameraRecorder = () => {
   }, [countdown, recording, handleStopRecording]);
 
   // 保存录制内容
-  const handleSaveRecording = async () => {
-    if (recordedChunks.length === 0) return;
-    
+  const handleSaveRecording = async (videoBlob: Blob)  => { // 接收 videoBlob 作为参数
+    if (!videoBlob || videoBlob.size === 0) {
+      console.warn("没有可保存的视频数据。");
+      return;
+    }
+
     setIsProcessing(true);
     setStatus("处理中");
 
     try {
-      const file = new Blob(recordedChunks, { type: `video/webm` });
+      // 直接使用传入的 videoBlob
+      const file = videoBlob;
       const unique_id = uuid();
 
-      console.log("recordedChunks length:", recordedChunks.length);
+      console.log("处理视频文件大小:", file.size);
       console.log("Blob size:", file.size);
 
       // 确保FFmpeg已初始化
@@ -702,7 +842,7 @@ const DualCameraRecorder = () => {
         body: JSON.stringify({
           text: generatedQuestion,
           voice: person, // Now safe
-          debug: false
+          debug: true
         }),
       });
 
@@ -764,11 +904,6 @@ const DualCameraRecorder = () => {
         `请根据以下对话内容和候选人的回答生成下一个问题，如果下面没有任何记录那么你需要发出一个疑问来开启这个面试流程\n面试官与候选人的对话:\n${chatrecord}`,
         setGeneratedQuestion
       );
-      // console.log("生成的问题:", generatedQuestion);
-      // synthesizeSpeech();
-      // startAudio();
-      // addMessage(`${generatedQuestion}`,selectedInterviewer?.name || "面试官");
-      // setQuestionIndex(prev => prev + 1);
     } catch (err) {
       console.error('调用失败:', err);
     }
@@ -1055,9 +1190,9 @@ const DualCameraRecorder = () => {
           </div>
             
             {/* 控制面板 - 固定高度容器 */}
-            <div className="bg-gray-800 rounded-2xl p-6 flex flex-col gap-6 min-h-[300px]">
+            <div className="bg-gray-800 rounded-2xl p-6 flex flex-col min-h-[300px] max-h-[500px] relative">
               {/* 状态提示 */}
-              <div className="text-center">
+              <div className="text-center mb-4">
                 {recording ? (
                   <div className="flex items-center justify-center">
                     <div className="w-3 h-3 bg-red-500 rounded-full mr-2 animate-pulse"></div>
@@ -1082,7 +1217,7 @@ const DualCameraRecorder = () => {
               </div>
               
               {/* 麦克风选择 */}
-              <div>
+              <div className="mb-4">
                 <label className="block text-sm text-gray-400 mb-2">麦克风设备</label>
                 <select
                   value={selectedAudioDevice}
@@ -1099,101 +1234,165 @@ const DualCameraRecorder = () => {
               </div>
               
               {/* 控制按钮 */}
-              <div className="flex flex-col gap-4">
-                {/* 只在需要时显示播放按钮 */}
-                {showPlayButton && (
+              <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+                {/* 预录制倒计时 */}
+                {preRecordingCountdown !== null && (
+                  <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+                    <div className="text-white text-center">
+                      <div className="text-8xl font-bold animate-pulse">{preRecordingCountdown}</div>
+                      <div className="text-xl mt-4">准备开始回答...</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 音量控制区域 */}
+                <div className="mb-4">
+                  {/* 静音倒计时 */}
+                  <div className="text-yellow-500 text-center animate-pulse mb-2">
+                    {silenceCountdown !== null
+                      ? `静音倒计时: ${silenceCountdown}秒后将自动停止录制`
+                      : '检测到发言，面试过程进行中...'}
+                  </div>
+                  
+                  {/* 音量显示 */}
+                  <div className="w-full max-w-xs mx-auto">
+                    <div className="text-center text-sm text-gray-300 mb-1">
+                      当前音量: {Math.round(volume)}% (阈值: {silenceThreshold}%)
+                    </div>
+                    <div className="w-full h-4 bg-gray-700 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full transition-all duration-500 ${
+                          volume > silenceThreshold ? 'bg-green-500' : 'bg-yellow-500'
+                        }`}
+                        style={{ width: `${Math.min(100, Math.max(0, volume))}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+          
+                {/* 按钮区域 - 使用网格布局 */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 text-sm">
+                  {showPlayButton && (
+                    <>
+                      <button
+                        onClick={() => {
+                          if (audioRef.current) {
+                            audioRef.current.play()
+                              .then(() => {
+                                console.log("手动播放成功");
+                                setShowPlayButton(false);
+                              })
+                              .catch(error => {
+                                console.error("手动播放失败:", error);
+                                alert("播放失败: 请点击一次页面任意位置后重试");
+                              });
+                          }
+                        }}
+                        className="px-3 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 active:scale-[.98] focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-md"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                        </svg>
+                        播放音频
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          if (audioRef.current) {
+                            audioRef.current.play()
+                              .then(() => {
+                                console.log("音频播放成功，将在结束后自动开始录制");
+                                setShowPlayButton(false);
+                                setAutoRecordAfterAudio(true);
+                              })
+                              .catch(error => {
+                                console.error("播放失败:", error);
+                                alert("播放失败: 请点击一次页面任意位置后重试");
+                                setAutoRecordAfterAudio(false);
+                              });
+                          }
+                        }}
+                        className="px-3 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 active:scale-[.98] focus:outline-none focus:ring-2 focus:ring-blue-300 shadow-md"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                          <path d="M5 4a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H6a1 1 0 01-1-1V4z" />
+                        </svg>
+                        播放并录制
+                      </button>
+                    </>
+                  )}
+
                   <button
-                    onClick={() => {
-                      if (audioRef.current) {
-                        audioRef.current.play()
-                          .then(() => {
-                            console.log("手动播放成功");
-                            setShowPlayButton(false);
-                          })
-                          .catch(error => {
-                            console.error("手动播放失败:", error);
-                            alert("播放失败: 请点击一次页面任意位置后重试");
-                          });
-                      }
-                    }}
-                    className="px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center bg-purple-600 hover:bg-purple-500"
+                    onClick={startRecording}
+                    disabled={recording || !cameraLoaded || !recordingPermission || !camera1Ready || !camera2Ready || preRecordingCountdown !== null}
+                    className={`px-3 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 shadow-md focus:outline-none active:scale-[.98] ${
+                      recording || !cameraLoaded || !recordingPermission || !camera1Ready || !camera2Ready || preRecordingCountdown !== null
+                        ? "bg-gray-600 cursor-not-allowed"
+                        : "bg-green-600 hover:bg-green-500 focus:ring-2 focus:ring-green-300"
+                    }`}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
                     </svg>
-                    播放问题音频
+                    {preRecordingCountdown !== null ? "准备中..." : "开始录制"}
                   </button>
-                )}
-                
-                <button
-                  onClick={startRecording}
-                  disabled={recording || !cameraLoaded || !recordingPermission || !camera1Ready || !camera2Ready}
-                  className={`px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center ${
-                    recording || !cameraLoaded || !recordingPermission || !camera1Ready || !camera2Ready
-                      ? "bg-gray-600 cursor-not-allowed"
-                      : "bg-green-600 hover:bg-green-500"
-                  }`}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                  </svg>
-                  开始录制
-                </button>
-                
-                <button
-                  onClick={handleStopRecording}
-                  disabled={!recording || isProcessing}
-                  className={`px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center ${
-                    !recording || isProcessing
-                      ? "bg-gray-600 cursor-not-allowed"
-                      : "bg-red-600 hover:bg-red-500"
-                  }`}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
-                  </svg>
-                  停止录制
-                </button>
+
+                  <button
+                    onClick={handleStopRecording}
+                    disabled={!recording || isProcessing}
+                    className={`px-3 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 shadow-md focus:outline-none active:scale-[.98] ${
+                      !recording || isProcessing
+                        ? "bg-gray-600 cursor-not-allowed"
+                        : "bg-red-600 hover:bg-red-500 focus:ring-2 focus:ring-red-300"
+                    }`}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
+                    </svg>
+                    停止录制
+                  </button>
+                </div>
+
                 
                 {deviceError && (
-                  <div className="mt-4 p-3 bg-red-900 bg-opacity-50 rounded-lg">
+                  <div className="p-3 bg-red-900 bg-opacity-50 rounded-lg">
                     <p className="text-red-300 text-sm mb-2">{deviceError}</p>
                     <button 
                       onClick={reloadDevices}
-                      className="text-white bg-red-600 hover:bg-red-500 px-3 py-1 rounded text-sm w-full"
+                      className="text-white bg-red-600 hover:bg-red-500 px-3 py-2 rounded text-sm w-full"
                     >
                       重新加载设备
                     </button>
                   </div>
                 )}
               </div>
-              
+
               {/* 隐藏的音频元素 */}
               <audio 
                 ref={audioRef} 
                 src={generatedAudio}
-                onError={(e) => console.error("音频加载错误", e)}
+                onError={(e) => {
+                  console.error("音频加载错误", e);
+                  setAutoRecordAfterAudio(false);
+                }}
                 className="hidden"
                 onPlay={() => setShowPlayButton(false)}
-                onEnded={() => setShowPlayButton(false)}
+                onEnded={() => {
+                  setShowPlayButton(false);
+                  console.log("音频播放结束（button end）");
+                  if (autoRecordAfterAudio) {
+                    console.log("准备开始录制（button end）");
+                    startRecording();
+                    // setAutoRecordAfterAudio(false);
+                  }
+                }}
               />
             </div>
           </div>
           
           {/* 第三列 - 聊天对话框和状态显示 */}
           <div className="w-full lg:w-2/5 h-full flex flex-col">
-            {/* 状态显示框 - 位于对话框上方，大小与录制按钮相似 */}
-            {/* {status && (
-              <div className="mb-4 bg-blue-600 text-white py-3 px-6 rounded-xl flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="w-3 h-3 bg-white rounded-full mr-2 animate-pulse"></div>
-                  <span>{status}</span>
-                </div>
-                {isProcessing && (
-                  <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
-                )}
-              </div>
-            )} */}
             
             {/* 聊天对话框 */}
             <div className="bg-gray-800 rounded-2xl flex flex-col overflow-hidden border border-gray-700 h-full min-h-[650px]">
