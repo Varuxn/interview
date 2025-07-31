@@ -1,85 +1,40 @@
-<a href="https://demo.useliftoff.com">
-  <img alt="Liftoff – AI-Powered Mock Interviews" src="https://demo.useliftoff.com/opengraph-image">
-  <h1 align="center">Liftoff Interviews</h1>
-</a>
+# 多模态AI面试评估系统
 
-<p align="center">
-  Mock Interview Simulator with AI-Powered Feedback
-</p>
+本系统的UI界面基于 Next.js 的 pages 路由
 
-<p align="center">
-  <a href="https://twitter.com/tmeyer_me">
-    <img src="https://img.shields.io/twitter/follow/tmeyer_me?style=flat&label=Follow&logo=twitter&color=0bf&logoColor=fff" alt="Tyler Meyer's follower count" />
-  </a>
-  <a href="https://github.com/Tameyer41/liftoff">
-    <img src="https://img.shields.io/github/stars/Tameyer41/liftoff?label=Tameyer41%2Fliftoff" alt="Liftoff repo star count" />
-  </a>
-</p>
+## 前端文件
 
-<p align="center">
-  <a href="#introduction"><strong>Introduction</strong></a> ·
-  <a href="#one-click-deploy"><strong>One-click Deploy</strong></a> ·
-  <a href="#tech-stack--features"><strong>Tech Stack + Features</strong></a> ·
-  <a href="#author"><strong>Author</strong></a>
-</p>
-<br/>
+* `_app.tsx` : 导航栏与侧边栏的设计展示
+* `index.tsx` : 主界面/登录界面
+* `admin.tsx` : 管理员界面，支持题库维护，人员权限管理
+* `demo.tsx` : 面试主界面，支持双机位自动化面试
+* `boss.tsx` : 面试者分数查询界面，支持面试者分数能力信息等多维度展示
+* `humaneval.tsx` : 面试官评分界面，支持查看面试者面试过程数据，并有可视化分析和打分模块
+* `home.tsx` : 面试者设置界面，支持简历上传、面试官岗位选取、基础信息设置等操作
+* `staff.tsx` : 面试结果查询界面，支持查看各环节各指标得分和评语建议
 
-## Introduction
+## 后端文件
 
-Liftoff is an interview preparation tool that provides AI feedback on your mock interviews.
+* `ai_eval.ts` : 读取 AI面试官 给出的评分结果
+* `human_eval.ts` : 读取 人类面试官 给出的评分结果
+* `save_human_eval.ts` : 保存人类面试官给出的评分
+* `datafile.ts` : 读取 `./data` 目录下的数据文件
+* `eval_resume.ts` : 对简历文件进行评估并保存（此功能已移除）
+* `initialize-user-evaluation.ts` : 对面试者的相关数据库信息进行初始化
+* `llm_chat.ts` : 调用 LLM API 进行交互
+* `llmApi.ts` : 获取 LLM 响应的函数
+* `parse-pdf.ts` : 解析 PDF 文件获取内容
+* `saveFile.ts` : 文件保存
+* `synthesis.ts` : 调用科大讯飞的 API 进行语音合成
+* `transcribe.ts` : 调用科大讯飞的 API 进行语音转文本的操作
+* `/databases` : 数据库有关的内容读取和写入
 
-## One-click Deploy
+## 使用文档
 
-You can deploy this template to Vercel with the button below:
+按照 `.env.example` 的格式创建 `.env` 文件，并配置密钥等信息
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/tameyer41/clone?demo-title=Liftoff%20%E2%80%93%C2%A0AI%20Mock%20Interview%20Simulator&demo-description=Liftoff%20is%20an%20interview%20preparation%20tool%20that%20provides%20AI%20feedback%20on%20your%20mock%20interviews%2C%20built%20with%20OpenAI%20Whisper%20and%20GPT.&demo-url=https%3A%2F%2Fdemo.useliftoff.com%2F&demo-image=%2F%2Fimages.ctfassets.net%2Fe5382hct74si%2F5TbjLXmeKdo2rURpnjIEqn%2Fc7c8fc350183e8cd3c819d172c0005ac%2F68747470733a2f2f696b2e696d6167656b69742e696f2f396b6d3732617371752f436c65616e53686f745f323032332d30352d33315f61745f31322e34332e35&project-name=Liftoff%20%E2%80%93%C2%A0AI%20Mock%20Interview%20Simulator&repository-name=liftoff&repository-url=https%3A%2F%2Fgithub.com%2FTameyer41%2Fliftoff&from=templates&skippable-integrations=1&env=OPENAI_API_KEY&envDescription=Get%20your%20OpenAI%20API%20key%20here%3A&envLink=https%3A%2F%2Fplatform.openai.com%2Faccount%2Fapi-keys)
+使用 `npm run build` 完成环境配置，执行 `npm run dev` 后服务启动，可在 `http://localhost:3000/` 访问面试平台。
 
-You can also clone & create this repo locally with the following command:
+在 `./page/demo.tsx` 文件下，有 `debug` 和 `test` 变量用于控制是否开启调试模式
 
-```bash
-npx create-next-app liftoff --example "https://github.com/Tameyer41/liftoff"
-```
-
-## Tech Stack + Features
-
-![Landing Page](https://ik.imagekit.io/9km72asqu/CleanShot_2023-05-31_at_12.43.54_svKkqF7dA.png?updatedAt=1685551454273)
-
-![Interview Selection](https://ik.imagekit.io/9km72asqu/CleanShot_2023-05-31_at_13.35.55_xohCRNMlJ.png?updatedAt=1685554576155)
-
-### Frameworks
-
-- [Next.js](https://nextjs.org/) – React framework for building performant apps with the best developer experience
-
-### Platforms
-
-- [Vercel](https://vercel.com/) – Easily preview & deploy changes with git
-- [Upstash](https://upstash.com/) - Serverless Data Platform (here using serverless Redis for rate limiting)
-
-### UI
-
-- [Tailwind CSS](https://tailwindcss.com/) – Utility-first CSS framework for rapid UI development
-- [Framer Motion](https://framer.com/motion) – Motion library for React to animate components with ease
-- [`ImageResponse`](https://beta.nextjs.org/docs/api-reference/image-response) – Generate dynamic Open Graph images at the edge
-- [HeadlessUI](https://headlessui.com/) - Completely unstyled, fully accessible UI components, designed to integrate beautifully with Tailwind CSS
-
-### Code Quality
-
-- [TypeScript](https://www.typescriptlang.org/) – Static type checker for end-to-end typesafety
-- [Prettier](https://prettier.io/) – Opinionated code formatter for consistent code style
-- [ESLint](https://eslint.org/) – Pluggable linter for Next.js and TypeScript
-
-### Miscellaneous
-
-- [FFMPEG.WASM](https://ffmpegwasm.netlify.app/) – Transcode video/audio files
-- [React Webcam](https://github.com/mozmorris/react-webcam) - Webcam component for React
-- [Stripe Gradient Animation](https://whatamesh.vercel.app/) - [@jordienr](https://twitter.com/jordienr) released a Mesh Gradient that uses WebGL and animates a beautiful gradient
-
-## How it all works
-
-Liftoff uses FFmpeg to transcode the raw video into MP3. Chrome, Safari, and Firefox all record with different codecs, and FFmpeg is great for standardizing them.
-
-We then send the audio directly to be transcribed by OpenAI's Whisper endpoint, and then stream feedback from the edge using OpenAI's gpt-3.5-turbo.
-
-## Author
-
-- Tyler Meyer ([@tmeyer_me](https://twitter.com/tmeyer_me))
+数据库相关设置可参考 `./mysql.md`
