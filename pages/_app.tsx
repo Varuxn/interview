@@ -5,7 +5,7 @@ import Head from "next/head";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useRouter } from "next/router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 // 定义用户类型
 interface User {
@@ -13,6 +13,95 @@ interface User {
   name: string;
   role: 'interviewer' | 'candidate';
 }
+
+// 粒子背景组件 - 优化为蓝色系配色
+const ParticleBackground = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const resizeCanvas = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    const particles: Array<{
+      x: number; y: number; size: number; speedX: number; speedY: number; opacity: number;
+    }> = [];
+
+    // 使用提供的蓝色系配色
+    const particleColors = ['#407BBF', '#5D8FDC', '#7BA9FF', '#9BC2FF', '#BDDBFF'];
+
+    // 创建粒子
+    for (let i = 0; i < 40; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        size: Math.random() * 3 + 1,
+        speedX: (Math.random() - 0.5) * 0.8,
+        speedY: (Math.random() - 0.5) * 0.8,
+        opacity: Math.random() * 0.6 + 0.2,
+      });
+    }
+
+    const animate = () => {
+      // 使用深蓝色背景
+      ctx.fillStyle = 'rgba(17, 24, 39, 0.1)'; // gray-900
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      particles.forEach((particle, index) => {
+        particle.x += particle.speedX;
+        particle.y += particle.speedY;
+
+        if (particle.x < 0 || particle.x > canvas.width) particle.speedX *= -1;
+        if (particle.y < 0 || particle.y > canvas.height) particle.speedY *= -1;
+
+        const colorIndex = index % particleColors.length;
+        const color = particleColors[colorIndex];
+
+        // 绘制粒子
+        ctx.beginPath();
+        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.globalAlpha = particle.opacity;
+        ctx.fill();
+
+        // 绘制光晕效果
+        const gradient = ctx.createRadialGradient(
+          particle.x, particle.y, 0,
+          particle.x, particle.y, particle.size * 4
+        );
+        gradient.addColorStop(0, `${color}40`);
+        gradient.addColorStop(1, 'transparent');
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(particle.x - particle.size * 4, particle.y - particle.size * 4, particle.size * 8, particle.size * 8);
+      });
+
+      ctx.globalAlpha = 1;
+      requestAnimationFrame(animate);
+    };
+
+    animate();
+
+    return () => window.removeEventListener('resize', resizeCanvas);
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="fixed inset-0 pointer-events-none z-0"
+      style={{ background: 'linear-gradient(135deg, #111827 0%, #1e3a8a 50%, #111827 100%)' }}
+    />
+  );
+};
 
 function MyApp({ Component, pageProps }: AppProps) {
   const PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || "";
@@ -23,15 +112,13 @@ function MyApp({ Component, pageProps }: AppProps) {
   );
 }
 
-// 新组件：包含所有需要 Clerk 上下文的逻辑
 const AppWithAuth = ({ Component, pageProps }: { Component: any; pageProps: any }) => {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const { userId, isLoaded: authLoaded } = useAuth(); // 现在可以安全使用
+  const { userId, isLoaded: authLoaded } = useAuth();
 
-  // 所有可能的导航项
   const navItems = [
     { 
       name: "Interview Dashboard", 
@@ -59,7 +146,6 @@ const AppWithAuth = ({ Component, pageProps }: { Component: any; pageProps: any 
     }
   ];
 
-  // 顶部栏标题映射
   const getPageTitle = (path: string) => {
     const mapping: Record<string, string> = {
       '/staff': 'Interview Dashboard',
@@ -68,7 +154,6 @@ const AppWithAuth = ({ Component, pageProps }: { Component: any; pageProps: any 
       '/humaneval': 'Interview Session'
     };
     
-    // 查找匹配的路由
     for (const [basePath, title] of Object.entries(mapping)) {
       if (path.startsWith(basePath)) return title;
     }
@@ -76,7 +161,6 @@ const AppWithAuth = ({ Component, pageProps }: { Component: any; pageProps: any 
     return "Dashboard";
   };
 
-  // 获取用户数据
   const fetchUsers = async () => {
     try {
       if (typeof window === 'undefined') return;
@@ -89,7 +173,6 @@ const AppWithAuth = ({ Component, pageProps }: { Component: any; pageProps: any 
       
       const data = await response.json();
       if (data.success) {
-        // 找到当前用户
         const user = data.users.find((u: User) => u.id === userId);
         setCurrentUser(user || null);
         setLoading(false);
@@ -99,7 +182,6 @@ const AppWithAuth = ({ Component, pageProps }: { Component: any; pageProps: any 
     } catch (error) {
       console.error('获取用户失败:', error);
       setLoading(false);
-      // alert(`获取用户信息失败: ${error.message}`);
     }
   };
 
@@ -107,7 +189,6 @@ const AppWithAuth = ({ Component, pageProps }: { Component: any; pageProps: any 
     if (authLoaded && userId) {
       fetchUsers();
     } else if (authLoaded) {
-      // 用户未登录
       setLoading(false);
     }
   }, [authLoaded, userId]);
@@ -117,10 +198,14 @@ const AppWithAuth = ({ Component, pageProps }: { Component: any; pageProps: any 
       <Head>
         <title>伯乐-多模态AI面试官</title>
         <meta name="description" content="伯乐是一款融合多模态感知与交互的AI人才评测系统" />
-        <meta name="theme-color" content="#FFF" />
+        <meta name="theme-color" content="#111827" />
       </Head>
       
-      <div className="flex h-screen bg-gray-50">
+      {/* 粒子背景 */}
+      <ParticleBackground />
+      
+      {/* 主容器 */}
+      <div className="flex h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 relative z-10">
         <Sidebar 
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
@@ -133,30 +218,42 @@ const AppWithAuth = ({ Component, pageProps }: { Component: any; pageProps: any 
         {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Top Bar */}
-          <header className="bg-white shadow-sm z-20">
+          <header className="bg-gradient-to-r from-gray-900/90 via-blue-900/70 to-gray-900/90 backdrop-blur-md border-b border-blue-400/20 z-20 relative">
             <div className="flex items-center justify-between px-6 py-4">
               <div className="flex items-center">
                 <button 
                   onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className="mr-4 p-1 rounded-md hover:bg-gray-100 text-gray-500 hover:text-gray-700 md:hidden"
+                  className="mr-4 p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-all duration-300 md:hidden"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
                   </svg>
                 </button>
-                <h1 className="text-xl font-semibold text-gray-800">
+                <motion.h1 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent"
+                >
                   {getPageTitle(router.pathname)}
-                </h1>
+                </motion.h1>
               </div>
               
               <div className="flex items-center space-x-4">
                 <div className="relative">
-                  <button className="p-2 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <motion.button 
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-all duration-300"
+                  >
+                    <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                     </svg>
-                    <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
-                  </button>
+                    <motion.span 
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                      className="absolute top-1 right-1 w-2 h-2 bg-purple-400 rounded-full shadow-lg shadow-purple-400/50"
+                    />
+                  </motion.button>
                 </div>
                 
                 <motion.div
@@ -166,26 +263,29 @@ const AppWithAuth = ({ Component, pageProps }: { Component: any; pageProps: any 
                   className="flex items-center space-x-2"
                 >
                   <SignedIn>
-                    <UserButton appearance={{
-                      elements: {
-                        userButtonAvatarBox: "w-8 h-8",
-                        userButtonPopoverCard: "shadow-lg rounded-lg",
-                      }
-                    }} />
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                      <UserButton appearance={{
+                        elements: {
+                          userButtonAvatarBox: "w-8 h-8 border-2 border-blue-400/50",
+                          userButtonPopoverCard: "bg-gray-900 border border-blue-400/20 shadow-2xl",
+                        }
+                      }} />
+                    </motion.div>
                   </SignedIn>
                   <SignedOut>
                     <SignInButton>
                       <motion.button
-                        whileHover={{ scale: 1.02 }}
+                        whileHover={{ scale: 1.02, boxShadow: "0 0 20px rgba(96, 165, 250, 0.5)" }}
                         whileTap={{ scale: 0.98 }}
-                        className="group rounded-full pl-[8px] pr-4 py-2 text-[13px] font-semibold transition-all flex items-center justify-center bg-[#1E2B3A] text-white hover:[linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1)), #0D2247] no-underline flex gap-x-2"
+                        className="group rounded-full pl-3 pr-4 py-2 text-sm font-semibold transition-all flex items-center justify-center bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 no-underline flex gap-x-2 relative overflow-hidden"
                         style={{
-                          boxShadow: "0px 1px 4px rgba(13, 34, 71, 0.17), inset 0px 0px 0px 1px #061530, inset 0px 0px 0px 2px rgba(255, 255, 255, 0.1)",
+                          boxShadow: "0 4px 15px rgba(59, 130, 246, 0.4)",
                         }}
                       >
-                        <span className="w-5 h-5 rounded-full bg-[#407BBF] flex items-center justify-center">
-                          <svg className="w-[16px] h-[16px] text-white" fill="none" viewBox="0 0 24 24">
-                            <path d="M8 12h8M14 8l4 4-4 4" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                        <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
+                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24">
+                            <path d="M8 12h8M14 8l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
                         </span>
                         Sign in
@@ -198,7 +298,8 @@ const AppWithAuth = ({ Component, pageProps }: { Component: any; pageProps: any 
           </header>
 
           {/* Main Content Area */}
-          <main className="flex-1 overflow-y-auto scroll-smooth antialiased [font-feature-settings:'ss01'] bg-gray-50 p-6">
+          <main className="flex-1 overflow-y-auto scroll-smooth antialiased bg-transparent p-6 relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-400/5 via-transparent to-purple-400/5 pointer-events-none" />
             <Component {...pageProps} />
           </main>
         </div>
@@ -207,7 +308,52 @@ const AppWithAuth = ({ Component, pageProps }: { Component: any; pageProps: any 
   );
 };
 
-// 侧边栏组件
+// 3D卡片交互组件
+const Card3D = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => {
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const card = cardRef.current;
+    if (!card) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      
+      const rotateY = (x - centerX) / 25;
+      const rotateX = (centerY - y) / 25;
+      
+      card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+    };
+
+    const handleMouseLeave = () => {
+      card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)';
+    };
+
+    card.addEventListener('mousemove', handleMouseMove);
+    card.addEventListener('mouseleave', handleMouseLeave);
+
+    return () => {
+      card.removeEventListener('mousemove', handleMouseMove);
+      card.removeEventListener('mouseleave', handleMouseLeave);
+    };
+  }, []);
+
+  return (
+    <div
+      ref={cardRef}
+      className={`transition-transform duration-300 ease-out ${className}`}
+      style={{ transformStyle: 'preserve-3d' }}
+    >
+      {children}
+    </div>
+  );
+};
+
 const Sidebar = ({ 
   sidebarOpen, 
   setSidebarOpen,
@@ -225,7 +371,6 @@ const Sidebar = ({
 }) => {
   const router = useRouter();
 
-  // 根据用户角色过滤导航项
   const getFilteredNavItems = () => {
     if (!currentUser || !currentUser.role) return [];
     return navItems.filter(item => item.roles.includes(currentUser.role));
@@ -236,103 +381,150 @@ const Sidebar = ({
       initial={{ x: -300 }}
       animate={{ x: sidebarOpen ? 0 : -250 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className={`fixed md:relative z-30 w-64 h-full bg-white shadow-lg border-r border-gray-200`}
+      className={`fixed md:relative z-30 w-64 h-full bg-gradient-to-b from-gray-900/95 to-blue-900/95 backdrop-blur-xl border-r border-blue-400/20 shadow-2xl`}
     >
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+      {/* 侧边栏顶部光效 */}
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-400/50 to-transparent" />
+      
+      <div className="flex items-center justify-between p-4 border-b border-blue-400/20">
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="flex items-center space-x-2"
+          className="flex items-center space-x-3"
         >
-          <svg className="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-          </svg>
-          <span className="text-xl font-semibold text-gray-800">伯乐AI</span>
+          <div className="relative">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-400 rounded-xl flex items-center justify-center shadow-lg shadow-blue-400/25">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+              </svg>
+            </div>
+            <div className="absolute inset-0 bg-blue-400/20 rounded-xl blur-sm" />
+          </div>
+          <div>
+            <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              伯乐AI
+            </span>
+            <div className="text-xs text-blue-400/60">多模态面试系统</div>
+          </div>
         </motion.div>
-        <button 
+        <motion.button 
+          whileHover={{ scale: 1.1, backgroundColor: 'rgba(96, 165, 250, 0.1)' }}
+          whileTap={{ scale: 0.9 }}
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="p-1 rounded-md hover:bg-gray-100 text-gray-500 hover:text-gray-700"
+          className="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-all duration-300"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={sidebarOpen ? "M15 19l-7-7 7-7" : "M9 5l7 7-7 7"} />
           </svg>
-        </button>
+        </motion.button>
       </div>
       
       <nav className="p-4">
         {loading ? (
           <div className="flex justify-center items-center h-40">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
+            <div className="relative">
+              <div className="w-8 h-8 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin" />
+              <div className="absolute inset-0 bg-blue-400/10 rounded-full blur-sm" />
+            </div>
           </div>
         ) : (
-          <ul className="space-y-2">
+          <ul className="space-y-3">
             {getFilteredNavItems().map((item, index) => (
               <motion.li
                 key={item.path}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1 + index * 0.1 }}
               >
-                <Link href={item.path}>
-                  <div className={`flex items-center p-3 rounded-lg transition-all ${currentPath === item.path ? 'bg-indigo-50 text-indigo-600' : 'text-gray-600 hover:bg-gray-100'}`}>
-                    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={item.icon} />
-                    </svg>
-                    <span className="font-medium">{item.name}</span>
-                    {currentPath === item.path && (
-                      <motion.span 
-                        layoutId="activeNavItem"
-                        className="absolute right-4 w-2 h-2 bg-indigo-600 rounded-full"
-                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                      />
-                    )}
-                  </div>
-                </Link>
+                <Card3D>
+                  <Link href={item.path}>
+                    <div className={`relative p-4 rounded-xl transition-all duration-300 group overflow-hidden ${
+                      currentPath === item.path 
+                        ? 'bg-gradient-to-r from-blue-400/20 to-purple-400/20 border border-blue-400/30 shadow-lg shadow-blue-400/10' 
+                        : 'bg-white/5 hover:bg-white/10 border border-white/10 hover:border-blue-400/30'
+                    }`}>
+                      {/* 悬停光效 */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-blue-400/0 via-blue-400/5 to-blue-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      
+                      <div className="flex items-center relative z-10">
+                        <div className={`p-2 rounded-lg mr-3 transition-all duration-300 ${
+                          currentPath === item.path 
+                            ? 'bg-blue-400/20 text-blue-400' 
+                            : 'bg-white/10 text-gray-300 group-hover:text-blue-400 group-hover:bg-blue-400/10'
+                        }`}>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={item.icon} />
+                          </svg>
+                        </div>
+                        <span className={`font-medium transition-colors duration-300 ${
+                          currentPath === item.path 
+                            ? 'text-blue-400' 
+                            : 'text-gray-300 group-hover:text-white'
+                        }`}>
+                          {item.name}
+                        </span>
+                        {currentPath === item.path && (
+                          <motion.div 
+                            layoutId="activeNavItem"
+                            className="absolute right-4 w-2 h-2 bg-blue-400 rounded-full shadow-lg shadow-blue-400/50"
+                            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                </Card3D>
               </motion.li>
             ))}
           </ul>
         )}
       </nav>
       
-      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
+      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-blue-400/20">
         <SignedIn>
           {loading ? (
-            <div className="flex items-center justify-center p-2">
-              <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-indigo-500"></div>
+            <div className="flex items-center justify-center p-3">
+              <div className="w-6 h-6 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin" />
             </div>
           ) : currentUser ? (
-            <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 cursor-pointer">
-              <UserButton appearance={{
-                elements: {
-                  userButtonAvatarBox: "w-8 h-8",
-                }
-              }} />
-              <div className="text-sm">
-                <p className="font-medium text-gray-800">
-                  {currentUser.name || "User Profile"}
-                </p>
-                <p className="text-gray-500">
-                  {currentUser.role 
-                    ? `${currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)}` 
-                    : "Account Settings"}
-                </p>
+            <Card3D>
+              <div className="flex items-center space-x-3 p-3 rounded-xl bg-white/5 border border-white/10 hover:border-blue-400/30 transition-all duration-300 group">
+                <UserButton appearance={{
+                  elements: {
+                    userButtonAvatarBox: "w-10 h-10 border-2 border-blue-400/50 group-hover:border-blue-400 transition-colors duration-300",
+                  }
+                }} />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-white truncate">
+                    {currentUser.name || "User Profile"}
+                  </p>
+                  <p className="text-sm text-blue-400/70 truncate">
+                    {currentUser.role 
+                      ? `${currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)}` 
+                      : "Account Settings"}
+                  </p>
+                </div>
               </div>
-            </div>
+            </Card3D>
           ) : (
-            <div className="text-center text-red-500 p-2">
+            <div className="text-center text-red-400 p-3 bg-red-400/10 rounded-xl border border-red-400/20">
               无法加载用户信息
             </div>
           )}
         </SignedIn>
         <SignedOut>
           <SignInButton>
-            <button className="w-full flex items-center justify-center p-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors">
-              <span className="mr-2">Sign In</span>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <motion.button 
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="w-full flex items-center justify-center p-3 rounded-xl bg-gradient-to-r from-blue-400/20 to-purple-400/20 border border-blue-400/30 hover:border-blue-300 transition-all duration-300 group"
+            >
+              <span className="text-blue-400 group-hover:text-white mr-2">Sign In</span>
+              <svg className="w-4 h-4 text-blue-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
               </svg>
-            </button>
+            </motion.button>
           </SignInButton>
         </SignedOut>
       </div>
