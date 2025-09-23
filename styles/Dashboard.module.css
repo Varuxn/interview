@@ -1,7 +1,7 @@
-/* 全局样式 */
+/* 全局样式 - 深色科技风 */
 .dashboardContainer {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7ff 0%, #f0f2f9 100%);
+  background: linear-gradient(135deg, #111827 0%, #1e3a8a 50%, #111827 100%);
   padding: 2rem 1rem;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
@@ -14,14 +14,15 @@
 .title {
   font-size: 2.25rem;
   font-weight: 700;
-  color: #1e293b;
+  color: #60a5fa;
   margin-bottom: 0.5rem;
   letter-spacing: -0.5px;
+  text-shadow: 0 0 20px rgba(96, 165, 250, 0.3);
 }
 
 .subtitle {
   font-size: 1.1rem;
-  color: #64748b;
+  color: #cbd5e1;
   max-width: 600px;
   margin: 0 auto;
   line-height: 1.6;
@@ -30,9 +31,10 @@
 .headerDivider {
   height: 4px;
   width: 80px;
-  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  background: linear-gradient(90deg, #60a5fa, #c084fc);
   margin: 1.5rem auto;
   border-radius: 2px;
+  box-shadow: 0 0 10px rgba(96, 165, 250, 0.3);
 }
 
 /* 主网格布局 - 使用重构后的布局 */
@@ -62,11 +64,14 @@
   }
 }
 
-/* 最终评估卡片优化 */
+/* 最终评估卡片优化 - 深色科技风 */
 .finalScoreCard {
   padding: 1.5rem;
   border-radius: 18px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(96, 165, 250, 0.2);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   height: 100%;
   display: flex;
@@ -75,7 +80,8 @@
 
 .finalScoreCard:hover {
   transform: translateY(-5px);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 0 30px rgba(96, 165, 250, 0.1);
+  border-color: rgba(96, 165, 250, 0.4);
 }
 
 .finalScoreHeader {
@@ -88,7 +94,7 @@
 .finalScoreHeader h2 {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #1e293b;
+  color: #f1f5f9;
 }
 
 .headerIcon {
@@ -97,9 +103,10 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(96, 165, 250, 0.1);
   border-radius: 12px;
-  color: #6366f1;
+  color: #60a5fa;
+  border: 1px solid rgba(96, 165, 250, 0.2);
 }
 
 .finalScoreContent {
@@ -128,15 +135,15 @@
   display: block;
   font-size: 2.8rem;
   font-weight: 800;
-  color: #1e293b;
+  color: #60a5fa;
   line-height: 1;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3), 0 0 10px rgba(96, 165, 250, 0.3);
 }
 
 .totalLabel {
   display: block;
   font-size: 1rem;
-  color: #64748b;
+  color: #cbd5e1;
   font-weight: 600;
   letter-spacing: 0.5px;
 }
@@ -149,17 +156,17 @@
 }
 
 .evaluationSummary {
-  background: linear-gradient(to bottom right, #f8fafc, #f1f5f9);
+  background: linear-gradient(to bottom right, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.5));
   border-radius: 16px;
   padding: 1.8rem;
-  border-left: 4px solid #6366f1;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+  border-left: 4px solid #60a5fa;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
 .summaryHeader {
   font-size: 1.2rem;
   font-weight: 700;
-  color: #1e293b;
+  color: #f1f5f9;
   margin-bottom: 1rem;
   display: flex;
   align-items: center;
@@ -170,13 +177,13 @@
   display: block;
   width: 6px;
   height: 24px;
-  background: #6366f1;
+  background: #60a5fa;
   border-radius: 3px;
   margin-right: 10px;
 }
 
 .summaryText {
-  color: #475569;
+  color: #cbd5e1;
   line-height: 1.8;
   margin: 0;
   font-size: 1rem;
@@ -191,12 +198,13 @@
   font-size: 4rem;
   margin-bottom: 1.5rem;
   opacity: 0.3;
+  color: #60a5fa;
 }
 
 .notTestedMessage {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #1e293b;
+  color: #f1f5f9;
   margin-bottom: 0.5rem;
 }
 
@@ -223,7 +231,7 @@
 .stageGridHeader h2 {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #1e293b;
+  color: #f1f5f9;
 }
 
 .stageGrid {
@@ -244,27 +252,30 @@
   }
 }
 
-/* 阶段卡片样式 */
+/* 阶段卡片样式 - 深色科技风 */
 .stageCard {
   padding: 1.5rem;
   border-radius: 16px;
   transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(96, 165, 250, 0.2);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
 }
 
 .testedCard {
-  background: white;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(34, 211, 238, 0.3);
 }
 
 .untestedCard {
-  background: #f8fafc;
-  border: 1px dashed #cbd5e1;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(96, 165, 250, 0.3);
 }
 
 .stageCard:hover {
   transform: translateY(-3px);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 0 20px rgba(96, 165, 250, 0.1);
+  border-color: rgba(96, 165, 250, 0.4);
 }
 
 .stageCardHeader {
@@ -277,7 +288,7 @@
 .stageTitle {
   font-size: 1.15rem;
   font-weight: 600;
-  color: #1e293b;
+  color: #f1f5f9;
 }
 
 .stageTotalScoreBadge {
@@ -290,7 +301,8 @@
   font-weight: 700;
   font-size: 1rem;
   color: white;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #60a5fa, #c084fc);
 }
 
 .stageCardBody {
@@ -312,7 +324,7 @@
 
 .skillLabel {
   font-size: 0.85rem;
-  color: #64748b;
+  color: #cbd5e1;
   font-weight: 500;
 }
 
@@ -325,7 +337,7 @@
 .skillValueBar {
   height: 8px;
   border-radius: 4px;
-  background: #e2e8f0;
+  background: rgba(255, 255, 255, 0.1);
   position: relative;
   flex-grow: 1;
   overflow: hidden;
@@ -334,7 +346,7 @@
 .skillValue {
   font-size: 0.9rem;
   font-weight: 600;
-  color: #1e293b;
+  color: #f1f5f9;
   min-width: 30px;
   text-align: right;
 }
@@ -351,6 +363,7 @@
   font-size: 2.5rem;
   opacity: 0.2;
   margin-bottom: 0.75rem;
+  color: #60a5fa;
 }
 
 .notTestedText {
@@ -359,7 +372,7 @@
   font-size: 0.95rem;
 }
 
-/* 按钮样式 */
+/* 按钮样式 - 深色科技风 */
 .demoButton {
   display: flex;
   align-items: center;
@@ -376,24 +389,24 @@
 }
 
 .startButton {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, #3b82f6, #9333ea);
   color: white;
 }
 
 .retestButton {
   background: transparent;
-  color: #6366f1;
-  border: 1px solid #c7d2fe;
+  color: #60a5fa;
+  border: 1px solid rgba(96, 165, 250, 0.3);
 }
 
 .startButton:hover {
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
-  box-shadow: 0 4px 6px rgba(99, 102, 241, 0.2);
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
 }
 
 .retestButton:hover {
-  background: rgba(99, 102, 241, 0.05);
-  border-color: #a5b4fc;
+  background: rgba(96, 165, 250, 0.1);
+  border-color: #60a5fa;
 }
 
 .buttonIcon {
@@ -420,8 +433,8 @@
 .loaderSpinner {
   width: 60px;
   height: 60px;
-  border: 5px solid rgba(99, 102, 241, 0.2);
-  border-top: 5px solid #6366f1;
+  border: 5px solid rgba(96, 165, 250, 0.2);
+  border-top: 5px solid #60a5fa;
   border-radius: 50%;
   margin: 0 auto 1.5rem;
   animation: spin 1s linear infinite;
@@ -437,9 +450,10 @@
   text-align: center;
   max-width: 400px;
   padding: 2rem;
-  background: white;
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 16px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(96, 165, 250, 0.2);
 }
 
 .errorIcon {
@@ -451,18 +465,18 @@
 .errorTitle {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #1e293b;
+  color: #f1f5f9;
   margin-bottom: 0.5rem;
 }
 
 .errorMessage {
-  color: #64748b;
+  color: #cbd5e1;
   margin-bottom: 1.5rem;
   line-height: 1.6;
 }
 
 .retryButton {
-  background: #6366f1;
+  background: #60a5fa;
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
@@ -473,11 +487,11 @@
 }
 
 .retryButton:hover {
-  background: #4f46e5;
-  box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);
+  background: #3b82f6;
+  box-shadow: 0 4px 6px rgba(96, 165, 250, 0.3);
 }
 
-/* 统一进度条样式 */
+/* 统一进度条样式 - 深色科技风 */
 .progressBarContainer {
   margin-bottom: 1.5rem;
 }
@@ -492,24 +506,24 @@
 .progressBarLabel {
   font-size: 0.95rem;
   font-weight: 500;
-  color: #475569;
+  color: #cbd5e1;
 }
 
 .progressBarValue {
   font-weight: 700;
   font-size: 1.1rem;
-  color: #1e293b;
+  color: #f1f5f9;
   min-width: 40px;
   text-align: right;
 }
 
 .progressBarBackground {
   height: 12px;
-  background-color: #e2e8f0;
+  background-color: rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   overflow: hidden;
   position: relative;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.3);
 }
 
 .progressBarFill {
@@ -518,6 +532,7 @@
   transition: width 0.8s cubic-bezier(0.22, 0.61, 0.36, 1);
   position: relative;
   z-index: 1;
+  background: linear-gradient(90deg, #60a5fa, #c084fc);
 }
 
 .progressBarFill::after {
@@ -588,12 +603,16 @@
   font-size: 0.85rem;
 }
 
-/* 描述卡片优化 */
+/* 描述卡片优化 - 深色科技风 */
 .descriptionCard {
   padding: 1.5rem;
   height: 100%;
   display: flex;
   flex-direction: column;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(96, 165, 250, 0.2);
+  border-radius: 16px;
 }
 
 .descriptionHeader {
@@ -603,7 +622,7 @@
 .descriptionHeader h2 {
   font-size: 1.4rem;
   font-weight: 700;
-  color: #1e293b;
+  color: #f1f5f9;
 }
 
 .descriptionContent {
@@ -619,12 +638,16 @@
   margin-top: auto;
 }
 
-/* 雷达图卡片优化 */
+/* 雷达图卡片优化 - 深色科技风 */
 .radarCard {
   padding: 1.5rem;
   height: 100%;
   display: flex;
   flex-direction: column;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(96, 165, 250, 0.2);
+  border-radius: 16px;
 }
 
 .radarHeader {
@@ -634,7 +657,8 @@
 .radarHeader h2 {
   font-size: 1.4rem;
   font-weight: 700;
-  color: #1e293b;
+  color: #f1f5f9;
+  text-align: center;
 }
 
 .radarContainer {

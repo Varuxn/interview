@@ -344,17 +344,17 @@ export default function ResumeUploadPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[rgba(186,230,253,0.98)] to-[#c1e5ff] p-0">
-      <div className="w-full min-h-screen bg-white">
-        <div className="bg-white h-full flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 p-0">
+      <div className="w-full min-h-screen bg-transparent">
+        <div className="bg-transparent h-full flex flex-col">
           {/* 三列布局 */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 overflow-hidden p-4">
             {/* 左侧列：简历上传和个人信息 */}
             <div className="flex flex-col space-y-4 h-full">
               {/* 简历上传区域 */}
-              <div className="bg-gray-50 rounded-xl p-4 flex flex-col h-[45%]">
-                <h2 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
-                  <svg className="w-5 h-5 text-[#5E72EB] mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <div className="bg-white/5 rounded-xl p-4 flex flex-col h-[45%] border border-white/10 backdrop-blur-sm">
+                <h2 className="text-lg font-semibold text-blue-400 mb-3 flex items-center">
+                  <svg className="w-5 h-5 text-blue-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                   </svg>
                   简历上传
@@ -362,7 +362,7 @@ export default function ResumeUploadPage() {
                 
                 <div 
                   className={`border-2 border-dashed rounded-lg p-4 transition-all duration-200 flex-1 flex flex-col justify-center ${
-                    isDragging ? "border-[#5E72EB] bg-[#eef7ff]" : "border-gray-300 hover:border-[#5E72EB] bg-white"
+                    isDragging ? "border-cyan-400 bg-cyan-400/10" : "border-cyan-400/30 hover:border-cyan-400 bg-white/5"
                   }`}
                   onDragEnter={handleDrag}
                   onDragOver={handleDrag}
@@ -388,12 +388,12 @@ export default function ResumeUploadPage() {
                   >
                     <div className="relative">
                       {isLoading ? (
-                        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-[#5E72EB] mx-auto"></div>
+                        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-cyan-400 mx-auto"></div>
                       ) : (
                         <>
-                          <div className="w-16 h-16 bg-[#eef7ff] rounded-full flex items-center justify-center mx-auto">
+                          <div className="w-16 h-16 bg-cyan-400/10 rounded-full flex items-center justify-center mx-auto border border-cyan-400/30">
                             <svg
-                              className="w-8 h-8 text-[#5E72EB]"
+                              className="w-8 h-8 text-cyan-400"
                               fill="none"
                               stroke="currentColor"
                               viewBox="0 0 24 24"
@@ -412,11 +412,11 @@ export default function ResumeUploadPage() {
                     </div>
                     
                     <div className="space-y-1 text-center">
-                      <p className="text-sm font-medium text-gray-700">
+                      <p className="text-sm font-medium text-gray-300">
                         {fileName || (
                           <>
-                            <span className="text-[#5E72EB] font-semibold">点击上传</span>
-                            <span> 或拖拽PDF文件到此处</span>
+                            <span className="text-cyan-400 font-semibold">点击上传</span>
+                            <span className="text-gray-400"> 或拖拽PDF文件到此处</span>
                           </>
                         )}
                       </p>
@@ -427,7 +427,7 @@ export default function ResumeUploadPage() {
 
                 {/* 文件状态显示 */}
                 {fileName && (
-                  <div className="mt-3 bg-white rounded-lg p-2 flex items-center border border-gray-200">
+                  <div className="mt-3 bg-white/5 rounded-lg p-2 flex items-center border border-cyan-400/30">
                     <svg
                       className="w-4 h-4 text-green-500 mr-2"
                       fill="none"
@@ -443,7 +443,7 @@ export default function ResumeUploadPage() {
                       />
                     </svg>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{fileName}</p>
+                      <p className="text-sm font-medium text-gray-300 truncate">{fileName}</p>
                       <p className="text-xs text-gray-500">
                         {isLoading ? "解析中..." : "已准备就绪"}
                       </p>
@@ -453,9 +453,9 @@ export default function ResumeUploadPage() {
               </div>
 
               {/* 个人信息区域 */}
-              <div className="bg-gray-50 rounded-xl p-4 flex flex-col h-[55%]">
-                <h2 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
-                  <svg className="w-5 h-5 text-[#5E72EB] mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <div className="bg-white/5 rounded-xl p-4 flex flex-col h-[55%] border border-white/10 backdrop-blur-sm">
+                <h2 className="text-lg font-semibold text-blue-400 mb-3 flex items-center">
+                  <svg className="w-5 h-5 text-blue-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                   </svg>
                   个人信息
@@ -463,7 +463,7 @@ export default function ResumeUploadPage() {
                 
                 <div className="space-y-3 flex-1">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
                       姓名
                     </label>
                     <input
@@ -471,13 +471,13 @@ export default function ResumeUploadPage() {
                       name="fullName"
                       value={formData.fullName}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-[#5E72EB] focus:border-[#5E72EB]"
+                      className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg focus:ring-cyan-400 focus:border-cyan-400 text-gray-300 placeholder-gray-500"
                       placeholder="请输入您的姓名"
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
                       邮箱
                     </label>
                     <input
@@ -485,13 +485,13 @@ export default function ResumeUploadPage() {
                       name="email"
                       value={formData.email}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-[#5E72EB] focus:border-[#5E72EB]"
+                      className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg focus:ring-cyan-400 focus:border-cyan-400 text-gray-300 placeholder-gray-500"
                       placeholder="example@email.com"
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
                       电话
                     </label>
                     <input
@@ -499,13 +499,13 @@ export default function ResumeUploadPage() {
                       name="phone"
                       value={formData.phone}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-[#5E72EB] focus:border-[#5E72EB]"
+                      className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg focus:ring-cyan-400 focus:border-cyan-400 text-gray-300 placeholder-gray-500"
                       placeholder="138-xxxx-xxxx"
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
                       擅长领域
                     </label>
                     <input
@@ -513,7 +513,7 @@ export default function ResumeUploadPage() {
                       name="expertise"
                       value={formData.expertise}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-[#5E72EB] focus:border-[#5E72EB]"
+                      className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg focus:ring-cyan-400 focus:border-cyan-400 text-gray-300 placeholder-gray-500"
                       placeholder="例如：机器学习、前端开发等"
                     />
                   </div>
@@ -524,9 +524,9 @@ export default function ResumeUploadPage() {
             {/* 中间列：岗位选择和面试官选择 */}
             <div className="flex flex-col space-y-4 h-full">
               {/* 岗位选择区域 */}
-              <div className="bg-gray-50 rounded-xl p-4 flex flex-col h-[45%]">
-                <h2 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
-                  <svg className="w-5 h-5 text-[#5E72EB] mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <div className="bg-white/5 rounded-xl p-4 flex flex-col h-[45%] border border-white/10 backdrop-blur-sm">
+                <h2 className="text-lg font-semibold text-blue-400 mb-3 flex items-center">
+                  <svg className="w-5 h-5 text-blue-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                   </svg>
                   应聘岗位
@@ -539,21 +539,21 @@ export default function ResumeUploadPage() {
                       onClick={() => setFormData(prev => ({ ...prev, position }))}
                       className={`border rounded-lg p-3 cursor-pointer transition-all ${
                         formData.position.id === position.id
-                          ? "border-[#5E72EB] bg-[#eef7ff] shadow-inner"
-                          : "border-gray-300 hover:border-[#5E72EB]"
+                          ? "border-cyan-400 bg-cyan-400/10 shadow-inner"
+                          : "border-white/10 hover:border-cyan-400 bg-white/5"
                       }`}
                     >
-                      <h3 className="font-medium text-gray-900">{position.name}</h3>
-                      <p className="text-sm text-gray-500 mt-1">{position.description}</p>
+                      <h3 className="font-medium text-gray-300">{position.name}</h3>
+                      <p className="text-sm text-gray-400 mt-1">{position.description}</p>
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* 面试官选择区域 */}
-              <div className="bg-gray-50 rounded-xl p-4 flex flex-col h-[55%]">
-                <h2 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
-                  <svg className="w-5 h-5 text-[#5E72EB] mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <div className="bg-white/5 rounded-xl p-4 flex flex-col h-[55%] border border-white/10 backdrop-blur-sm">
+                <h2 className="text-lg font-semibold text-blue-400 mb-3 flex items-center">
+                  <svg className="w-5 h-5 text-blue-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
                   </svg>
                   选择面试官
@@ -569,13 +569,13 @@ export default function ResumeUploadPage() {
                         onClick={() => setFormData(prev => ({ ...prev, interviewer }))}
                         className={`border rounded-lg p-3 cursor-pointer transition-all ${
                           formData.interviewer.id === interviewer.id
-                            ? "border-[#5E72EB] bg-[#eef7ff] shadow-inner"
-                            : "border-gray-300 hover:border-[#5E72EB]"
+                            ? "border-cyan-400 bg-cyan-400/10 shadow-inner"
+                            : "border-white/10 hover:border-cyan-400"
                         }`}
                       >
                         <div className="flex items-center">
                           <div 
-                            className="relative w-12 h-12 rounded-full overflow-hidden bg-gray-200 cursor-pointer"
+                            className="relative w-12 h-12 rounded-full overflow-hidden bg-gray-700 cursor-pointer border border-cyan-400/30"
                             onClick={(e) => {
                               e.stopPropagation();
                               triggerFileInput(interviewer.id);
@@ -588,8 +588,8 @@ export default function ResumeUploadPage() {
                                 className="w-full h-full object-cover"
                               />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center">
-                                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                                <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                                 </svg>
                               </div>
@@ -601,7 +601,7 @@ export default function ResumeUploadPage() {
                               onChange={(e) => handleAvatarUpload(interviewer.id, e)}
                               className="hidden"
                             />
-                            <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 transition-all flex items-center justify-center">
+                            <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-all flex items-center justify-center">
                               <svg className="w-4 h-4 text-white opacity-0 hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -610,12 +610,12 @@ export default function ResumeUploadPage() {
                           </div>
                           <div className="ml-3">
                             <div className="flex items-center">
-                              <h4 className="font-medium text-gray-900">{interviewer.name}</h4>
-                              <span className="ml-2 text-xs bg-[#eef7ff] text-[#5E72EB] px-2 py-0.5 rounded-full">
+                              <h4 className="font-medium text-gray-300">{interviewer.name}</h4>
+                              <span className="ml-2 text-xs bg-cyan-400/20 text-cyan-400 px-2 py-0.5 rounded-full">
                                 {interviewer.level}
                               </span>
                             </div>
-                            <p className="text-xs text-gray-600 mt-1">{interviewer.description}</p>
+                            <p className="text-xs text-gray-400 mt-1">{interviewer.description}</p>
                           </div>
                         </div>
                       </div>
@@ -628,48 +628,48 @@ export default function ResumeUploadPage() {
             {/* 右侧列：简历预览和关键词 */}
             <div className="flex flex-col space-y-4 h-full">
               {/* 简历预览区域 - 包含关键词 */}
-              <div className="bg-gray-50 rounded-xl p-4 flex flex-col h-[70%]">
+              <div className="bg-white/5 rounded-xl p-4 flex flex-col h-[70%] border border-white/10 backdrop-blur-sm">
                 <div className="flex justify-between items-center mb-3">
-                  <h2 className="text-lg font-semibold text-gray-800 flex items-center">
-                    <svg className="w-5 h-5 text-[#5E72EB] mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <h2 className="text-lg font-semibold text-blue-400 flex items-center">
+                    <svg className="w-5 h-5 text-blue-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
                     简历预览
                   </h2>
                   
                   {keywords.length > 0 && (
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-cyan-400">
                       {keywords.length}个关键词已提取
                     </div>
                   )}
                 </div>
                 
-                <div className="bg-white rounded-lg border border-[#5E72EB]/30 h-full overflow-hidden flex flex-col">
+                <div className="bg-white/5 rounded-lg border border-cyan-400/30 h-full overflow-hidden flex flex-col">
                   {/* 固定高度的预览区域 */}
                   <div className="overflow-y-auto flex-1 p-3" style={{ maxHeight: '300px' }}>
                     {isUploaded ? (
-                    <div className="whitespace-pre-wrap text-sm text-gray-700">
+                    <div className="whitespace-pre-wrap text-sm text-gray-300">
                         {documentContext}
                     </div>
                     ) : (
                       <div className="h-full flex flex-col items-center justify-center text-center text-gray-500">
-                        <svg className="w-10 h-10 text-[#5E72EB]/50 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <svg className="w-10 h-10 text-cyan-400/50 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                         </svg>
-                        <p className="mt-2 text-sm">上传简历后预览内容将显示在这里</p>
+                        <p className="mt-2 text-sm text-gray-400">上传简历后预览内容将显示在这里</p>
                       </div>
                     )}
                   </div>
                   
                   {/* 关键词预览 */}
                   {keywords.length > 0 && (
-                    <div className="border-t border-gray-200 p-3">
-                      <h3 className="text-sm font-semibold text-gray-800 mb-2">简历关键词</h3>
+                    <div className="border-t border-white/10 p-3">
+                      <h3 className="text-sm font-semibold text-blue-400 mb-2">简历关键词</h3>
                       <div className="flex flex-wrap gap-1">
                         {keywords.map((keyword, index) => (
                           <span 
                             key={index} 
-                            className="px-2 py-1 bg-[#eef7ff] text-[#5E72EB] rounded-full text-xs"
+                            className="px-2 py-1 bg-cyan-400/20 text-cyan-400 rounded-full text-xs"
                           >
                             {keyword}
                           </span>
@@ -681,9 +681,9 @@ export default function ResumeUploadPage() {
               </div>
 
               {/* 技能标签区域 */}
-              <div className="bg-gray-50 rounded-xl p-4 flex flex-col h-[30%]">
-                <h2 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
-                  <svg className="w-5 h-5 text-[#5E72EB] mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <div className="bg-white/5 rounded-xl p-4 flex flex-col h-[30%] border border-white/10 backdrop-blur-sm">
+                <h2 className="text-lg font-semibold text-blue-400 mb-3 flex items-center">
+                  <svg className="w-5 h-5 text-blue-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
                   </svg>
                   技能标签
@@ -696,8 +696,8 @@ export default function ResumeUploadPage() {
                       onClick={() => toggleSkill(skill)}
                       className={`px-3 py-1 rounded-full text-xs transition-all ${
                         formData.selectedSkills.includes(skill)
-                          ? "bg-[#5E72EB] text-white shadow-md"
-                          : "bg-white text-gray-700 hover:bg-gray-100"
+                          ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-md"
+                          : "bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10"
                       }`}
                     >
                       {skill}
@@ -709,17 +709,17 @@ export default function ResumeUploadPage() {
           </div>
           
           {/* 底部操作按钮 */}
-          <div className="flex justify-end space-x-4 p-4 border-t border-gray-200">
+          <div className="flex justify-end space-x-4 p-4 border-t border-white/10">
             <button
               onClick={handleCancel}
-              className="px-5 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none transition-colors"
+              className="px-5 py-2 border border-white/10 rounded-md text-gray-300 hover:bg-white/5 focus:outline-none transition-colors"
             >
               取消
             </button>
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className={`px-5 py-2 bg-gradient-to-r from-[#5E72EB] to-[#3a4fc4] text-white rounded-md hover:opacity-90 shadow transition-all flex items-center justify-center ${
+              className={`px-5 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-md hover:from-blue-600 hover:to-purple-700 shadow transition-all flex items-center justify-center ${
                   isSaving ? "opacity-70 cursor-not-allowed" : ""
               }`}
               >

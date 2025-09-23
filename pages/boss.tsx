@@ -19,7 +19,7 @@ interface UserData {
   setting?: Setting;
   evaluation?: FullEvaluationData;
   resumeSetupData?: {
-    fullName?: string; // 添加 fullName
+    fullName?: string;
     email?: string;
     phone?: string;
     selectedSkills?: string[];
@@ -31,6 +31,7 @@ interface UserData {
     };
   };
 }
+
 // 评估指标的类型定义
 type MetricKey = 'expertise' | 'proficiency' | 'articulation' | 'reasoning' | 'innovation' | 'resilience' | 'total';
 type StageKey = 'introduction' | 'technology' | 'analysis' | 'final';
@@ -48,7 +49,6 @@ const getEvaluationMetrics = (evaluation: FullEvaluationData) => {
     total: '总分',
   };
 
-  // 定义所有阶段及其对应的显示名称
   const stageKeys: StageKey[] = ['introduction', 'technology', 'analysis', 'final'];
   const stageDisplayNames: { [key in StageKey]: string } = {
     introduction: '自我介绍',
@@ -59,7 +59,6 @@ const getEvaluationMetrics = (evaluation: FullEvaluationData) => {
 
   stageKeys.forEach(stage => {
     const stageMetrics: { [key: string]: number } = {};
-    // 遍历每个阶段的指标
     (['expertise', 'proficiency', 'articulation', 'reasoning', 'innovation', 'resilience'] as MetricKey[]).forEach(metric => {
       const key = `${stage}_${metric}` as keyof FullEvaluationData;
       if (evaluation[key] !== undefined) {
@@ -67,13 +66,11 @@ const getEvaluationMetrics = (evaluation: FullEvaluationData) => {
       }
     });
 
-    // Add the total score for the stage if it exists
     const totalKey = `${stage}_total` as keyof FullEvaluationData;
     if (evaluation[totalKey] !== undefined) {
       stageMetrics[metricNames['total']] = evaluation[totalKey] as number;
     }
 
-    // 如果阶段有任何指标，则添加到 stages 对象中
     if (Object.keys(stageMetrics).length > 0) {
       stages[stageDisplayNames[stage]] = stageMetrics;
     }
@@ -83,18 +80,18 @@ const getEvaluationMetrics = (evaluation: FullEvaluationData) => {
 
 // 辅助函数：根据分数获取颜色
 const getColorForScore = (score: number): string => {
-  if (score === -1) return '#9CA3AF'; // 未测试状态 - 灰色
-  if (score >= 80) return '#10B981'; // Green
-  if (score >= 60) return '#FBBF24'; // Yellow
-  return '#EF4444'; // Red
+  if (score === -1) return '#9CA3AF';
+  if (score >= 80) return '#10B981';
+  if (score >= 60) return '#FBBF24';
+  return '#EF4444';
 };
 
 // 辅助函数：根据分数获取渐变颜色
 const getGradientForScore = (score: number): [string, string] => {
-  if (score === -1) return ['#9CA3AF', '#D1D5DB']; // 未测试状态 - 灰色
-  if (score >= 80) return ['#10B981', '#34D399']; // Green shades
-  if (score >= 60) return ['#FBBF24', '#FCD34D']; // Yellow shades
-  return ['#EF4444', '#F87171']; // Red shades
+  if (score === -1) return ['#4B5563', '#6B7280'];
+  if (score >= 80) return ['#10B981', '#34D399'];
+  if (score >= 60) return ['#FBBF24', '#FCD34D'];
+  return ['#EF4444', '#F87171'];
 };
 
 // 创新组件：能力卡片
@@ -104,21 +101,21 @@ const SkillCard: React.FC<{ label: string; score: number; maxScore: number }> = 
   const [color1, color2] = getGradientForScore(score);
   
   return (
-    <div className="flex flex-col items-center p-4 bg-white rounded-xl shadow-sm border border-gray-100 transition-all duration-300 hover:shadow-md">
-      <div className="text-sm font-medium text-gray-700 mb-2">{label}</div>
+    <div className="flex flex-col items-center p-4 bg-gray-800/50 rounded-xl border border-cyan-400/10 transition-all duration-300 hover:border-cyan-400/30 hover:shadow-lg hover:shadow-cyan-500/20">
+      <div className="text-sm font-medium text-gray-300 mb-2">{label}</div>
       <div className="relative w-24 h-24 flex items-center justify-center">
         <div className="absolute inset-0 rounded-full" style={{ 
           background: isUntested 
-            ? '#F3F4F6' 
-            : `conic-gradient(${color1} 0%, ${color2} ${percentage}%, #F3F4F6 ${percentage}%, #F3F4F6 100%)` 
+            ? 'conic-gradient(#374151 0%, #4B5563 100%)' 
+            : `conic-gradient(${color1} 0%, ${color2} ${percentage}%, #374151 ${percentage}%, #4B5563 100%)` 
         }}></div>
-        <div className="absolute inset-2 rounded-full bg-white flex items-center justify-center">
-          <span className="text-xl font-bold" style={{ color: isUntested ? '#6B7280' : color1 }}>
+        <div className="absolute inset-2 rounded-full bg-gray-900 flex items-center justify-center">
+          <span className="text-xl font-bold" style={{ color: isUntested ? '#9CA3AF' : color1 }}>
             {isUntested ? 'N/A' : score}
           </span>
         </div>
       </div>
-      <div className="mt-2 text-xs text-gray-500">
+      <div className="mt-2 text-xs text-gray-400">
         {isUntested ? '未测试' : `/ ${maxScore}`}
       </div>
     </div>
@@ -138,7 +135,6 @@ const KeywordCloud: React.FC<{
       try {
         setLoading(true);
         
-        // 1. 尝试从localStorage获取用户数据
         const userDataKey = "userdata";
         const allUserDataJSON = localStorage.getItem(userDataKey);
         
@@ -148,7 +144,6 @@ const KeywordCloud: React.FC<{
         
         const allUserData = JSON.parse(allUserDataJSON);
         
-        // 2. 获取特定用户的关键词
         if (userId && allUserData[userId]) {
           const userKeywords = allUserData[userId].resumeKeywords || [];
           const count = Math.min(userKeywords.length, 9);
@@ -194,7 +189,6 @@ const KeywordCloud: React.FC<{
 
   return (
     <div className="keyword-container">
-      {/* 中央圆形UI元素 */}
       <div className="center-circle">
         <div className="circle-inner">
           <svg className="cloud-icon" viewBox="0 0 24 24">
@@ -204,7 +198,6 @@ const KeywordCloud: React.FC<{
         </div>
       </div>
       
-      {/* 关键词云 */}
       {!error && keywords.length > 0 && positionedKeywords.map(({ keyword, style }, index) => (
         <div 
           key={index} 
@@ -224,7 +217,6 @@ const KeywordCloud: React.FC<{
         </div>
       ))}
       
-      {/* 错误信息 */}
       {error && <div className="message-display error-message">{error}</div>}
       {!error && keywords.length === 0 && !loading && (
         <div className="message-display">未能提取到关键词或无分析内容。</div>
@@ -241,16 +233,16 @@ const KeywordCloud: React.FC<{
           overflow: hidden;
           background: radial-gradient(
             circle at center,
-            rgba(255, 255, 255, 0.8) 0%,
-            rgba(245, 248, 255, 0.9) 100%
+            rgba(30, 58, 138, 0.3) 0%,
+            rgba(17, 24, 39, 0.8) 100%
           );
-          border-radius: 20px;
+          border-radius: 16px;
+          border: 1px solid rgba(34, 211, 238, 0.2);
           box-shadow: 
-            0 15px 35px rgba(94, 114, 235, 0.15),
-            inset 0 0 20px rgba(255, 255, 255, 0.6);
+            0 0 40px rgba(34, 211, 238, 0.1),
+            inset 0 0 20px rgba(34, 211, 238, 0.05);
         }
         
-        /* 中央圆形UI设计 */
         .center-circle {
           position: absolute;
           top: 50%;
@@ -259,21 +251,20 @@ const KeywordCloud: React.FC<{
           width: 180px;
           height: 180px;
           border-radius: 50%;
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.95) 0%,
-            rgba(240, 249, 255, 0.95) 100%
+          background: radial-gradient(
+            circle at center,
+            rgba(34, 211, 238, 0.15) 0%,
+            rgba(30, 58, 138, 0.3) 100%
           );
           display: flex;
           align-items: center;
           justify-content: center;
           box-shadow: 
-            0 10px 30px rgba(94, 114, 235, 0.2),
-            inset 0 0 20px rgba(255, 255, 255, 0.8),
-            inset 0 0 10px rgba(155, 93, 229, 0.1);
+            0 0 30px rgba(34, 211, 238, 0.2),
+            inset 0 0 20px rgba(34, 211, 238, 0.1);
           z-index: 2;
           backdrop-filter: blur(8px);
-          border: 1px solid rgba(219, 234, 254, 0.7);
+          border: 1px solid rgba(34, 211, 238, 0.3);
         }
         
         .circle-inner {
@@ -287,19 +278,18 @@ const KeywordCloud: React.FC<{
         .cloud-icon {
           width: 60px;
           height: 60px;
-          fill: #5E72EB;
-          filter: drop-shadow(0 2px 5px rgba(94, 114, 235, 0.3));
+          fill: #22d3ee;
+          filter: drop-shadow(0 0 10px rgba(34, 211, 238, 0.5));
         }
         
         .circle-text {
-          color: #5E72EB;
+          color: #67e8f9;
           font-size: 1.3rem;
           font-weight: 600;
           letter-spacing: 1px;
-          text-shadow: 0 1px 2px rgba(94, 114, 235, 0.2);
+          text-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
         }
         
-        /* 关键词样式 */
         .keyword-item {
           position: absolute; 
           top: 50%; 
@@ -333,17 +323,20 @@ const KeywordCloud: React.FC<{
         }
         
         .keyword-text {
-          color: #1e3a8a;
+          color: #bdffff;
           font-size: 1.1rem;
           font-weight: 500;
           padding: 10px 18px;
-          background: linear-gradient(145deg, rgba(240, 249, 255, 0.95), rgba(224, 242, 254, 0.95));
+          background: linear-gradient(145deg, 
+            rgba(34, 211, 238, 0.15), 
+            rgba(96, 165, 250, 0.1)
+          );
           backdrop-filter: blur(4px);
-          border: 1px solid #dbeafe;
+          border: 1px solid rgba(34, 211, 238, 0.3);
           border-radius: 50px;
           box-shadow: 
-            0 4px 12px rgba(59, 130, 246, 0.15),
-            0 2px 4px rgba(255, 255, 255, 0.5) inset;
+            0 4px 15px rgba(34, 211, 238, 0.2),
+            0 0 10px rgba(34, 211, 238, 0.1) inset;
           cursor: default;
           transition: all 0.3s ease;
           display: block;
@@ -353,17 +346,20 @@ const KeywordCloud: React.FC<{
 
         .keyword-text:hover {
           transform: scale(1.12);
-          background: linear-gradient(145deg, rgba(224, 242, 254, 0.98), rgba(186, 230, 253, 0.98));
+          background: linear-gradient(145deg, 
+            rgba(34, 211, 238, 0.25), 
+            rgba(96, 165, 250, 0.2)
+          );
           box-shadow: 
-            0 6px 20px rgba(59, 130, 246, 0.25),
-            0 2px 4px rgba(255, 255, 255, 0.5) inset;
+            0 6px 20px rgba(34, 211, 238, 0.3),
+            0 0 10px rgba(34, 211, 238, 0.2) inset;
           z-index: 10;
         }
 
         .message-display {
           text-align: center;
           padding: 20px;
-          color: #374151;
+          color: #d1d5db;
           font-size: 1.1rem;
           max-width: 80%;
           margin: 0 auto;
@@ -380,7 +376,6 @@ const KeywordCloud: React.FC<{
   );
 };
 
-
 // 评估详情卡片组件
 const EvaluationDetails: React.FC<{ 
   evaluation?: FullEvaluationData;
@@ -388,9 +383,9 @@ const EvaluationDetails: React.FC<{
 }> = ({ evaluation, userId }) => {
   if (!evaluation) {
     return (
-      <div className="p-6 text-center bg-gray-50 rounded-2xl border border-gray-100">
+      <div className="p-6 text-center bg-gray-800/50 rounded-2xl border border-gray-700">
         <div className="text-gray-400 flex flex-col items-center py-8">
-          <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 mb-4" />
+          <div className="bg-gray-700 border-2 border-dashed border-gray-600 rounded-xl w-16 h-16 mb-4" />
           <p className="text-gray-500">暂无评估数据</p>
         </div>
       </div>
@@ -410,47 +405,35 @@ const EvaluationDetails: React.FC<{
     '案例分析': allStages['案例分析'],
   };
 
-  // 准备图表数据
-  const chartData = [
-    { name: '自我介绍', score: allStages['自我介绍']?.['总分'] || 0 },
-    { name: '技术问答', score: allStages['技术问答']?.['总分'] || 0 },
-    { name: '案例分析', score: allStages['案例分析']?.['总分'] || 0 },
-    { name: '最终评估', score: finalTotalScore || 0 },
-  ];
-
-  // 提取能力分数
   const skillScores = Object.entries(otherFinalMetrics).map(([skill, score]) => ({
     skill,
     score
   }));
 
   return (
-    <div className="p-6 bg-gray-50 rounded-2xl border border-gray-200">
-      <h3 className="text-xl font-bold text-gray-800 mb-6 pb-2 border-b border-gray-200">评估详情</h3>
+    <div className="p-6 bg-gray-800/30 rounded-2xl border border-gray-700">
+      <h3 className="text-xl font-bold text-white mb-6 pb-2 border-b border-gray-600">评估详情</h3>
 
-      {/* 最终评估和能力维度分布 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-          <h4 className="text-base font-semibold text-indigo-600 mb-3 pb-1 border-b border-indigo-100">综合能力评估</h4>
+        <div className="bg-gray-800/50 p-4 rounded-xl border border-gray-700">
+          <h4 className="text-base font-semibold text-cyan-400 mb-3 pb-1 border-b border-cyan-400/20">综合能力评估</h4>
           
           {finalStage && (
             <div className="flex flex-col items-center justify-center flex-grow"> 
-              {/* Final score section with original progress bar height */}
               <div className="mt-2 mb-4">
                 {finalTotalScore !== undefined && (
                   <div className="flex flex-col items-center">
                     <div className="text-center">
-                      <span className="text-lg font-bold text-gray-800">最终得分</span>
+                      <span className="text-lg font-bold text-gray-300">最终得分</span>
                       <div 
                         className="text-3xl font-bold mt-1"
                         style={{ color: getColorForScore(finalTotalScore) }}
                       >
-                        {finalTotalScore}<span className="text-gray-500 text-lg">/100</span>
+                        {finalTotalScore}<span className="text-gray-400 text-lg">/100</span>
                       </div>
                     </div>
                     
-                    {/* Progress bar with original h-4 height */}
-                    <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden mt-2">
+                    <div className="w-full h-4 bg-gray-700 rounded-full overflow-hidden mt-2">
                       <div 
                         className="h-full rounded-full transition-all duration-1000 ease-out"
                         style={{ 
@@ -463,7 +446,6 @@ const EvaluationDetails: React.FC<{
                 )}
               </div>
               
-              {/* Compact skill cards grid */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {skillScores.map(({ skill, score }) => (
                   <SkillCard 
@@ -478,15 +460,14 @@ const EvaluationDetails: React.FC<{
           )}
         </div>
         
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-          <h4 className="text-base font-semibold text-indigo-600 mb-3 pb-1 border-b border-indigo-100">简历内容分析</h4>
+        <div className="bg-gray-800/50 p-4 rounded-xl border border-gray-700">
+          <h4 className="text-base font-semibold text-cyan-400 mb-3 pb-1 border-b border-cyan-400/20">简历内容分析</h4>
           <KeywordCloud userId={userId} />
         </div>
       </div>
       
-      {/* 各环节评估 */}
-      <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-6">
-        <h4 className="text-lg font-bold text-indigo-600 mb-5 pb-2 border-b border-indigo-100">环节表现分析</h4>
+      <div className="bg-gray-800/50 p-5 rounded-2xl border border-gray-700 mb-6">
+        <h4 className="text-lg font-bold text-cyan-400 mb-5 pb-2 border-b border-cyan-400/20">环节表现分析</h4>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {Object.entries(otherStages).map(([stageName, metrics]) => {
@@ -497,11 +478,11 @@ const EvaluationDetails: React.FC<{
               return (
                 <div 
                   key={stageName} 
-                  className="p-4 bg-gray-50 rounded-xl border border-gray-200 transition-all duration-300 hover:shadow-md"
+                  className="p-4 bg-gray-800/30 rounded-xl border border-gray-600 transition-all duration-300 hover:border-cyan-400/20"
                 >
                   <div className="flex items-center mb-4">
-                    <div className="w-3 h-7 bg-indigo-500 rounded-full mr-3"></div>
-                    <h4 className="text-md font-bold text-gray-800">{stageName}</h4>
+                    <div className="w-3 h-7 bg-cyan-400 rounded-full mr-3"></div>
+                    <h4 className="text-md font-bold text-white">{stageName}</h4>
                     <span className="ml-auto text-lg font-bold" style={{ color: getColorForScore(stageScore) }}>
                       {isStageUntested ? '未测试' : stageScore}
                     </span>
@@ -512,11 +493,11 @@ const EvaluationDetails: React.FC<{
                       const isUntested = score === -1;
                       return (
                         <div key={metricLabel} className="flex items-center">
-                          <span className="text-sm text-gray-600 w-24 truncate">{metricLabel}</span>
-                          <div className="flex-1 ml-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <span className="text-sm text-gray-300 w-24 truncate">{metricLabel}</span>
+                          <div className="flex-1 ml-2 h-2 bg-gray-700 rounded-full overflow-hidden">
                             {isUntested ? (
-                              <div className="h-full bg-gray-300 rounded-full flex items-center justify-center">
-                                <div className="text-[8px] text-gray-500">未测试</div>
+                              <div className="h-full bg-gray-600 rounded-full flex items-center justify-center">
+                                <div className="text-[8px] text-gray-400">未测试</div>
                               </div>
                             ) : (
                               <div 
@@ -543,13 +524,12 @@ const EvaluationDetails: React.FC<{
         </div>
       </div>
 
-      {/* 面试官评语 */}
       {evaluation.description && (
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-          <h4 className="text-lg font-bold text-indigo-600 mb-4">面试官评语</h4>
-          <div className="relative bg-indigo-50 p-4 rounded-lg border border-indigo-100">
-            <div className="absolute -top-2 left-6 w-4 h-4 bg-indigo-50 transform rotate-45 border-t border-l border-indigo-100"></div>
-            <p className="text-gray-700 italic">&quot;{evaluation.description}&quot;</p>
+        <div className="bg-gray-800/50 p-5 rounded-2xl border border-gray-700">
+          <h4 className="text-lg font-bold text-cyan-400 mb-4">面试官评语</h4>
+          <div className="relative bg-cyan-900/20 p-4 rounded-lg border border-cyan-400/20">
+            <div className="absolute -top-2 left-6 w-4 h-4 bg-cyan-900/20 transform rotate-45 border-t border-l border-cyan-400/20"></div>
+            <p className="text-gray-300 italic">&quot;{evaluation.description}&quot;</p>
           </div>
         </div>
       )}
@@ -569,30 +549,28 @@ const UserCard: React.FC<{
   const [color1] = !isUntested && finalScore ? getGradientForScore(finalScore) : ['#9CA3AF', '#9CA3AF'];
   const fullName = resumeSetupData?.fullName || user.name;
 
-  // 获取关键信息用于标签展示
   const positionName = resumeSetupData?.position?.name || setting?.position || '未知岗位';
   const interviewerName = resumeSetupData?.interviewer?.name || setting?.interviewer || '未知面试官';
   const email = resumeSetupData?.email || '未提供';
   const phone = resumeSetupData?.phone || '未提供';
-  const skills = resumeSetupData?.selectedSkills?.slice(0, 3) || []; // 最多展示3个技能4
-  
+  const skills = resumeSetupData?.selectedSkills?.slice(0, 3) || [];
 
   return (
     <div
-      className={`bg-white rounded-2xl overflow-hidden transition-all duration-500 ease-in-out ${
-        isExpanded ? 'max-h-[2500px] shadow-xl' : 'max-h-40 shadow-md'
-      } mb-6 cursor-pointer hover:shadow-lg`}
+      className={`bg-gray-800 rounded-2xl overflow-hidden transition-all duration-500 ease-in-out ${
+        isExpanded ? 'max-h-[2500px] shadow-2xl' : 'max-h-40 shadow-lg'
+      } mb-6 cursor-pointer hover:shadow-xl border border-blue-500/20`}
       onClick={() => onToggleExpand(user.id)}
     >
-      <div className="p-5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white flex justify-between items-start">
+      <div className="p-5 bg-gradient-to-r from-blue-500 to-purple-600 text-white flex justify-between items-start border-b border-cyan-400/30">
         <div className="flex items-start">
           <div className="relative">
-            <div className="bg-white/20 rounded-full w-12 h-12 flex items-center justify-center mr-4">
+            <div className="bg-white/20 rounded-full w-12 h-12 flex items-center justify-center mr-4 backdrop-blur-sm">
               <span className="text-xl font-bold">{fullName.charAt(0)}</span>
             </div>
             {!isUntested && finalScore !== undefined && (
               <div 
-                className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white"
+                className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white backdrop-blur-sm"
                 style={{ backgroundColor: color1 }}
               >
                 {finalScore}
@@ -600,48 +578,45 @@ const UserCard: React.FC<{
             )}
             {isUntested && (
               <div 
-                className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white bg-gray-400"
+                className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white bg-gray-600 backdrop-blur-sm"
               >
                 ?
               </div>
             )}
           </div>
           <div>
-            {/* 这里展示用户名字而不是ID */}
             <h2 className="text-xl font-bold mb-1">{fullName}</h2>
             
-            {/* 折叠状态下展示的标签信息 */}
             <div className="flex flex-wrap gap-2 mt-2 max-w-lg">
-              {/* 用户ID标签 - 新添加 */}
-              <div className="bg-white/20 rounded-full px-3 py-1 text-xs flex items-center">
+              <div className="bg-white/20 rounded-full px-3 py-1 text-xs flex items-center backdrop-blur-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
                 </svg>
                 ID: {user.id.substring(0,6)}...
               </div>
               
-              <div className="bg-white/20 rounded-full px-3 py-1 text-xs flex items-center">
+              <div className="bg-white/20 rounded-full px-3 py-1 text-xs flex items-center backdrop-blur-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
                 {positionName}
               </div>
               
-              <div className="bg-white/20 rounded-full px-3 py-1 text-xs flex items-center">
+              <div className="bg-white/20 rounded-full px-3 py-1 text-xs flex items-center backdrop-blur-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
                 {interviewerName}
               </div>
               
-              <div className="bg-white/20 rounded-full px-3 py-1 text-xs flex items-center">
+              <div className="bg-white/20 rounded-full px-3 py-1 text-xs flex items-center backdrop-blur-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
                 {email}
               </div>
               
-              <div className="bg-white/20 rounded-full px-3 py-1 text-xs flex items-center">
+              <div className="bg-white/20 rounded-full px-3 py-1 text-xs flex items-center backdrop-blur-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                 </svg>
@@ -649,7 +624,7 @@ const UserCard: React.FC<{
               </div>
               
               {skills.map((skill, index) => (
-                <div key={index} className="bg-white/20 rounded-full px-3 py-1 text-xs flex items-center">
+                <div key={index} className="bg-white/20 rounded-full px-3 py-1 text-xs flex items-center backdrop-blur-sm">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                   </svg>
@@ -663,11 +638,11 @@ const UserCard: React.FC<{
         <div className="flex items-center">
           <div className="text-3xl transition-transform duration-500">
             {isExpanded ? (
-              <div className="bg-white/20 rounded-full w-10 h-10 flex items-center justify-center">
+              <div className="bg-white/20 rounded-full w-10 h-10 flex items-center justify-center backdrop-blur-sm">
                 <span>▲</span>
               </div>
             ) : (
-              <div className="bg-white/20 rounded-full w-10 h-10 flex items-center justify-center">
+              <div className="bg-white/20 rounded-full w-10 h-10 flex items-center justify-center backdrop-blur-sm">
                 <span>▼</span>
               </div>
             )}
@@ -694,19 +669,16 @@ const HomePage: React.FC = () => {
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
 
-  // 切换卡片展开/折叠状态
   const handleToggleExpand = useCallback((userId: string) => {
     setExpandedUserId(prevId => (prevId === userId ? null : userId));
   }, []);
 
-  // 异步获取数据
   useEffect(() => {
     const fetchAllData = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // 1. 获取所有用户
         const usersResponse = await fetch('/api/databases/query?table=users');
         const usersResult = await usersResponse.json();
         if (!usersResult.success || !Array.isArray(usersResult.data)) {
@@ -714,7 +686,6 @@ const HomePage: React.FC = () => {
         }
         const users: User[] = usersResult.data;
 
-        // 2. 为每个用户获取设置和评估，并组合数据
         const combinedDataPromises = users.map(async (user) => {
           const settingPromise = fetch(`/api/databases/query?table=settings&id=${user.id}`).then(res => res.json());
           const evaluationPromise = fetch(`/api/databases/query?table=evaluations&id=${user.id}`).then(res => res.json());
@@ -727,7 +698,6 @@ const HomePage: React.FC = () => {
           const position = setting?.position === '1' ? '人工智能' : setting?.position === '2' ? '大数据' : setting?.position === '3' ? '物联网' : setting?.position === '4' ? '智能系统' : setting?.position;
           if(setting !== undefined ) setting.position = position || '未知岗位';
 
-          // 3. 从localStorage获取用户简历设置数据
           let resumeSetupData = null;
           try {
             const userDataKey = "userdata";
@@ -756,15 +726,12 @@ const HomePage: React.FC = () => {
     fetchAllData();
   }, []);
 
-  // 过滤用户数据
   const filteredUsers = usersData.filter(userData => {
-    // 获取关键信息用于搜索
     const fullName = userData.resumeSetupData?.fullName || '';
     const positionName = userData.resumeSetupData?.position?.name || userData.setting?.position || '';
     const interviewerName = userData.resumeSetupData?.interviewer?.name || userData.setting?.interviewer || '';
     const userName = userData.user.name || '';
     
-    // 将所有搜索字段转换为小写
     const searchLower = searchTerm.toLowerCase();
     
     return (
@@ -777,16 +744,16 @@ const HomePage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 p-4">
         <div className="flex flex-col items-center">
           <div className="relative">
-            <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+            <div className="w-16 h-16 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mb-4"></div>
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-8 h-8 bg-indigo-500 rounded-full animate-ping"></div>
+              <div className="w-8 h-8 bg-cyan-400 rounded-full animate-ping"></div>
             </div>
           </div>
-          <div className="text-xl font-semibold text-gray-700">加载评估数据中...</div>
-          <p className="text-gray-500 mt-2">正在获取候选人评估信息</p>
+          <div className="text-xl font-semibold text-gray-300">加载评估数据中...</div>
+          <p className="text-gray-400 mt-2">正在获取候选人评估信息</p>
         </div>
       </div>
     );
@@ -794,13 +761,13 @@ const HomePage: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
-        <div className="bg-white p-8 rounded-2xl shadow-md text-center max-w-md">
-          <div className="text-red-500 text-5xl mb-4">⚠️</div>
-          <h2 className="text-xl font-bold text-gray-800 mb-2">数据加载失败</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 p-4">
+        <div className="bg-gray-800 p-8 rounded-2xl shadow-2xl border border-cyan-400/20 text-center max-w-md">
+          <div className="text-red-400 text-5xl mb-4">⚠️</div>
+          <h2 className="text-xl font-bold text-white mb-2">数据加载失败</h2>
+          <p className="text-gray-300 mb-6">{error}</p>
           <button 
-            className="bg-indigo-500 hover:bg-indigo-600 text-white py-2 px-6 rounded-lg transition-colors"
+            className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white py-2 px-6 rounded-lg transition-all duration-300 shadow-lg"
             onClick={() => window.location.reload()}
           >
             重新加载
@@ -811,25 +778,25 @@ const HomePage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 p-6">
       <div className="max-w-6xl mx-auto">
         <header className="text-center mb-10 mt-2">
-          <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-3">
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+          <h1 className="text-3xl md:text-4xl font-extrabold mb-3">
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-400">
               面试评估仪表盘
             </span>
           </h1>
-          <p className="text-gray-600 max-w-2xl mx-auto">
+          <p className="text-gray-300 max-w-2xl mx-auto">
             可视化展示候选人面试表现，多维评估助力高效决策
           </p>
         </header>
         
-        <div className="bg-white rounded-2xl shadow-sm p-5 mb-8">
+        <div className="bg-gray-800/80 backdrop-blur-sm rounded-2xl p-5 mb-8 border border-cyan-400/10">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h2 className="text-xl font-bold text-gray-800">候选人评估报告</h2>
-              <div className="text-sm text-gray-500 mt-1">
-                共 <span className="font-semibold text-indigo-600">{filteredUsers.length}</span> 位候选人
+              <h2 className="text-xl font-bold text-white">候选人评估报告</h2>
+              <div className="text-sm text-gray-400 mt-1">
+                共 <span className="font-semibold text-cyan-400">{filteredUsers.length}</span> 位候选人
               </div>
             </div>
             
@@ -837,7 +804,7 @@ const HomePage: React.FC = () => {
               <input
                 type="text"
                 placeholder="搜索候选人、岗位或面试官..."
-                className="w-full px-4 py-2 pr-10 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500"
+                className="w-full px-4 py-2 pr-10 rounded-lg bg-gray-700 border border-cyan-400/30 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all duration-300"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -865,14 +832,14 @@ const HomePage: React.FC = () => {
             ))}
           </div>
         ) : (
-          <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
-            <div className="mx-auto bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full w-24 h-24 flex items-center justify-center mb-6">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="bg-gray-800/80 backdrop-blur-sm rounded-2xl p-12 text-center border border-cyan-400/10">
+            <div className="mx-auto bg-gradient-to-br from-cyan-900/30 to-blue-900/30 rounded-full w-24 h-24 flex items-center justify-center mb-6">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">未找到匹配的候选人</h3>
-            <p className="text-gray-600 max-w-md mx-auto">&quot;没有找到与 &quot;{searchTerm}&quot; 匹配的候选人，请尝试其他搜索词&quot;</p>
+            <h3 className="text-xl font-bold text-white mb-2">未找到匹配的候选人</h3>
+            <p className="text-gray-300 max-w-md mx-auto">&quot;没有找到与 &quot;{searchTerm}&quot; 匹配的候选人，请尝试其他搜索词&quot;</p>
           </div>
         )}
       </div>

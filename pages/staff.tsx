@@ -36,9 +36,9 @@ interface StageCardProps {
 
 // --- 更新渐变颜色方案 ---
 const totalScoreGradientColors = {
-  high: ['#22c55e', '#86efac'],
-  mid: ['#f59e0b', '#fde68a'],
-  low: ['#ef4444', '#fca5a5'],
+  high: ['#60a5fa', '#c084fc'], // 蓝色到紫色
+  mid: ['#f59e0b', '#fde68a'],   // 保持或改为蓝紫渐变
+  low: ['#ef4444', '#fca5a5'],   // 保持或改为深紫色
 };
 
 // --- 辅助函数 ---
@@ -79,14 +79,13 @@ const ProgressBar: React.FC<{
 const StageCard: React.FC<StageCardProps> = ({ title, stageKey, scores, onNavigate, compact = false }) => {
   const isTested = typeof scores !== 'string';
   const scoreColors = {
-  expertise: '#8b5cf6',      // 专业知识水平 (purple)
-  proficiency: '#3b82f6',    // 技能匹配度 (blue)
-  articulation: '#14b8a6',   // 语言表达能力 (teal)
-  reasoning: '#f97316',      // 逻辑思维能力 (orange)
-  innovation: '#10b981',     // 创新能力 (green)
-  resilience: '#ef4444'      // 应变抗压能力 (red)
-};
-
+    expertise: '#8b5cf6',      // 改为紫色系 #c084fc
+    proficiency: '#3b82f6',    // 改为蓝色系 #60a5fa  
+    articulation: '#14b8a6',   // 改为青色系 #22d3ee
+    reasoning: '#f97316',      // 保持橙色或改为紫色 #d8b4fe
+    innovation: '#10b981',     // 改为青色系 #22d3ee
+    resilience: '#ef4444'      // 改为紫色系 #c084fc
+  };
   return (
     <Card className={`${styles.stageCard} ${isTested ? styles.testedCard : styles.untestedCard} ${compact ? styles.compactStageCard : ''}`}>
       <div className={styles.stageCardHeader}>
@@ -452,48 +451,12 @@ const MainDashboard: React.FC = () => {
                 </p>
                 {typeof finalScores !== 'string' && (
                   <div className={styles.finalSkillsCompact}>
-                    <ProgressBar 
-                      label="专业知识"  // Expertise
-                      value={finalScores.expertise} 
-                      color="#8B5CF6"  // Purple
-                      showValue={true}
-                      compact={true}
-                    />
-                    <ProgressBar 
-                      label="技能匹配"  // Proficiency
-                      value={finalScores.proficiency} 
-                      color="#3B82F6"  // Blue
-                      showValue={true}
-                      compact={true}
-                    />
-                    <ProgressBar 
-                      label="语言表达"  // Articulation
-                      value={finalScores.articulation} 
-                      color="#14B8A6"  // Teal
-                      showValue={true}
-                      compact={true}
-                    />
-                    <ProgressBar 
-                      label="逻辑思维"  // Reasoning
-                      value={finalScores.reasoning} 
-                      color="#F97316"  // Orange
-                      showValue={true}
-                      compact={true}
-                    />
-                    <ProgressBar 
-                      label="创新能力"  // Innovation
-                      value={finalScores.innovation} 
-                      color="#10B981"  // Green
-                      showValue={true}
-                      compact={true}
-                    />
-                    <ProgressBar 
-                      label="应变抗压"  // Resilience
-                      value={finalScores.resilience} 
-                      color="#EF4444"  // Red
-                      showValue={true}
-                      compact={true}
-                    />
+                    <ProgressBar label="专业知识" value={finalScores.expertise} color="#c084fc" showValue={true} compact={true} />
+                    <ProgressBar label="技能匹配" value={finalScores.proficiency} color="#60a5fa" showValue={true} compact={true} />
+                    <ProgressBar label="语言表达" value={finalScores.articulation} color="#22d3ee" showValue={true} compact={true} />
+                    <ProgressBar label="逻辑思维" value={finalScores.reasoning} color="#d8b4fe" showValue={true} compact={true} />
+                    <ProgressBar label="创新能力" value={finalScores.innovation} color="#22d3ee" showValue={true} compact={true} />
+                    <ProgressBar label="应变抗压" value={finalScores.resilience} color="#c084fc" showValue={true} compact={true} />
                   </div>
                 )}
               </div>
