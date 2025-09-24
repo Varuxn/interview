@@ -401,20 +401,22 @@ const HumanEvalPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 py-8 px-4">
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">面试评估系统</h1>
+          <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
+            面试评估系统
+          </h1>
           <div className="flex items-center space-x-4">
             <div className="relative">
               <input 
                 type="text" 
                 placeholder="搜索候选人..." 
-                className="pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="pl-10 pr-4 py-2 rounded-lg border border-cyan-400/30 bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all"
               />
-              <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-cyan-400 w-5 h-5" />
             </div>
-            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center">
+            <button className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all flex items-center shadow-lg shadow-blue-500/20">
               <PlusIcon className="w-5 h-5 mr-1" />
               添加候选人
             </button>
@@ -422,13 +424,13 @@ const HumanEvalPage = () => {
         </div>
         
         {users.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-md p-8 text-center">
-            <FolderOpenIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-xl font-bold mb-2">暂无候选人数据</h2>
-            <p className="text-gray-600 mb-6">当前没有可评估的候选人，请添加新的候选人</p>
+          <div className="bg-gray-800 rounded-xl border border-cyan-400/20 shadow-lg shadow-cyan-500/10 p-8 text-center">
+            <FolderOpenIcon className="w-16 h-16 text-cyan-400 mx-auto mb-4" />
+            <h2 className="text-xl font-bold text-white mb-2">暂无候选人数据</h2>
+            <p className="text-gray-400 mb-6">当前没有可评估的候选人，请添加新的候选人</p>
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
+          <div className="bg-gray-800 rounded-xl border border-cyan-400/20 shadow-lg shadow-cyan-500/10 overflow-hidden mb-6">
             <div className="space-y-4 p-4">
               {users.map(user => (
                 <UserCard 
@@ -789,386 +791,423 @@ const UserCard: React.FC<{
     }
   };
 
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-      {/* 始终显示的头部卡片 */}
-      <div 
-        className={`flex items-center p-4 cursor-pointer transition-colors ${
-          isExpanded ? 'bg-blue-50 border-b border-gray-200' : 'hover:bg-gray-50'
-        }`}
-        onClick={() => toggleExpand(user.id)}
-      >
-        <div className="flex items-center w-2/5">
-          <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center mr-4">
-            <UserIcon className="text-gray-500 w-6 h-6" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold">{user.fullName}</h2>
-            <p className="text-gray-600 text-sm">{user.position}</p>
-          </div>
+  // UserCard 组件的 return 部分
+return (
+  <div className="bg-gray-800 rounded-xl border border-cyan-400/20 overflow-hidden transition-all hover:border-cyan-400/40">
+    {/* 始终显示的头部卡片 */}
+    <div 
+      className={`flex items-center p-4 cursor-pointer transition-all ${
+        isExpanded ? 'bg-blue-900/30 border-b border-cyan-400/30' : 'hover:bg-gray-700/50'
+      }`}
+      onClick={() => toggleExpand(user.id)}
+    >
+      <div className="flex items-center w-2/5">
+        <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center mr-4 border border-cyan-400/30">
+          <UserIcon className="text-cyan-400 w-6 h-6" />
         </div>
-        
-        <div className="w-1/5">
-          <span className={`px-3 py-1 rounded-full text-sm ${
-            user.status === '评估中' 
-              ? 'bg-yellow-100 text-yellow-800' 
-              : 'bg-green-100 text-green-800'
-          }`}>
-            {user.status}
-          </span>
-        </div>
-        
-        <div className="w-1/5">
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
-              className="bg-blue-600 h-2 rounded-full" 
-              style={{ width: `${(selectedSession + 1) / user.sessions.length * 100}%` }}
-            ></div>
-          </div>
-          <p className="text-gray-600 text-xs mt-1">
-            已完成 {selectedSession + 1}/{user.sessions.length} 个环节
-          </p>
-        </div>
-        
-        <div className="w-1/5 flex justify-end">
-          <div className="flex space-x-2">
-            {user.sessions.map((session, index) => (
-              <button
-                key={session.id}
-                className={`px-4 py-2 rounded-lg text-sm ${
-                  selectedSession === index
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSessionChange(index);
-                }}
-              >
-                {session.name}
-              </button>
-            ))}
-          </div>
+        <div>
+          <h2 className="text-lg font-semibold text-white">{user.fullName}</h2>
+          <p className="text-cyan-300 text-sm">{user.position}</p>
         </div>
       </div>
       
-      {/* 展开内容 */}
-      <AnimatePresence>
-        {isExpanded && currentSession && currentRound && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="p-6 border-t border-gray-200"
-          >
-            <div className="flex flex-col gap-6">
-              {/* 第一行：视频和雷达图 */}
-              <div className="flex flex-col lg:flex-row gap-6">
-                {/* 视频区域 - 2/3宽度 */}
-                <div className="w-full lg:w-2/3">
-                  <div className="bg-gray-800 rounded-xl overflow-hidden aspect-video relative">
-                    {currentRound.video ? (
-                      <>
-                        <video 
-                          ref={videoRef}
-                          src={currentRound.video}
-                          className="w-full h-full object-cover"
-                          onTimeUpdate={handleVideoTimeUpdate}
-                          onEnded={() => setIsPlaying(false)}
-                        />
+      <div className="w-1/5">
+        <span className={`px-3 py-1 rounded-full text-sm ${
+          user.status === '评估中' 
+            ? 'bg-yellow-900/50 text-yellow-300 border border-yellow-600/30' 
+            : 'bg-green-900/50 text-green-300 border border-green-600/30'
+        }`}>
+          {user.status}
+        </span>
+      </div>
+      
+      <div className="w-1/5">
+        <div className="w-full bg-gray-700 rounded-full h-2">
+          <div 
+            className="bg-gradient-to-r from-cyan-500 to-blue-600 h-2 rounded-full" 
+            style={{ width: `${(selectedSession + 1) / user.sessions.length * 100}%` }}
+          ></div>
+        </div>
+        <p className="text-gray-400 text-xs mt-1">
+          已完成 {selectedSession + 1}/{user.sessions.length} 个环节
+        </p>
+      </div>
+      
+      <div className="w-1/5 flex justify-end">
+        <div className="flex space-x-2">
+          {user.sessions.map((session, index) => (
+            <button
+              key={session.id}
+              className={`px-4 py-2 rounded-lg text-sm transition-all ${
+                selectedSession === index
+                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/20'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600'
+              }`}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleSessionChange(index);
+              }}
+            >
+              {session.name}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+    
+    {/* 展开内容 */}
+    <AnimatePresence>
+      {isExpanded && currentSession && currentRound && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
+          className="p-6 border-t border-cyan-400/20"
+        >
+          <div className="flex flex-col gap-6">
+            {/* 第一行：视频和雷达图 */}
+            <div className="flex flex-col lg:flex-row gap-6">
+              {/* 视频区域 - 2/3宽度 */}
+              <div className="w-full lg:w-2/3">
+                <div className="bg-gray-900 rounded-xl border border-cyan-400/20 overflow-hidden aspect-video relative">
+                  {currentRound.video ? (
+                    <>
+                      <video 
+                        ref={videoRef}
+                        src={currentRound.video}
+                        className="w-full h-full object-cover"
+                        onTimeUpdate={handleVideoTimeUpdate}
+                        onEnded={() => setIsPlaying(false)}
+                      />
+                      
+                      <audio 
+                        ref={audioRef} 
+                        src={currentRound.audio}
+                        onEnded={() => setIsPlaying(false)}
+                      />
+                      
+                      {/* 视频控制条 */}
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/70 p-2">
+                        <div className="w-full bg-gray-700 rounded-full h-1.5 mb-2">
+                          <div 
+                            className="bg-gradient-to-r from-cyan-500 to-blue-600 h-1.5 rounded-full" 
+                            style={{ width: `${videoProgress}%` }}
+                          ></div>
+                        </div>
                         
-                        <audio 
-                          ref={audioRef} 
-                          src={currentRound.audio}
-                          onEnded={() => setIsPlaying(false)}
-                        />
-                        
-                        {/* 视频控制条 */}
-                        <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 p-2">
-                          <div className="w-full bg-gray-600 rounded-full h-1.5 mb-2">
-                            <div 
-                              className="bg-blue-500 h-1.5 rounded-full" 
-                              style={{ width: `${videoProgress}%` }}
-                            ></div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={togglePlay}
+                              className="text-white hover:bg-gray-600/50 p-1 rounded-full transition-colors"
+                            >
+                              {isPlaying ? (
+                                <PauseIcon className="w-5 h-5" />
+                              ) : (
+                                <PlayIcon className="w-5 h-5" />
+                              )}
+                            </button>
+                            <span className="text-xs text-gray-300">
+                              {videoProgress.toFixed(0)}%
+                            </span>
                           </div>
                           
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              <button
-                                onClick={togglePlay}
-                                className="text-white hover:bg-gray-700 p-1 rounded-full"
-                              >
-                                {isPlaying ? (
-                                  <PauseIcon className="w-5 h-5" />
-                                ) : (
-                                  <PlayIcon className="w-5 h-5" />
-                                )}
-                              </button>
-                              <span className="text-xs text-gray-300">
-                                {videoProgress.toFixed(0)}%
-                              </span>
-                            </div>
-                            
-                            <button className="text-white hover:bg-gray-700 p-1 rounded-full">
-                              <FullscreenIcon className="w-5 h-5" />
-                            </button>
-                          </div>
+                          <button className="text-white hover:bg-gray-600/50 p-1 rounded-full transition-colors">
+                            <FullscreenIcon className="w-5 h-5" />
+                          </button>
                         </div>
-                      </>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                      <div className="text-center text-white p-6">
+                        <VideoCameraSlashIcon className="w-16 h-16 mx-auto mb-4 text-cyan-400" />
+                        <h3 className="text-xl font-bold mb-2">视频文件缺失</h3>
+                        <p className="text-gray-300">该环节没有可播放的视频文件</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* 雷达图/聊天记录区域 - 1/3宽度 */}
+              <div className="w-full lg:w-1/3">
+                <div className="bg-gray-800 rounded-xl border border-cyan-400/20 p-4 h-full flex flex-col">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-medium text-white">
+                      {showChat ? '聊天记录' : '能力评估'}
+                    </h3>
+                    <div className="flex space-x-2">
+                      <button
+                        className={`px-3 py-1 rounded-lg text-sm transition-all ${
+                          !showChat 
+                            ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white border border-cyan-400/30'
+                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600'
+                        }`}
+                        onClick={() => setShowChat(false)}
+                      >
+                        雷达图
+                      </button>
+                      <button
+                        className={`px-3 py-1 rounded-lg text-sm transition-all ${
+                          showChat 
+                            ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white border border-cyan-400/30'
+                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600'
+                        }`}
+                        onClick={() => setShowChat(true)}
+                      >
+                        聊天记录
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="flex-grow overflow-auto">
+                    {showChat ? (
+                      currentRound.questions.length > 0 ? (
+                        <div className="space-y-4 max-h-96 overflow-y-auto p-2">
+                          {currentRound.questions.map((question, index) => (
+                            <div key={index} className="space-y-2">
+                              <div className="bg-blue-900/30 p-3 rounded-lg border border-blue-700/30">
+                                <div className="flex items-start">
+                                  <span className="font-semibold text-blue-300 mr-2">Q:</span>
+                                  <p className="text-gray-200">{question}</p>
+                                </div>
+                              </div>
+                              <div className="bg-green-900/30 p-3 rounded-lg ml-6 border border-green-700/30">
+                                <div className="flex items-start">
+                                  <span className="font-semibold text-green-300 mr-2">A:</span>
+                                  <p className="text-gray-200">{currentRound.answers[index] || '无回答内容'}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="h-64 flex flex-col items-center justify-center text-gray-400">
+                          <DocumentTextIcon className="w-12 h-12 mb-4 text-cyan-400" />
+                          <p>该环节没有聊天记录</p>
+                        </div>
+                      )
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gray-700">
-                        <div className="text-center text-white p-6">
-                          <VideoCameraSlashIcon className="w-16 h-16 mx-auto mb-4" />
-                          <h3 className="text-xl font-bold mb-2">视频文件缺失</h3>
-                          <p className="text-gray-300">该环节没有可播放的视频文件</p>
+                      <div className="h-80">
+                        <Radar 
+                          data={{
+                            labels: metrics,
+                            datasets: [
+                              {
+                                label: '人工评分',
+                                data: scores,
+                                backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                                borderColor: '#60a5fa',
+                                pointBackgroundColor: '#60a5fa',
+                                pointBorderColor: '#fff',
+                                pointHoverBackgroundColor: '#fff',
+                                pointHoverBorderColor: '#60a5fa'
+                              },
+                              {
+                                label: 'AI评分',
+                                data: aiScores,
+                                backgroundColor: 'rgba(156, 163, 175, 0.1)',
+                                borderColor: '#9ca3af',
+                                pointBackgroundColor: '#9ca3af',
+                                pointBorderColor: '#fff',
+                                pointHoverBackgroundColor: '#fff',
+                                pointHoverBorderColor: '#9ca3af'
+                              }
+                            ]
+                          }}
+                          options={{
+                            ...radarOptions,
+                            scales: {
+                              r: {
+                                ...radarOptions.scales.r,
+                                angleLines: {
+                                  display: true,
+                                  color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                grid: {
+                                  color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                pointLabels: {
+                                  font: {
+                                    size: 10,
+                                    family: 'sans-serif'
+                                  },
+                                  color: '#d1d5db'
+                                },
+                                ticks: {
+                                  ...radarOptions.scales.r.ticks,
+                                  color: '#9ca3af'
+                                }
+                              }
+                            },
+                            plugins: {
+                              ...radarOptions.plugins,
+                              legend: {
+                                ...radarOptions.plugins.legend,
+                                labels: {
+                                  ...radarOptions.plugins.legend.labels,
+                                  color: '#d1d5db'
+                                }
+                              }
+                            }
+                          }}
+                        />
+                        <div className="mt-2 text-center text-sm text-gray-400">
+                          {scores === aiScores ? (
+                            <p>人工评分尚未录入，当前显示AI评分</p>
+                          ) : (
+                            <p>蓝色: 人工评分 | 灰色: AI评分</p>
+                          )}
                         </div>
                       </div>
                     )}
                   </div>
                 </div>
+              </div>
+            </div>
+            
+            {/* 第二行：轮次/波形和评分 */}
+            <div className="flex flex-col lg:flex-row gap-6">
+              {/* 左侧：轮次和波形 - 1/3宽度 */}
+              <div className="w-full lg:w-1/3 flex flex-col gap-6">
+                {/* 轮数选择器 - 下拉式 */}
+                <div className="bg-gray-800 rounded-xl border border-cyan-400/20 p-4">
+                  <h3 className="font-medium text-white mb-3">选择轮次</h3>
+                  <div className="relative">
+                    <select
+                      value={selectedRound}
+                      onChange={(e) => {
+                        const newRound = parseInt(e.target.value);
+                        setSelectedRound(newRound);
+                        setIsPlaying(false);
+                        setVideoProgress(0);
+                        if (audioRef.current) {
+                          audioRef.current.pause();
+                        }
+                        if (videoRef.current) {
+                          videoRef.current.pause();
+                        }
+                      }}
+                      className="w-full p-3 pr-10 border border-cyan-400/30 rounded-lg appearance-none bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all"
+                    >
+                      {currentSession.rounds.map((round, index) => (
+                        <option key={round.id} value={index}>
+                          轮次 {index + 1}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-cyan-400">
+                      <ChevronDownIcon className="w-5 h-5" />
+                    </div>
+                  </div>
+                </div>
                 
-                {/* 雷达图/聊天记录区域 - 1/3宽度 */}
-                <div className="w-full lg:w-1/3">
-                  <div className="bg-white rounded-xl border border-gray-200 p-4 h-full flex flex-col">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="font-medium">
-                        {showChat ? '聊天记录' : '能力评估'}
-                      </h3>
-                      <div className="flex space-x-2">
-                        <button
-                          className={`px-3 py-1 rounded-lg text-sm ${
-                            !showChat 
-                              ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          }`}
-                          onClick={() => setShowChat(false)}
-                        >
-                          雷达图
-                        </button>
-                        <button
-                          className={`px-3 py-1 rounded-lg text-sm ${
-                            showChat 
-                              ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          }`}
-                          onClick={() => setShowChat(true)}
-                        >
-                          聊天记录
-                        </button>
+                {/* 音频分析图 */}
+                <div className="bg-gray-800 rounded-xl border border-cyan-400/20 p-4 flex-grow">
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="font-medium text-white">音频分析</h3>
+                    <div className="flex space-x-2">
+                      <button
+                        className={`text-xs px-2 py-1 rounded transition-all ${
+                          waveformType === 'amplitude'
+                            ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white border border-cyan-400/30'
+                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600'
+                        }`}
+                        onClick={() => setWaveformType('amplitude')}
+                      >
+                        响度图
+                      </button>
+                      <button
+                        className={`text-xs px-2 py-1 rounded transition-all ${
+                          waveformType === 'vad'
+                            ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white border border-cyan-400/30'
+                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600'
+                        }`}
+                        onClick={() => setWaveformType('vad')}
+                      >
+                        语速图
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="h-40 bg-gray-900 rounded-lg p-3 relative border border-cyan-400/10">
+                    {isAnalyzing ? (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-cyan-500"></div>
                       </div>
-                    </div>
-                    
-                    <div className="flex-grow overflow-auto">
-                      {showChat ? (
-                        currentRound.questions.length > 0 ? (
-                          <div className="space-y-4 max-h-96 overflow-y-auto p-2">
-                            {currentRound.questions.map((question, index) => (
-                              <div key={index} className="space-y-2">
-                                <div className="bg-blue-50 p-3 rounded-lg">
-                                  <div className="flex items-start">
-                                    <span className="font-semibold text-blue-700 mr-2">Q:</span>
-                                    <p>{question}</p>
-                                  </div>
-                                </div>
-                                <div className="bg-green-50 p-3 rounded-lg ml-6">
-                                  <div className="flex items-start">
-                                    <span className="font-semibold text-green-700 mr-2">A:</span>
-                                    <p>{currentRound.answers[index] || '无回答内容'}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="h-64 flex flex-col items-center justify-center text-gray-500">
-                            <DocumentTextIcon className="w-12 h-12 mb-4" />
-                            <p>该环节没有聊天记录</p>
-                          </div>
-                        )
-                      ) : (
-                        <div className="h-80">
-                          <Radar 
-                            data={{
-                              labels: metrics,
-                              datasets: [
-                                {
-                                  label: '人工评分',
-                                  data: scores,
-                                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                                  borderColor: 'rgb(59, 130, 246)',
-                                  pointBackgroundColor: 'rgb(59, 130, 246)',
-                                  pointBorderColor: '#fff',
-                                  pointHoverBackgroundColor: '#fff',
-                                  pointHoverBorderColor: 'rgb(59, 130, 246)'
-                                },
-                                {
-                                  label: 'AI评分',
-                                  data: aiScores,
-                                  backgroundColor: 'rgba(107, 114, 128, 0.1)',
-                                  borderColor: 'rgb(107, 114, 128)',
-                                  pointBackgroundColor: 'rgb(107, 114, 128)',
-                                  pointBorderColor: '#fff',
-                                  pointHoverBackgroundColor: '#fff',
-                                  pointHoverBorderColor: 'rgb(107, 114, 128)'
-                                }
-                              ]
-                            }}
-                            options={radarOptions}
-                          />
-                          <div className="mt-2 text-center text-sm text-gray-500">
-                            {scores === aiScores ? (
-                              <p>人工评分尚未录入，当前显示AI评分</p>
-                            ) : (
-                              <p>蓝色: 人工评分 | 灰色: AI评分</p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                    ) : !audioData ? (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
+                        <DocumentTextIcon className="w-8 h-8 mb-2 text-cyan-400" />
+                        <p className="text-sm">无音频数据</p>
+                      </div>
+                    ) : (
+                      <canvas 
+                        ref={canvasRef} 
+                        className="w-full h-full bg-gray-800 rounded"
+                        width={300}
+                        height={128}
+                      />
+                    )}
+                  </div>
+                  
+                  <div className="mt-2 text-xs text-gray-400">
+                    {waveformType === 'amplitude' ? (
+                      <p>显示音频振幅随时间的变化，振幅越高表示声音越大</p>
+                    ) : (
+                      <p>绿色区域表示检测到声音活动，可用于分析语速和停顿</p>
+                    )}
                   </div>
                 </div>
               </div>
               
-              {/* 第二行：轮次/波形和评分 */}
-              <div className="flex flex-col lg:flex-row gap-6">
-                {/* 左侧：轮次和波形 - 1/3宽度 */}
-                <div className="w-full lg:w-1/3 flex flex-col gap-6">
-                  {/* 轮数选择器 - 下拉式 */}
-                  <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <h3 className="font-medium mb-3">选择轮次</h3>
-                    <div className="relative">
-                      <select
-                        value={selectedRound}
-                        onChange={(e) => {
-                          const newRound = parseInt(e.target.value);
-                          setSelectedRound(newRound);
-                          setIsPlaying(false);
-                          setVideoProgress(0);
-                          if (audioRef.current) {
-                            audioRef.current.pause();
-                          }
-                          if (videoRef.current) {
-                            videoRef.current.pause();
-                          }
-                        }}
-                        className="w-full p-3 pr-10 border border-gray-300 rounded-lg appearance-none bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                      >
-                        {currentSession.rounds.map((round, index) => (
-                          <option key={round.id} value={index}>
-                            轮次 {index + 1}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
-                        <ChevronDownIcon className="w-5 h-5" />
-                      </div>
-                    </div>
+              {/* 右侧：评分系统 - 2/3宽度 */}
+              <div className="w-full lg:w-2/3">
+                <div className="bg-gray-800 rounded-xl border border-cyan-400/20 p-4 h-full">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-medium text-white">面试评分</h3>
+                    <span className="text-sm text-cyan-300">环节: {currentSession.name}</span>
                   </div>
                   
-                  {/* 音频分析图 */}
-                  <div className="bg-white rounded-xl border border-gray-200 p-4 flex-grow">
-                    <div className="flex justify-between items-center mb-3">
-                      <h3 className="font-medium">音频分析</h3>
-                      <div className="flex space-x-2">
-                        <button
-                          className={`text-xs px-2 py-1 rounded ${
-                            waveformType === 'amplitude'
-                              ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          }`}
-                          onClick={() => setWaveformType('amplitude')}
-                        >
-                          响度图
-                        </button>
-                        <button
-                          className={`text-xs px-2 py-1 rounded ${
-                            waveformType === 'vad'
-                              ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          }`}
-                          onClick={() => setWaveformType('vad')}
-                        >
-                          语速图
-                        </button>
-                      </div>
-                    </div>
-                    
-                    <div className="h-40 bg-gray-50 rounded-lg p-3 relative">
-                      {isAnalyzing ? (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-                        </div>
-                      ) : !audioData ? (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500">
-                          <DocumentTextIcon className="w-8 h-8 mb-2" />
-                          <p className="text-sm">无音频数据</p>
-                        </div>
-                      ) : (
-                        <canvas 
-                          ref={canvasRef} 
-                          className="w-full h-full bg-white rounded"
-                          width={300}
-                          height={128}
-                        />
-                      )}
-                    </div>
-                    
-                    <div className="mt-2 text-xs text-gray-500">
-                      {waveformType === 'amplitude' ? (
-                        <p>显示音频振幅随时间的变化，振幅越高表示声音越大</p>
-                      ) : (
-                        <p>绿色区域表示检测到声音活动，可用于分析语速和停顿</p>
-                      )}
-                    </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    {metrics.map((metric, index) => (
+                      <ScoreInput
+                        key={index}
+                        label={metric}
+                        value={scores[index]}
+                        onChange={(value) => handleScoreChange(index, value)}
+                      />
+                    ))}
                   </div>
-                </div>
-                
-                {/* 右侧：评分系统 - 2/3宽度 */}
-                <div className="w-full lg:w-2/3">
-                  <div className="bg-white rounded-xl border border-gray-200 p-4 h-full">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="font-medium">面试评分</h3>
-                      <span className="text-sm text-gray-500">环节: {currentSession.name}</span>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      {metrics.map((metric, index) => (
-                        <ScoreInput
-                          key={index}
-                          label={metric}
-                          value={scores[index]}
-                          onChange={(value) => handleScoreChange(index, value)}
-                        />
-                      ))}
-                    </div>
-                    
-                    <div className="mt-6 flex justify-between">
-                      <button
-                        onClick={() => toggleExpand(user.id)}
-                        className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
-                      >
-                        收起
-                      </button>
-                      <button 
-                        onClick={saveScores}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                      >
-                        保存评分
-                      </button>
-                    </div>
+                  
+                  <div className="mt-6 flex justify-between">
+                    <button
+                      onClick={() => toggleExpand(user.id)}
+                      className="px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-all border border-gray-600"
+                    >
+                      收起
+                    </button>
+                    <button 
+                      onClick={saveScores}
+                      className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all shadow-lg shadow-blue-500/20"
+                    >
+                      保存评分
+                    </button>
                   </div>
                 </div>
               </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  </div>
+);
 };
 
 // 评分输入组件
+// ScoreInput 组件的修改
 const ScoreInput: React.FC<{
   label: string;
   value: number;
@@ -1177,8 +1216,8 @@ const ScoreInput: React.FC<{
   return (
     <div>
       <div className="flex justify-between mb-1">
-        <span className="text-sm font-medium">{label}</span>
-        <span className="text-sm font-mono">{value}</span>
+        <span className="text-sm font-medium text-gray-300">{label}</span>
+        <span className="text-sm font-mono text-cyan-300">{value}</span>
       </div>
       <div className="flex items-center space-x-2">
         <input
@@ -1188,7 +1227,7 @@ const ScoreInput: React.FC<{
           step="5"
           value={value}
           onChange={(e) => onChange(parseFloat(e.target.value))}
-          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
+          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
         />
         <input
           type="number"
@@ -1202,7 +1241,7 @@ const ScoreInput: React.FC<{
               onChange(newValue);
             }
           }}
-          className="w-16 border border-gray-300 rounded px-2 py-1 text-sm"
+          className="w-16 border border-cyan-400/30 bg-gray-700 text-white rounded px-2 py-1 text-sm"
         />
       </div>
     </div>
