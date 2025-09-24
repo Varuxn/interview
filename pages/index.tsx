@@ -23,7 +23,14 @@ interface TechBoxProps extends ComponentProps<typeof motion.div> {
   aspectRatio?: string;
 }
 
-// --- 背景粒子组件 (无改动) ---
+interface TechDecorationBoxProps {
+  delay?: number;
+  size?: "small" | "medium" | "large";
+  color?: "blue" | "purple" | "teal" | "indigo";
+  style?: React.CSSProperties;
+}
+
+// --- 背景粒子组件 ---
 const ParticleBackground = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
@@ -45,7 +52,7 @@ const ParticleBackground = () => {
     window.addEventListener('resize', resizeCanvas);
     
     const particles: Particle[] = [];
-    const particleCount = 80;
+    const particleCount = 60;
     const colors = ['#407BBF', '#5D8FDC', '#7BA9FF', '#9BC2FF', '#BDDBFF'];
     
     for (let i = 0; i < particleCount; i++) {
@@ -53,10 +60,10 @@ const ParticleBackground = () => {
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
         size: Math.random() * 2 + 0.5,
-        speedX: (Math.random() - 0.5) * 0.5,
-        speedY: (Math.random() - 0.5) * 0.5,
+        speedX: (Math.random() - 0.5) * 0.3,
+        speedY: (Math.random() - 0.5) * 0.3,
         color: colors[Math.floor(Math.random() * colors.length)],
-        opacity: Math.random() * 0.6 + 0.2
+        opacity: Math.random() * 0.4 + 0.2
       });
     }
     
@@ -90,39 +97,51 @@ const ParticleBackground = () => {
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 w-full h-full opacity-30"
+      className="absolute inset-0 w-full h-full opacity-20"
     />
   );
 };
 
-// --- 科技感装饰方块组件 ---
-const TechDecorationBox = ({ delay = 0, size = "medium", color = "blue" }) => {
-  const colorClasses = {
+// --- 修复后的科技感装饰方块组件 ---
+const TechDecorationBox = ({ delay = 0, size = "medium", color = "blue", style = {} }: TechDecorationBoxProps) => {
+  const colorClasses: Record<string, string> = {
     blue: "from-cyan-500/20 to-blue-600/20 border-cyan-400/30",
     purple: "from-purple-500/20 to-indigo-600/20 border-purple-400/30",
     teal: "from-teal-500/20 to-cyan-600/20 border-teal-400/30",
     indigo: "from-indigo-500/20 to-blue-600/20 border-indigo-400/30"
   };
   
-  const sizeClasses = {
-    small: "w-16 h-16",
-    medium: "w-24 h-24",
-    large: "w-32 h-32"
+  const sizeClasses: Record<string, string> = {
+    small: "w-12 h-12",
+    medium: "w-16 h-16",
+    large: "w-20 h-20"
   };
   
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay, duration: 0.8, ease: "easeOut" }}
-      className={`absolute ${sizeClasses[size]} bg-gradient-to-br ${colorClasses[color]} border rounded-xl backdrop-blur-sm shadow-lg`}
+      initial={{ opacity: 0, scale: 0, rotate: 0 }}
+      animate={{ opacity: 1, scale: 1, rotate: 45 }}
+      transition={{ delay, duration: 1.2, ease: "easeOut" }}
+      className={`absolute ${sizeClasses[size]} bg-gradient-to-br ${colorClasses[color]} border rounded-lg backdrop-blur-sm shadow-lg`}
+      style={style}
     />
   );
 };
 
-// --- 科技感方框组件 ---
-const TechBox = ({ image, index, aspectRatio = "aspect-[4/3]", ...rest }: TechBoxProps) => {
+// --- 优化的科技感方框组件 ---
+const TechBox = ({ image, index, aspectRatio = "aspect-auto", ...rest }: TechBoxProps) => {
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const img = new Image();
+    img.onload = () => {
+      setImageDimensions({ width: img.width, height: img.height });
+      setImageLoaded(true);
+    };
+    img.src = image;
+  }, [image]);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!cardRef.current) return;
@@ -132,9 +151,9 @@ const TechBox = ({ image, index, aspectRatio = "aspect-[4/3]", ...rest }: TechBo
     const y = e.clientY - rect.top;
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
-    const rotateY = ((x - centerX) / centerX) * 5;
-    const rotateX = ((centerY - y) / centerY) * 5;
-    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+    const rotateY = ((x - centerX) / centerX) * 8;
+    const rotateX = ((centerY - y) / centerY) * 8;
+    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.05, 1.05, 1.05)`;
   };
 
   const handleMouseLeave = () => {
@@ -143,115 +162,207 @@ const TechBox = ({ image, index, aspectRatio = "aspect-[4/3]", ...rest }: TechBo
     }
   };
 
+  const getOptimalAspectRatio = () => {
+    if (!imageLoaded) return "aspect-[4/3]";
+    const ratio = imageDimensions.width / imageDimensions.height;
+    if (ratio > 1.5) return "aspect-[16/9]";
+    if (ratio > 1.2) return "aspect-[4/3]";
+    if (ratio < 0.8) return "aspect-[3/4]";
+    return "aspect-square";
+  };
+
   return (
     <motion.div
       ref={cardRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      initial={{ opacity: 0, scale: 0.9, y: 20 }}
+      initial={{ opacity: 0, scale: 0.8, y: 30 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       transition={{ 
-        delay: index * 0.1 + 0.5, 
-        duration: 0.6,
+        delay: index * 0.15 + 0.3, 
+        duration: 0.8,
         ease: [0.25, 0.46, 0.45, 0.94]
       }}
       {...rest}
-      className={`relative p-3 bg-gradient-to-br from-cyan-900/15 to-blue-900/10 backdrop-blur-md border border-cyan-400/30 rounded-xl shadow-2xl transition-all duration-300 ease-out cursor-pointer overflow-hidden group hover:border-cyan-400/60 hover:shadow-cyan-500/20 ${rest.className}`}
+      className={`relative p-2 bg-gradient-to-br from-slate-800/20 via-blue-900/10 to-purple-900/20 backdrop-blur-md border border-cyan-400/20 rounded-2xl shadow-2xl transition-all duration-500 ease-out cursor-pointer overflow-hidden group hover:border-cyan-400/50 hover:shadow-cyan-500/30 ${rest.className}`}
     >
-      {/* 科技感光效 */}
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+      {/* 动态光效 */}
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/8 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1200" />
       
-      <div className={`w-full h-full rounded-lg overflow-hidden ${aspectRatio}`}>
-        <img
-          src={image}
-          alt={`页面预览 ${index + 1}`}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
+      <div className={`w-full h-full rounded-xl overflow-hidden ${getOptimalAspectRatio()}`}>
+        {imageLoaded ? (
+          <img
+            src={image}
+            alt={`页面预览 ${index + 1}`}
+            className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110 group-hover:brightness-110"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center">
+            <div className="animate-spin w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full" />
+          </div>
+        )}
       </div>
       
-      {/* 科技感角标装饰 */}
-      <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-cyan-400/70 rounded-tl-lg transition-colors duration-300 group-hover:border-cyan-300" />
-      <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-cyan-400/70 rounded-tr-lg transition-colors duration-300 group-hover:border-cyan-300" />
-      <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-cyan-400/70 rounded-bl-lg transition-colors duration-300 group-hover:border-cyan-300" />
-      <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-cyan-400/70 rounded-br-lg transition-colors duration-300 group-hover:border-cyan-300" />
+      {/* 科技感边角装饰 */}
+      <div className="absolute top-1 left-1 w-3 h-3 border-t-2 border-l-2 border-cyan-400/60 rounded-tl-xl transition-all duration-300 group-hover:border-cyan-300 group-hover:w-4 group-hover:h-4" />
+      <div className="absolute top-1 right-1 w-3 h-3 border-t-2 border-r-2 border-cyan-400/60 rounded-tr-xl transition-all duration-300 group-hover:border-cyan-300 group-hover:w-4 group-hover:h-4" />
+      <div className="absolute bottom-1 left-1 w-3 h-3 border-b-2 border-l-2 border-cyan-400/60 rounded-bl-xl transition-all duration-300 group-hover:border-cyan-300 group-hover:w-4 group-hover:h-4" />
+      <div className="absolute bottom-1 right-1 w-3 h-3 border-b-2 border-r-2 border-cyan-400/60 rounded-br-xl transition-all duration-300 group-hover:border-cyan-300 group-hover:w-4 group-hover:h-4" />
       
       {/* 悬浮光晕效果 */}
-      <div className="absolute inset-0 rounded-xl bg-cyan-500/0 group-hover:bg-cyan-500/5 transition-all duration-500" />
+      <div className="absolute inset-0 rounded-2xl bg-cyan-500/0 group-hover:bg-cyan-500/10 transition-all duration-700" />
+      
+      {/* 序号指示器 */}
+      <div className="absolute top-2 right-2 w-6 h-6 bg-gradient-to-br from-cyan-500/80 to-blue-600/80 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        {index + 1}
+      </div>
     </motion.div>
   );
 };
 
-// --- 右侧页面展示组件 ---
+// --- 全新设计的右侧页面展示组件 ---
 const PagesShowcase = () => {
-  // 优化布局数据，确保在有限空间内合理展示
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+
+  // 页面数据配置
   const pagesData = [
     { 
       id: 1, 
-      src: '/pages/1.png', 
-      className: 'col-span-2 row-span-2',
-      aspectRatio: 'aspect-[4/3]'
+      src: '/img/demo.png', 
+      title: '面试主界面',
+      description: '功能展示预览',
+      position: 'primary'
     },
     { 
       id: 2, 
-      src: '/pages/2.png', 
-      className: 'col-span-1 row-span-1',
-      aspectRatio: 'aspect-[4/3]'
+      src: '/img/boss.png', 
+      title: '面试官视图',
+      description: '面试流程管控',
+      position: 'secondary'
     },
     { 
       id: 3, 
-      src: '/pages/3.png', 
-      className: 'col-span-1 row-span-1',
-      aspectRatio: 'aspect-[4/3]'
+      src: '/img/admin.png', 
+      title: '管理员面板',
+      description: '系统管理与配置',
+      position: 'secondary'
     },
     { 
       id: 4, 
-      src: '/pages/4.png', 
-      className: 'col-span-1 row-span-1',
-      aspectRatio: 'aspect-[4/3]'
+      src: '/img/humaneval.png', 
+      title: '人工评估',
+      description: '专业评估系统',
+      position: 'tertiary'
     },
     { 
       id: 5, 
-      src: '/pages/5.png', 
-      className: 'col-span-2 row-span-1',
-      aspectRatio: 'aspect-[4/3]'
+      src: '/img/setting.png', 
+      title: '系统设置',
+      description: '个性化配置',
+      position: 'tertiary'
+    },
+    { 
+      id: 6, 
+      src: '/img/staff.png', 
+      title: '评测结果',
+      description: '查看面试结果',
+      position: 'tertiary'
     }
   ];
 
+  const getGridClass = (position: string, index: number) => {
+    switch (position) {
+      case 'primary':
+        return 'col-span-2 row-span-2';
+      case 'secondary':
+        return 'col-span-1 row-span-1';
+      case 'tertiary':
+        return 'col-span-1 row-span-1';
+      default:
+        return 'col-span-1 row-span-1';
+    }
+  };
+
   return (
-    <div className="relative w-full h-full flex items-center justify-center p-4 lg:p-6 overflow-hidden">
+    <div className="relative w-full h-full flex items-center justify-center p-3 lg:p-4 overflow-hidden">
       <ParticleBackground />
       
-      {/* 添加科技感装饰方块 */}
-      <TechDecorationBox delay={0.2} size="small" color="blue" style={{ top: '10%', left: '5%' }} />
-      <TechDecorationBox delay={0.4} size="medium" color="purple" style={{ top: '15%', right: '8%' }} />
-      <TechDecorationBox delay={0.6} size="small" color="teal" style={{ bottom: '20%', left: '7%' }} />
-      <TechDecorationBox delay={0.8} size="large" color="indigo" style={{ bottom: '10%', right: '5%', opacity: 0.3 }} />
+      {/* 科技感装饰元素 - 调整位置以适应较小空间 */}
+      <TechDecorationBox 
+        delay={0.2} 
+        size="small" 
+        color="blue" 
+        style={{ top: '12%', left: '8%' }} 
+      />
+      <TechDecorationBox 
+        delay={0.5} 
+        size="small" 
+        color="purple" 
+        style={{ top: '8%', right: '12%' }} 
+      />
+      <TechDecorationBox 
+        delay={0.8} 
+        size="small" 
+        color="teal" 
+        style={{ bottom: '20%', left: '5%' }} 
+      />
+      <TechDecorationBox 
+        delay={1.1} 
+        size="medium" 
+        color="indigo" 
+        style={{ bottom: '12%', right: '8%', opacity: 0.4 }} 
+      />
       
-      {/* 优化的网格布局，适应侧边栏空间 */}
-      <div className="w-full h-full max-w-4xl max-h-[580px] grid grid-cols-3 grid-rows-3 gap-3 lg:gap-4 auto-rows-fr z-10">
-        {pagesData.map((page, index) => (
-          <TechBox
-            key={page.id}
-            image={page.src}
-            index={index}
-            aspectRatio={page.aspectRatio}
-            className={`${page.className} min-h-[100px]`}
-          />
-        ))}
+      {/* 紧凑型网格布局 - 确保完全可见 */}
+      <div className="w-full h-full max-w-4xl max-h-[580px] z-10 px-2">
+        <div className="grid grid-cols-3 grid-rows-3 gap-2 lg:gap-3 h-full auto-rows-fr">
+          {pagesData.map((page, index) => (
+            <div
+              key={page.id}
+              className={`${getGridClass(page.position, index)} relative group`}
+              onMouseEnter={() => setActiveIndex(index)}
+              onMouseLeave={() => setActiveIndex(null)}
+            >
+              <TechBox
+                image={page.src}
+                index={index}
+                className="w-full h-full min-h-[80px] lg:min-h-[100px]"
+              />
+              
+              {/* 悬浮信息卡片 - 调整位置避免被侧边栏遮挡 */}
+              <motion.div
+                initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                animate={{ 
+                  opacity: activeIndex === index ? 1 : 0,
+                  y: activeIndex === index ? 0 : 10,
+                  scale: activeIndex === index ? 1 : 0.9
+                }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="absolute -bottom-14 left-1/2 transform -translate-x-1/2 bg-slate-900/95 backdrop-blur-md border border-cyan-400/30 rounded-lg px-2 py-1.5 min-w-max z-20 shadow-xl max-w-[200px]"
+              >
+                <h4 className="text-cyan-300 font-medium text-xs mb-0.5">{page.title}</h4>
+                <p className="text-slate-300 text-[10px] leading-tight">{page.description}</p>
+                <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-l-4 border-r-4 border-b-4 border-l-transparent border-r-transparent border-b-slate-900/95" />
+              </motion.div>
+            </div>
+          ))}
+        </div>
       </div>
       
-      {/* 背景装饰元素 */}
-      <div className="absolute -bottom-20 -right-20 w-60 h-60 bg-cyan-500/5 rounded-full blur-3xl" />
-      <div className="absolute -top-20 -left-20 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl" />
+      {/* 背景氛围元素 - 调整大小和位置 */}
+      <div className="absolute -bottom-20 -right-20 w-60 h-60 bg-gradient-to-t from-cyan-500/6 to-transparent rounded-full blur-3xl" />
+      <div className="absolute -top-20 -left-20 w-52 h-52 bg-gradient-to-br from-blue-500/6 to-transparent rounded-full blur-3xl" />
       
-      {/* 浮动元素增强科技感 */}
+      {/* 底部标识 - 更紧凑的设计 */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.2, duration: 1 }}
-        className="absolute bottom-6 left-1/2 transform -translate-x-1/2 text-cyan-300/60 text-sm font-light"
+        transition={{ delay: 1.5, duration: 1 }}
+        className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex items-center gap-1.5 text-cyan-300/50 text-xs font-light"
       >
-        ✨ 交互式页面预览 - 支持多维度展示
+        <div className="w-1.5 h-1.5 bg-cyan-400/60 rounded-full animate-pulse" />
+        智能面试系统展示
+        <div className="w-1.5 h-1.5 bg-purple-400/60 rounded-full animate-pulse" />
       </motion.div>
     </div>
   );
@@ -300,15 +411,15 @@ export default function Home() {
             </Head>
 
             <AnimatePresence>
-                <div className="min-h-[100vh] sm:min-h-screen w-screen flex relative bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 font-inter overflow-hidden">
+                <div className="min-h-[100vh] sm:min-h-screen w-full flex relative bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 font-inter overflow-hidden">
                     <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900/20 via-gray-900 to-gray-900" />
                     <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:50px_50px]" />
                     <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
                     <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
 
-                    <main className="flex flex-col md:flex-row w-full h-full z-10">
-                        {/* 左侧内容区域 */}
-                        <div className="flex-1 flex flex-col justify-center px-4 md:px-12 py-8 md:py-0">
+                    <main className="flex flex-col lg:flex-row w-full h-full z-10 max-w-[100vw] overflow-hidden">
+                        {/* 左侧内容区域 - 调整为固定宽度以适应侧边栏 */}
+                        <div className="w-full lg:w-[45%] xl:w-[50%] flex flex-col justify-center px-4 md:px-8 lg:px-12 py-8 md:py-0 flex-shrink-0">
                             <motion.h1 initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.95, ease: [0.165, 0.84, 0.44, 1] }} className="text-2xl font-bold text-blue-400 mb-8" >
                                 伯乐
                             </motion.h1>
@@ -352,7 +463,6 @@ export default function Home() {
                                 </SignedOut>
 
                                 <SignedIn>
-                                    {/* 修复按钮布局 - 确保在一行内正确显示 */}
                                     <div className="flex flex-col sm:flex-row items-center gap-4">
                                         <div className="flex items-center gap-3 bg-white/5 backdrop-blur-sm rounded-lg p-2 border border-white/10">
                                             <UserButton />
@@ -400,8 +510,8 @@ export default function Home() {
                             )}
                         </div>
 
-                        {/* 右侧展示区域 - 优化布局适应侧边栏 */}
-                        <div className="flex-1 relative min-h-[500px] md:min-h-screen lg:pr-4">
+                        {/* 右侧展示区域 - 优化布局以适应侧边栏 */}
+                        <div className="w-full lg:w-[55%] xl:w-[50%] relative min-h-[500px] lg:min-h-screen flex-shrink-0 lg:pr-8">
                             <PagesShowcase />
                         </div>
                     </main>
