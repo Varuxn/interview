@@ -613,60 +613,119 @@ const UserCard: React.FC<{
   }, [audioData, waveformType]);
 
   // 绘制振幅波形
-  const drawAmplitudeWaveform = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
-    if (!audioData) return;
+  // 绘制振幅波形 - 科技风
+const drawAmplitudeWaveform = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+  if (!audioData) return;
+  
+  const centerY = height / 2;
+  const step = Math.ceil(audioData.length / width);
+  const scale = height / 2;
+  
+  // 清除画布并设置科技风背景
+  ctx.fillStyle = '#0f172a'; // 深蓝色背景
+  ctx.fillRect(0, 0, width, height);
+  
+  // 绘制网格线 - 科技风
+  ctx.strokeStyle = 'rgba(34, 211, 238, 0.1)'; // 青色半透明
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  
+  // 垂直网格线
+  for (let x = 0; x <= width; x += 20) {
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, height);
+  }
+  
+  // 水平网格线
+  for (let y = 0; y <= height; y += 20) {
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y);
+  }
+  ctx.stroke();
+  
+  // 绘制中心线
+  ctx.strokeStyle = 'rgba(34, 211, 238, 0.3)';
+  ctx.beginPath();
+  ctx.moveTo(0, centerY);
+  ctx.lineTo(width, centerY);
+  ctx.stroke();
+  
+  // 绘制波形 - 使用渐变
+  const gradient = ctx.createLinearGradient(0, 0, width, 0);
+  gradient.addColorStop(0, '#22d3ee'); // 青色
+  gradient.addColorStop(0.5, '#3b82f6'); // 蓝色
+  gradient.addColorStop(1, '#8b5cf6'); // 紫色
+  
+  ctx.beginPath();
+  ctx.moveTo(0, centerY);
+  
+  for (let i = 0; i < width; i++) {
+    const start = Math.floor(i * step);
+    const end = Math.min(start + step, audioData.length);
     
-    const centerY = height / 2;
-    const step = Math.ceil(audioData.length / width);
-    const scale = height / 2;
+    let sum = 0;
+    let count = 0;
     
-    ctx.beginPath();
-    ctx.moveTo(0, centerY);
-    
-    for (let i = 0; i < width; i++) {
-      const start = Math.floor(i * step);
-      const end = Math.min(start + step, audioData.length);
-      
-      let sum = 0;
-      let count = 0;
-      
-      for (let j = start; j < end; j++) {
-        sum += Math.abs(audioData[j]);
-        count++;
-      }
-      
-      if (count > 0) {
-        const amplitude = sum / count;
-        const y = centerY - amplitude * scale;
-        ctx.lineTo(i, y);
-      }
+    for (let j = start; j < end; j++) {
+      sum += Math.abs(audioData[j]);
+      count++;
     }
     
-    ctx.strokeStyle = '#3b82f6';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    
-    // 添加标题
-    ctx.fillStyle = '#4b5563';
-    ctx.font = '12px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('音频振幅波形图', width / 2, 15);
-  };
+    if (count > 0) {
+      const amplitude = sum / count;
+      const y = centerY - amplitude * scale;
+      ctx.lineTo(i, y);
+      
+      // 添加数据点发光效果
+      if (i % 10 === 0) {
+        ctx.save();
+        ctx.fillStyle = '#22d3ee';
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = '#22d3ee';
+        ctx.beginPath();
+        ctx.arc(i, y, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+  }
+  
+  ctx.strokeStyle = gradient;
+  ctx.lineWidth = 2;
+  ctx.shadowBlur = 10;
+  ctx.shadowColor = '#22d3ee';
+  ctx.stroke();
+  ctx.shadowBlur = 0; // 重置阴影
+  
+  // 添加科技风标题
+  ctx.fillStyle = '#22d3ee';
+  ctx.font = 'bold 14px "Courier New", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('AUDIO AMPLITUDE WAVEFORM', width / 2, 20);
+  
+  // 添加装饰性边框
+  ctx.strokeStyle = 'rgba(34, 211, 238, 0.5)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(2, 2, width - 4, height - 4);
+};
 
   // 绘制语速检测波形 (VAD - Voice Activity Detection)
-  const drawVADWaveform = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+  // 绘制语速检测波形 - 科技风
+const drawVADWaveform = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
   if (!audioData) return;
   
   const step = Math.ceil(audioData.length / width);
-  const threshold = 0.02; // 声音活动阈值
-  const paddingTop = 40; // 顶部留出标题和图例空间
-  const graphHeight = height - paddingTop; // 实际绘图高度
+  const threshold = 0.02;
+  const paddingTop = 40;
+  const graphHeight = height - paddingTop;
   
-  // 清除绘图区域
-  ctx.clearRect(0, paddingTop, width, graphHeight);
+  // 清除画布并设置科技风背景
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(0, 0, width, height);
   
-  // 绘制背景网格
-  ctx.strokeStyle = 'rgba(0, 0, 0, 0.05)';
+  // 绘制网格背景
+  ctx.strokeStyle = 'rgba(34, 211, 238, 0.1)';
+  ctx.lineWidth = 0.5;
   ctx.beginPath();
   for (let i = 1; i < 4; i++) {
     const yPos = paddingTop + (graphHeight * i / 4);
@@ -699,47 +758,59 @@ const UserCard: React.FC<{
     }
     
     const isActive = segmentMaxAmplitude > threshold;
+    const barHeight = Math.min(
+      (segmentMaxAmplitude / maxAmplitude) * graphHeight * 0.9, 
+      graphHeight * 0.9
+    );
     
     if (isActive) {
-      // 根据最大振幅缩放柱状图高度
-      const barHeight = Math.min(
-        (segmentMaxAmplitude / maxAmplitude) * graphHeight * 0.9, 
-        graphHeight * 0.9
-      );
+      // 有声部分 - 使用渐变
+      const gradient = ctx.createLinearGradient(0, height - barHeight, 0, height);
+      gradient.addColorStop(0, '#10b981'); // 绿色
+      gradient.addColorStop(1, '#059669'); // 深绿色
       
-      ctx.fillStyle = '#10b981';
-      // 从底部开始绘制
-      ctx.fillRect(
-        i, 
-        height - barHeight, 
-        1, 
-        barHeight
-      );
+      ctx.fillStyle = gradient;
+      ctx.fillRect(i, height - barHeight, 2, barHeight);
+      
+      // 添加发光效果
+      ctx.shadowBlur = 5;
+      ctx.shadowColor = '#10b981';
+      ctx.fillRect(i, height - barHeight, 2, barHeight);
+      ctx.shadowBlur = 0;
     } else {
-      // 静音部分只画一个像素线
-      ctx.fillStyle = '#ef4444';
-      ctx.fillRect(i, height - 1, 1, 1);
+      // 静音部分 - 使用红色渐变
+      const gradient = ctx.createLinearGradient(0, height - 3, 0, height);
+      gradient.addColorStop(0, '#ef4444'); // 红色
+      gradient.addColorStop(1, '#dc2626'); // 深红色
+      
+      ctx.fillStyle = gradient;
+      ctx.fillRect(i, height - 3, 2, 3);
     }
   }
   
-  // 添加标题（在顶部）
-  ctx.fillStyle = '#4b5563';
-  ctx.font = '12px sans-serif';
+  // 添加科技风标题
+  ctx.fillStyle = '#22d3ee';
+  ctx.font = 'bold 14px "Courier New", monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('语速检测波形图 (绿色表示有声音)', width / 2, 15);
+  ctx.fillText('VOICE ACTIVITY DETECTION', width / 2, 20);
   
-  // 添加图例（在顶部）
+  // 添加图例
   ctx.fillStyle = '#10b981';
-  ctx.fillRect(width - 120, 20, 10, 10);
-  ctx.fillStyle = '#4b5563';
-  ctx.font = '10px sans-serif';
+  ctx.fillRect(width - 140, 25, 12, 12);
+  ctx.fillStyle = '#e5e7eb';
+  ctx.font = '11px "Courier New", monospace';
   ctx.textAlign = 'left';
-  ctx.fillText('有声音', width - 105, 28);
+  ctx.fillText('VOICE', width - 120, 35);
   
   ctx.fillStyle = '#ef4444';
-  ctx.fillRect(width - 120, 35, 10, 10);
-  ctx.fillStyle = '#4b5563';
-  ctx.fillText('静音', width - 105, 43);
+  ctx.fillRect(width - 140, 42, 12, 12);
+  ctx.fillStyle = '#e5e7eb';
+  ctx.fillText('SILENCE', width - 120, 52);
+  
+  // 添加装饰性边框
+  ctx.strokeStyle = 'rgba(34, 211, 238, 0.5)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(2, 2, width - 4, height - 4);
 };
 
   // 保存评分
@@ -1132,22 +1203,26 @@ return (
                     </div>
                   </div>
                   
-                  <div className="h-40 bg-gray-900 rounded-lg p-3 relative border border-cyan-400/10">
+                  {/* 在UserCard组件中修改波形图容器 */}
+                  <div className="h-40 bg-gray-900 rounded-lg p-3 relative border border-cyan-400/20 shadow-inner">
                     {isAnalyzing ? (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-cyan-500"></div>
+                      <div className="absolute inset-0 flex items-center justify-center bg-gray-900/80 rounded-lg">
+                        <div className="text-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-cyan-500 mx-auto mb-2"></div>
+                          <p className="text-cyan-300 text-sm">分析音频中...</p>
+                        </div>
                       </div>
                     ) : !audioData ? (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 bg-gray-900/50 rounded-lg">
                         <DocumentTextIcon className="w-8 h-8 mb-2 text-cyan-400" />
                         <p className="text-sm">无音频数据</p>
                       </div>
                     ) : (
                       <canvas 
                         ref={canvasRef} 
-                        className="w-full h-full bg-gray-800 rounded"
-                        width={300}
-                        height={128}
+                        className="w-full h-full bg-gradient-to-br from-gray-900 to-blue-900/30 rounded"
+                        width={400} // 增加分辨率
+                        height={160}
                       />
                     )}
                   </div>
