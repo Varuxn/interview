@@ -108,7 +108,7 @@ const DualCameraRecorder = () => {
   const silenceThreshold = 1; // 静音阈值（百分比），可根据需要调整
   const [preRecordingCountdown, setPreRecordingCountdown] = useState<number | null>(null);
   
-  const test = useState<boolean>(true)[0];
+  const test = useState<boolean>(false)[0];
 
   const Question =[
     "问题1",

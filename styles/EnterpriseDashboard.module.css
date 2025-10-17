@@ -1,0 +1,895 @@
+/* ------------- 基础容器 ------------- */
+.dashboardContainer {
+  padding: 2rem;
+  min-height: 100vh;
+  color: #e6eef8;
+  position: relative;
+  background: linear-gradient(135deg, #0b1020 0%, #07102a 50%, #061024 100%);
+  font-family: 'Inter', sans-serif;
+}
+
+/* 流动背景光 */
+.dashboardContainer::before {
+  content: '';
+  position: absolute;
+  inset: -20% -30%;
+  background: linear-gradient(120deg, rgba(0, 198, 255, 0.06), rgba(96, 165, 250, 0.04), rgba(192, 132, 252, 0.03));
+  filter: blur(120px);
+  animation: gradientFlow 18s linear infinite;
+  z-index: 0;
+}
+
+/* ------------- header ------------- */
+.header {
+  text-align: center;
+  z-index: 1;
+  position: relative;
+  margin-bottom: 1.25rem;
+}
+
+.title {
+  font-size: 1.9rem;
+  color: transparent;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  -webkit-background-clip: text;
+  font-weight: 700;
+  text-shadow: 0 6px 24px rgba(3, 102, 214, 0.06);
+}
+
+.subtitle {
+  color: #9fb1d6;
+  margin-top: 0.35rem;
+  font-size: 0.95rem;
+}
+
+/* ------------- 布局 ------------- */
+.gridWrapper {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 1.5rem;
+  z-index: 1;
+  position: relative;
+}
+
+@media (max-width: 1100px) {
+  .gridWrapper {
+    grid-template-columns: 1fr;
+  }
+}
+
+.leftColumn {}
+
+.rightColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* ------------- 通用卡片 ------------- */
+.card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(96, 165, 250, 0.06);
+  padding: 1rem;
+  border-radius: 14px;
+  box-shadow: 0 6px 22px rgba(3, 102, 214, 0.03);
+  backdrop-filter: blur(8px);
+  position: relative;
+}
+
+/* 刻意增加微光边框和流动光带（通过伪元素） */
+.card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  padding: 1px;
+  background: linear-gradient(90deg, rgba(0, 198, 255, 0.06), rgba(192, 132, 252, 0.04));
+  pointer-events: none;
+  mix-blend-mode: overlay;
+}
+
+/* ------------- 大卡片 ------------- */
+.largeCard {
+  padding: 1.25rem;
+}
+
+/* ------------- card header ------------- */
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.9rem;
+}
+
+.cardHeader h2,
+.cardHeader h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.cardSub {
+  color: #9fb1d6;
+  font-size: 0.87rem;
+  margin-top: 0.25rem;
+}
+
+/* ------------- 小徽章 ------------- */
+.smallBadge {
+  background: linear-gradient(90deg, rgba(96, 165, 250, 0.14), rgba(192, 132, 252, 0.12));
+  padding: 6px 10px;
+  border-radius: 999px;
+  color: #dbeafe;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* ========== 部门与岗位列表 ========== */
+.deptList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  margin-top: 0.6rem;
+}
+
+.deptBlock {
+  border-radius: 10px;
+  padding: 0.6rem;
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid rgba(96, 165, 250, 0.03);
+}
+
+.deptHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.linkBtn {
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.rotate180 {
+  transform: rotate(90deg);
+  transition: transform 0.25s ease;
+}
+
+/* 岗位网格 */
+.positionGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.8rem;
+  margin-top: 0.6rem;
+}
+
+.positionCard {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+  padding: 0.75rem;
+  border-radius: 10px;
+  border: 1px solid rgba(96, 165, 250, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+/* header */
+.positionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.scoreBadge {
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  color: #001;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+/* skill mini rows */
+.skillRow {
+  display: flex;
+  gap: 0.5rem;
+  flex-direction: column;
+}
+
+.skillMini {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skillLabel {
+  font-size: 0.78rem;
+  color: #a8c0df;
+}
+
+.skillBar {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.skillFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  transition: width 0.6s ease;
+}
+
+/* actions */
+.positionActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 6px;
+}
+
+.detailBtn,
+.adviseBtn {
+  border: none;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.detailBtn {
+  background: rgba(96, 165, 250, 0.12);
+  color: var(--primary);
+}
+
+.adviseBtn {
+  background: rgba(34, 197, 94, 0.08);
+  color: #9ff3d6;
+}
+
+/* ========== 漏斗 ========== */
+.funnel {
+  margin-top: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.funnelRow {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.funnelLabel {
+  width: 70px;
+  color: #9fb1d6;
+  font-weight: 600;
+}
+
+.funnelBar {
+  height: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding-left: 8px;
+  color: #dbeafe;
+  font-weight: 700;
+  overflow: hidden;
+}
+
+.funnelBar::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+}
+
+.funnelMeta {
+  display: flex;
+  gap: 1rem;
+  margin-top: 8px;
+  color: #9fb1d6;
+  font-size: 0.9rem;
+}
+
+/* channel performance */
+.channelSection {
+  margin-top: 10px;
+}
+
+.channelRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.channelName {
+  width: 90px;
+  color: #cfe6ff;
+  font-weight: 600;
+}
+
+.channelMetric {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.channelBar {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.channelFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  transition: width 0.6s ease;
+}
+
+.channelCost {
+  min-width: 70px;
+  text-align: right;
+  color: #bfe8ff;
+}
+
+/* ========== 团队角色预测 ========== */
+.roleGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.8rem;
+}
+
+.roleCard {
+  padding: 0.6rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid rgba(96, 165, 250, 0.03);
+}
+
+.roleHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.roleValue {
+  font-weight: 800;
+  color: #e8f8ff;
+}
+
+.roleBarWrap {}
+
+.roleBarBg {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.roleBarFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  transition: width 0.6s ease;
+}
+
+.roleAdvice {
+  color: #a6d1f7;
+  margin-top: 6px;
+  font-size: 0.85rem;
+}
+
+/* ========== 绩效预测 ========== */
+.performance {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.predicted {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.predLabel {
+  color: #bcd7f7;
+  font-weight: 700;
+}
+
+.predValue {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: transparent;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  -webkit-background-clip: text;
+}
+
+.predConf {
+  color: #9fb1d6;
+  font-size: 0.9rem;
+}
+
+.driverList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.driverRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.driverName {
+  width: 110px;
+  color: #cfe6ff;
+  font-weight: 600;
+}
+
+.driverBar {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.driverFill {
+  height: 100%;
+  background: linear-gradient(90deg, #8ef3c4, #2fd5b3);
+}
+
+/* sparkline */
+.sparkline {
+  margin-top: 8px;
+}
+
+.sparklineRow {
+  display: flex;
+  align-items: end;
+  gap: 6px;
+  height: 60px;
+  padding: 6px 0;
+}
+
+.sparkBar {
+  width: 8px;
+  background: linear-gradient(180deg, #60a5fa, #c084fc);
+  border-radius: 3px;
+  transition: height 0.4s ease;
+}
+
+/* ========== 流失风险 ========== */
+.attrition {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.overallRisk {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.overRiskLabel {
+  color: #cfe6ff;
+}
+
+.overRiskValue {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #ffd9d9;
+}
+
+.factorList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.factorRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.factorName {
+  width: 140px;
+  color: #cfe6ff;
+}
+
+.factorBar {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.factorFill {
+  height: 100%;
+  background: linear-gradient(90deg, #ffab91, #ff726f);
+}
+
+.factorScore {
+  min-width: 40px;
+  text-align: right;
+  color: #ffd7d7;
+  font-weight: 700;
+}
+
+/* actions */
+.actions ol {
+  margin: 8px 0 0 18px;
+  color: #dbeafe;
+}
+
+/* ========== 侧边滑出面板 ========== */
+.sidePanel {
+  position: fixed;
+  top: 0;
+  right: -520px;
+  width: 480px;
+  height: 100vh;
+  background: rgba(5, 8, 18, 0.95);
+  border-left: 1px solid rgba(96, 165, 250, 0.06);
+  box-shadow: -20px 0 60px rgba(2, 8, 20, 0.6);
+  transition: right 0.35s cubic-bezier(.2, .9, .3, 1);
+  z-index: 120;
+  padding: 18px;
+  overflow-y: auto;
+}
+
+.sidePanel.open {
+  right: 0;
+}
+
+.sideHeader {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  color: #cfe6ff;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.panelContent {
+  padding: 6px 0 40px 0;
+  color: #cfe6ff;
+}
+
+.panelScore {
+  margin-top: 6px;
+  font-weight: 700;
+  color: #ffd9d9;
+}
+
+.panelSection {
+  margin-top: 12px;
+}
+
+.radarFake {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.radarRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.radarLabel {
+  width: 130px;
+  color: #cfe6ff;
+}
+
+.radarBars {
+  flex: 1;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.radarReq {
+  height: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  flex: 1;
+  border-radius: 6px;
+  position: relative;
+}
+
+.radarCand {
+  height: 10px;
+  width: 40%;
+  background: linear-gradient(90deg, #8ef3c4, #2fd5b3);
+  border-radius: 6px;
+  position: absolute;
+}
+
+/* ========== loader ========== */
+.loaderContainer {
+  height: 80vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #9fb1d6;
+}
+
+.loader {
+  border: 4px solid rgba(255, 255, 255, 0.06);
+  border-top: 4px solid var(--primary);
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+
+/* ========== 动画 ========== */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes gradientFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* utility */
+.fadeIn {
+  animation: fadeIn 0.45s ease both;
+}
+
+.multiLineChartContainer {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.multiLineChart {
+  display: flex;
+  gap: 2px;
+  height: 100px;
+  width: 100%;
+  align-items: flex-end;
+  position: relative;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  padding: 6px;
+  overflow-x: auto;
+}
+
+.chartLabel {
+  font-size: 0.85rem;
+  color: #9fb1d6;
+}
+
+/* 左列卡片间距 */
+.leftCardMargin {
+  margin-bottom: 16px;
+  /* 调整间距大小，可根据需要调节 */
+}
+
+/* 折线图外框：浅蓝色边框 + 半透明蓝色背景 */
+.lineChartWrapper {
+  border: 1px solid #3b82f6;
+  /* 浅蓝色边框 */
+  padding: 8px;
+  border-radius: 6px;
+  margin-top: 12px;
+  background-color: rgba(59, 130, 246, 0.05);
+  /* 半透明蓝色背景 */
+}
+
+/* 缩小版折线图 */
+.compactLineChart {
+  width: 100%;
+  height: 100px;
+}
+
+/* ================= 团队角色预测 & 构建建议（优化版v3） ================= */
+
+.roleList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+  /* ⬆️ 增大间距：卡片之间有更明显分隔 */
+  margin-top: 1rem;
+}
+
+.roleCardDark {
+  background: rgba(150, 190, 255, 0.08);
+  border: 1px solid rgba(120, 180, 255, 0.15);
+  border-radius: 14px;
+  padding: 0.3rem 0.2rem;
+  /* ⬆️ 内边距更大 */
+  cursor: pointer;
+  transition: all 0.25s ease;
+  backdrop-filter: blur(10px);
+  position: relative;
+}
+
+.roleCardDark+.roleCardDark {
+  margin-top: 0.8rem;
+  /* ✅ 保底的竖向间距（避免贴紧） */
+}
+
+.roleCardDark:hover {
+  border-color: rgba(120, 180, 255, 0.25);
+  background: rgba(180, 210, 255, 0.12);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.12);
+  transform: translateY(-2px);
+}
+
+.roleExpanded {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(96, 165, 250, 0.25);
+}
+
+.roleHeaderDark {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #dbeafe;
+  font-weight: 600;
+  gap: 0.5rem;
+  border-bottom: 1px solid rgba(96, 165, 250, 0.12);
+  padding-bottom: 0.6rem;
+  /* ⬆️ header 下方间距更大 */
+  margin-bottom: 0.8rem;
+  /* ✅ header 与 bar 间距 */
+}
+
+.roleNameDark {
+  font-size: 1rem;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  -webkit-background-clip: text;
+  color: transparent;
+  font-weight: 700;
+}
+
+.roleScoreDark {
+  font-size: 0.9rem;
+  color: #a8c7ff;
+  font-weight: 600;
+}
+
+.chevronIcon {
+  color: #8fbfff;
+  font-size: 1rem;
+  opacity: 0.9;
+}
+
+.roleBarDark {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-top: 4px;
+  margin-bottom: 0.9rem;
+  /* ✅ bar 与内容区之间拉开距离 */
+}
+
+.roleFillDark {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  transition: width 0.6s ease;
+}
+
+.roleContentDark {
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  color: #cfe1ff;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  border-top: 1px solid rgba(96, 165, 250, 0.08);
+  /* ⬆️ 内容与 bar 分层 */
+}
+
+.roleDescDark {
+  margin-bottom: 0.7rem;
+  color: #e0eaff;
+}
+
+.roleSuggestionDark {
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.08), rgba(192, 132, 252, 0.08));
+  border-left: 2px solid var(--primary);
+  padding: 8px 12px;
+  /* ⬆️ 建议块呼吸更明显 */
+  border-radius: 6px;
+  color: #b5d8ff;
+  line-height: 1.55;
+}
+
+/* 双折线图容器 */
+.dualChartWrapper {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+/* 单折线图框 */
+.singleChart {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(96, 165, 250, 0.06);
+}
+
+/* 放大按钮 */
+.chartBtn {
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(96, 165, 250, 0.2);
+  background: rgba(96, 165, 250, 0.08);
+  color: #dbeafe;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.chartBtn:hover {
+  background: rgba(96, 165, 250, 0.12);
+}
+
+/* 按钮下分析文字 */
+.chartInfo {
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: #a6d1f7;
+  line-height: 1.4;
+}
